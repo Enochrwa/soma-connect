@@ -1,0 +1,170 @@
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { nanoid } from "nanoid";
+import { User } from "../models/User.js";
+import { Otp } from "../models/Otp.js";
+import { HttpError } from "../middleware/errorHandler.js";
+import { validate } from "../middleware/validate.js";
+import { strictLimiter } from "../middleware/rateLimiter.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  setRefreshCookie,
+  clearRefreshCookie,
+} from "../services/token.service.js";
+import { sendOtpEmail } from "../services/email.service.js";
+import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
+
+export const authRouter = Router();
+
+const phoneRwRegex = /^\+250 ?7\d{2} ?\d{3} ?\d{3}$/;
+
+const registerSchema = z.object({
+  name: z.string().min(2).max(80),
+  phone: z.string().regex(phoneRwRegex, "Use the format +250 7XX XXX XXX"),
+  email: z.string().email().optional(),
+  password: z.string().min(8).max(128),
+});
+
+authRouter.post("/register", strictLimiter, validate(registerSchema), async (req, res, next) => {
+  try {
+    const { name, phone, email, password } = req.body as z.infer<typeof registerSchema>;
+    const existing = await User.findOne({ phone });
+    if (existing) throw new HttpError(409, "An account with this phone already exists.");
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      phone,
+      email,
+      passwordHash,
+      profile: { name },
+      referralCode: nanoid(8).toUpperCase(),
+    });
+    const access = signAccessToken({ id: String(user._id), role: user.role });
+    const refresh = signRefreshToken({ id: String(user._id), role: user.role });
+    setRefreshCookie(res, refresh);
+    res.status(201).json({ user: sanitize(user), accessToken: access });
+  } catch (e) {
+    next(e);
+  }
+});
+
+const loginSchema = z.object({
+  phone: z.string().regex(phoneRwRegex),
+  password: z.string().min(1),
+});
+
+authRouter.post("/login", strictLimiter, validate(loginSchema), async (req, res, next) => {
+  try {
+    const { phone, password } = req.body as z.infer<typeof loginSchema>;
+    const user = await User.findOne({ phone });
+    if (!user || !user.passwordHash) throw new HttpError(401, "Invalid phone or password.");
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new HttpError(423, "Too many attempts. Try again in a few minutes.");
+    }
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      user.failedLogins = (user.failedLogins ?? 0) + 1;
+      if (user.failedLogins >= 5) {
+        user.lockedUntil = new Date(Date.now() + 15 * 60_000);
+        user.failedLogins = 0;
+      }
+      await user.save();
+      throw new HttpError(401, "Invalid phone or password.");
+    }
+    user.failedLogins = 0;
+    user.lockedUntil = undefined;
+    await user.save();
+    const access = signAccessToken({ id: String(user._id), role: user.role });
+    const refresh = signRefreshToken({ id: String(user._id), role: user.role });
+    setRefreshCookie(res, refresh);
+    res.json({ user: sanitize(user), accessToken: access });
+  } catch (e) {
+    next(e);
+  }
+});
+
+const otpRequestSchema = z.object({ email: z.string().email() });
+authRouter.post("/otp/request", strictLimiter, validate(otpRequestSchema), async (req, res, next) => {
+  try {
+    const { email } = req.body as { email: string };
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codeHash = await bcrypt.hash(code, 8);
+    await Otp.create({ email, codeHash, expiresAt: new Date(Date.now() + 10 * 60_000) });
+    await sendOtpEmail(email, code);
+    res.json({ ok: true, message: "If that email exists, a code is on its way." });
+  } catch (e) {
+    next(e);
+  }
+});
+
+const otpVerifySchema = z.object({ email: z.string().email(), code: z.string().length(6) });
+authRouter.post("/otp/verify", strictLimiter, validate(otpVerifySchema), async (req, res, next) => {
+  try {
+    const { email, code } = req.body as { email: string; code: string };
+    const record = await Otp.findOne({ email }).sort({ createdAt: -1 });
+    if (!record) throw new HttpError(400, "No code found — request a new one.");
+    if (record.attempts >= 5) throw new HttpError(429, "Too many attempts. Request a new code.");
+    const ok = await bcrypt.compare(code, record.codeHash);
+    record.attempts += 1;
+    await record.save();
+    if (!ok) throw new HttpError(400, "That code didn't match.");
+    await Otp.deleteMany({ email });
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        phone: `+250 ${nanoid(9).replace(/[^0-9]/g, "0").slice(0, 9)}`,
+        email,
+        emailVerifiedAt: new Date(),
+        referralCode: nanoid(8).toUpperCase(),
+      });
+    } else if (!user.emailVerifiedAt) {
+      user.emailVerifiedAt = new Date();
+      await user.save();
+    }
+
+    const access = signAccessToken({ id: String(user._id), role: user.role });
+    const refresh = signRefreshToken({ id: String(user._id), role: user.role });
+    setRefreshCookie(res, refresh);
+    res.json({ user: sanitize(user), accessToken: access });
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.post("/refresh", async (req, res, next) => {
+  try {
+    const token = req.cookies?.soma_rt;
+    if (!token) throw new HttpError(401, "Not signed in.");
+    const payload = jwt.verify(token, env.JWT_REFRESH_SECRET) as { sub: string; role: string };
+    const user = await User.findById(payload.sub);
+    if (!user) throw new HttpError(401, "Not signed in.");
+    const access = signAccessToken({ id: String(user._id), role: user.role });
+    const refresh = signRefreshToken({ id: String(user._id), role: user.role });
+    setRefreshCookie(res, refresh); // rotate
+    res.json({ accessToken: access, user: sanitize(user) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.post("/logout", (_req, res) => {
+  clearRefreshCookie(res);
+  res.json({ ok: true });
+});
+
+function sanitize(u: any) {
+  return {
+    id: String(u._id),
+    phone: u.phone,
+    email: u.email,
+    role: u.role,
+    profile: u.profile,
+    addresses: u.addresses,
+    loyaltyPoints: u.loyaltyPoints,
+    tier: u.tier,
+    referralCode: u.referralCode,
+  };
+}

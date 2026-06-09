@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-ivory text-slate font-sans antialiased;
+  }
+  h1, h2, h3, h4 { @apply font-display tracking-tight; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-saffron px-5 py-3 font-semibold text-slate shadow-gold transition hover:brightness-105 active:scale-[0.98];
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 font-semibold text-ivory transition hover:bg-forest-600 active:scale-[0.98];
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-forest/15 bg-white px-4 py-2.5 font-medium text-slate transition hover:border-forest/30;
+  }
+  .card {
+    @apply rounded-2xl bg-white shadow-soft border border-black/[0.04];
+  }
+  .price { @apply font-mono font-bold text-forest; }
+  .pill { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
