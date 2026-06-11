@@ -8,7 +8,7 @@ const VariantSchema = new Schema(
     stock: { type: Number, default: 0 },
     sku: String,
   },
-  { _id: true }
+  { _id: true },
 );
 
 const ProductSchema = new Schema(
@@ -38,7 +38,7 @@ const ProductSchema = new Schema(
     },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 ProductSchema.index({ title: "text", description: "text", tags: "text" });

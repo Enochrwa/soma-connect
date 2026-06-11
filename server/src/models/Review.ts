@@ -16,7 +16,7 @@ const ReviewSchema = new Schema(
       at: Date,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type ReviewDoc = InferSchemaType<typeof ReviewSchema> & { _id: string };

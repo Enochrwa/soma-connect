@@ -1,0 +1,42 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-pr:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check branch name
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          if ! echo "$BRANCH" | grep -qE '^(feature|fix|chore|docs|refactor|test|hotfix)/.+$|^Project-Configuration$|^develop$|^main$'; then
+            echo "ERROR: Branch name '$BRANCH' does not follow convention."
+            echo "Use: feature/*, fix/*, chore/*, docs/*, refactor/*, test/*, hotfix/*"
+            exit 1
+          fi
+          echo "Branch name OK: $BRANCH"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci --ignore-scripts
+        working-directory: client
+      - run: npm ci --ignore-scripts
+        working-directory: server
+
+      - name: Type check (client)
+        run: npx tsc --noEmit
+        working-directory: client
+
+      - name: Type check (server)
+        run: npx tsc --noEmit
+        working-directory: server

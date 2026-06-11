@@ -16,19 +16,53 @@ import { reviewRouter } from "./routes/review.routes.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
 import { loyaltyRouter } from "./routes/loyalty.routes.js";
+import { notificationRouter } from "./routes/notification.routes.js";
+import { userRouter } from "./routes/user.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
 
 export const app = express();
 
-app.use(helmet());
+// ── Security ─────────────────────────────────────────────────────────────────
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://placehold.co"],
+        connectSrc: ["'self'", env.CLIENT_URL],
+      },
+    },
+  }),
+);
+
+// ── Core middleware ───────────────────────────────────────────────────────────
 app.use(compression());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+app.use(
+  cors({
+    origin: env.CLIENT_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser());
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(rateLimiter);
 
-app.get("/api/health", (_req, res) => res.json({ ok: true, name: "soma-market" }));
+// ── Health ────────────────────────────────────────────────────────────────────
+app.get("/api/health", (_req, res) =>
+  res.json({
+    ok: true,
+    name: "soma-market",
+    env: env.NODE_ENV,
+    time: new Date().toISOString(),
+  }),
+);
 
+// ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRouter);
 app.use("/api/products", productRouter);
 app.use("/api/sellers", sellerRouter);
@@ -38,5 +72,14 @@ app.use("/api/reviews", reviewRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/loyalty", loyaltyRouter);
+app.use("/api/notifications", notificationRouter);
+app.use("/api/users", userRouter);
+app.use("/api/admin", adminRouter);
 
+// ── 404 ───────────────────────────────────────────────────────────────────────
+app.use((_req, res) => {
+  res.status(404).json({ error: "Route not found." });
+});
+
+// ── Error handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);

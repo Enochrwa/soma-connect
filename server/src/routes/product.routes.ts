@@ -23,30 +23,35 @@ productRouter.get("/", async (req, res, next) => {
       inStock,
     } = req.query as Record<string, string | undefined>;
 
-    const filter: Record<string, any> = { isActive: true };
+    // Use a loose but typed filter object (Mongoose accepts this shape)
+    const filter: Record<string, unknown> = { isActive: true };
     if (category) filter.category = category;
     if (condition) filter.condition = condition;
     if (inStock === "true") filter.stock = { $gt: 0 };
     if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
+      const priceRange: Record<string, number> = {};
+      if (minPrice) priceRange.$gte = Number(minPrice);
+      if (maxPrice) priceRange.$lte = Number(maxPrice);
+      filter.price = priceRange;
     }
     if (q) filter.$text = { $search: q };
 
-    const sortMap: Record<string, Record<string, 1 | -1>> = {
+    type SortSpec = Record<string, 1 | -1>;
+    const textScore = { score: { $meta: "textScore" } } as unknown as SortSpec;
+    const sortMap: Record<string, SortSpec> = {
       newest: { createdAt: -1 },
       price_asc: { price: 1 },
       price_desc: { price: -1 },
       rating: { avgRating: -1 },
-      relevance: q ? { score: { $meta: "textScore" } as any } : { salesCount: -1, createdAt: -1 },
+      relevance: q ? textScore : { salesCount: -1, createdAt: -1 },
     };
 
     const pg = Math.max(1, Number(page));
     const lim = Math.min(60, Math.max(1, Number(limit)));
 
-    const cursor = Product.find(filter, q ? { score: { $meta: "textScore" } } : undefined)
-      .sort((sortMap[sort] as any) ?? sortMap.relevance)
+    const projection = q ? ({ score: { $meta: "textScore" } } as unknown as SortSpec) : undefined;
+    const cursor = Product.find(filter, projection)
+      .sort(sortMap[sort] ?? sortMap.relevance)
       .skip((pg - 1) * lim)
       .limit(lim)
       .lean();
@@ -135,5 +140,5 @@ productRouter.post(
     } catch (e) {
       next(e);
     }
-  }
+  },
 );

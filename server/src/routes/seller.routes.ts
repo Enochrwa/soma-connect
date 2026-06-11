@@ -14,9 +14,7 @@ sellerRouter.get("/:slug", async (req, res, next) => {
   try {
     const seller = await Seller.findOne({ storeSlug: req.params.slug }).lean();
     if (!seller) throw new HttpError(404, "Store not found.");
-    const products = await Product.find({ sellerId: seller._id, isActive: true })
-      .limit(20)
-      .lean();
+    const products = await Product.find({ sellerId: seller._id, isActive: true }).limit(20).lean();
     res.json({ seller, products });
   } catch (e) {
     next(e);
@@ -58,7 +56,7 @@ sellerRouter.post(
     } catch (e) {
       next(e);
     }
-  }
+  },
 );
 
 sellerRouter.get("/me/overview", requireAuth, async (req: AuthedRequest, res, next) => {

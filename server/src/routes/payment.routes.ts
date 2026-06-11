@@ -41,5 +41,5 @@ paymentRouter.post(
     } catch (e) {
       next(e);
     }
-  }
+  },
 );

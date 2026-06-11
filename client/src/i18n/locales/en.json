@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "home": "Home",
+    "search": "Search products…",
+    "cart": "Cart",
+    "wishlist": "Wishlist",
+    "orders": "My Orders",
+    "account": "Account",
+    "sell": "Start Selling",
+    "admin": "Admin"
+  },
+  "home": {
+    "pulse": "{{count}} people shopping now",
+    "flashDeals": "Flash Deals",
+    "trending": "Trending in Kigali",
+    "newArrivals": "New Arrivals",
+    "featuredSeller": "Featured Seller",
+    "endsIn": "Ends in"
+  },
+  "product": {
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "saveToWishlist": "Save to Wishlist",
+    "inStock": "In Stock",
+    "lowStock": "Only {{count}} left",
+    "outOfStock": "Out of Stock",
+    "reviews": "{{count}} reviews",
+    "verifiedPurchase": "Verified Purchase",
+    "deliveryTo": "Deliver to"
+  },
+  "cart": {
+    "empty": "Your cart is empty",
+    "continueShopping": "Continue Shopping",
+    "checkout": "Checkout",
+    "subtotal": "Subtotal",
+    "deliveryFee": "Delivery Fee",
+    "total": "Total",
+    "promoCode": "Promo code",
+    "apply": "Apply",
+    "saveForLater": "Save for later"
+  },
+  "checkout": {
+    "delivery": "Delivery",
+    "payment": "Payment",
+    "confirm": "Confirm",
+    "placeOrder": "Place Order",
+    "momoPrompt": "You will receive a USSD push on {{phone}}",
+    "momoWaiting": "Waiting for confirmation…",
+    "codNote": "Pay cash when your order arrives",
+    "success": "Order placed!",
+    "orderNumber": "Order #{{number}}"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Create Account",
+    "phone": "Phone number",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "otpSent": "OTP sent to {{email}}",
+    "continueWithGoogle": "Continue with Google",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?"
+  },
+  "loyalty": {
+    "points": "{{count}} pts",
+    "tier": "{{tier}} Member",
+    "earnPoints": "Earn points on every purchase",
+    "dailyLogin": "Claim daily login bonus",
+    "spinWheel": "Spin the wheel",
+    "mysteryBox": "Mystery Box"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "offline": "You're offline — changes will sync when you reconnect",
+    "seeAll": "See all",
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "share": "Share on WhatsApp"
+  }
+}

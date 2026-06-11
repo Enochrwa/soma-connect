@@ -1,5 +1,6 @@
 import ProductCard from "../product/ProductCard";
 import { Skeleton } from "../ui/Skeleton";
+import type { Product } from "../../types";
 
 export default function ProductRow({
   title,
@@ -9,7 +10,7 @@ export default function ProductRow({
 }: {
   title: string;
   subtitle?: string;
-  items: any[];
+  items: Product[];
   isLoading?: boolean;
 }) {
   return (

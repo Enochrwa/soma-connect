@@ -2,7 +2,9 @@ import { env } from "../config/env.js";
 
 const HF_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
 
-export async function somaAiReply(messages: Array<{ role: "user" | "assistant" | "system"; content: string }>) {
+export async function somaAiReply(
+  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+) {
   if (!env.HF_API_TOKEN) {
     return "SOMA AI isn't connected yet — add HF_API_TOKEN to your .env to enable chat.";
   }
@@ -16,7 +18,10 @@ export async function somaAiReply(messages: Array<{ role: "user" | "assistant" |
         Authorization: `Bearer ${env.HF_API_TOKEN}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 256, temperature: 0.6 } }),
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: { max_new_tokens: 256, temperature: 0.6 },
+      }),
     });
     if (res.status === 429 || res.status === 503) {
       return "SOMA AI is busy right now — try again in a moment.";

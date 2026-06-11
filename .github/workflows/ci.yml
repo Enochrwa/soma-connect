@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, "Project-Configuration"]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Strategy: install deps in each workspace independently so tsc and eslint
+# can resolve modules from local node_modules (avoids hoisting ambiguity).
+
+jobs:
+  # ── Prettier ───────────────────────────────────────────────────────────────
+  format:
+    name: Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install root devDeps (prettier only)
+        run: npm install --no-save prettier
+
+      - name: Check formatting
+        run: |
+          npx prettier --check \
+            "client/src/**/*.{ts,tsx,css}" \
+            "server/src/**/*.ts" \
+            --ignore-path .gitignore
+
+  # ── TypeScript — client ────────────────────────────────────────────────────
+  typecheck-client:
+    name: TypeScript (client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install client deps
+        run: npm install
+        working-directory: client
+
+      - name: TypeCheck
+        run: npx tsc --noEmit
+        working-directory: client
+
+  # ── TypeScript — server ────────────────────────────────────────────────────
+  typecheck-server:
+    name: TypeScript (server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install server deps
+        run: npm install
+        working-directory: server
+
+      - name: TypeCheck
+        run: npx tsc --noEmit
+        working-directory: server
+
+  # ── ESLint — client ────────────────────────────────────────────────────────
+  lint-client:
+    name: ESLint (client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install client deps
+        run: npm install
+        working-directory: client
+
+      - name: ESLint
+        run: npx eslint . --ext .ts,.tsx --max-warnings=0
+        working-directory: client
+
+  # ── ESLint — server ────────────────────────────────────────────────────────
+  lint-server:
+    name: ESLint (server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install server deps
+        run: npm install
+        working-directory: server
+
+      - name: ESLint
+        run: npx eslint . --ext .ts --max-warnings=0
+        working-directory: server
+
+  # ── Build ──────────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [format, typecheck-client, typecheck-server, lint-client, lint-server]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install client deps
+        run: npm install
+        working-directory: client
+
+      - name: Install server deps
+        run: npm install
+        working-directory: server
+
+      - name: Build client
+        run: npm run build
+        working-directory: client
+        env:
+          VITE_API_URL: http://localhost:4000/api
+          VITE_SOCKET_URL: http://localhost:4000
+          VITE_APP_NAME: "SOMA Market"
+
+      - name: Build server
+        run: npm run build
+        working-directory: server
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist/
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-dist
+          path: server/dist/
+          retention-days: 7

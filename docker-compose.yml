@@ -1,11 +1,75 @@
 version: "3.9"
+
 services:
+  # ── MongoDB local dev ──────────────────────────────────────
   mongo:
     image: mongo:7
-    ports: ["27017:27017"]
-    volumes: ["soma_mongo:/data/db"]
+    container_name: soma_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - soma_mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: soma_market
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis local dev ────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    container_name: soma_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - soma_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Express API ────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: soma_server
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./server/.env
+    environment:
+      MONGO_URI: mongodb://mongo:27017/soma_market
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./server/src:/app/src:ro
+
+  # ── React client (dev only) ────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: soma_client
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./client/.env
+    volumes:
+      - ./client/src:/app/src:ro
+    depends_on:
+      - server
+
 volumes:
-  soma_mongo:
+  soma_mongo_data:
+  soma_redis_data:

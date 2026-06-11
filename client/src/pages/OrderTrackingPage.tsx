@@ -3,8 +3,16 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useGetOrderQuery } from "../app/api";
 
-const STEPS = ["placed","payment_confirmed","preparing","packed","picked_up","out_for_delivery","delivered"];
-const LABELS: Record<string,string> = {
+const STEPS = [
+  "placed",
+  "payment_confirmed",
+  "preparing",
+  "packed",
+  "picked_up",
+  "out_for_delivery",
+  "delivered",
+];
+const LABELS: Record<string, string> = {
   placed: "Order placed",
   payment_confirmed: "Payment confirmed",
   preparing: "Seller preparing",
@@ -21,7 +29,9 @@ export default function OrderTrackingPage() {
     const socket = io(import.meta.env.VITE_SOCKET_URL ?? "http://localhost:4000");
     socket.emit("subscribeOrder", id);
     socket.on("orderUpdate", () => refetch());
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+    };
   }, [id, refetch]);
 
   const order = data?.order;
@@ -35,11 +45,15 @@ export default function OrderTrackingPage() {
       <ol className="mt-6 space-y-4">
         {STEPS.map((s, i) => (
           <li key={s} className="flex items-center gap-3">
-            <span className={`w-8 h-8 rounded-full grid place-items-center font-mono text-xs
-              ${i < currentIdx ? "bg-forest text-ivory" : i === currentIdx ? "bg-saffron text-slate" : "bg-white border"}`}>
-              {i < currentIdx ? "✓" : i+1}
+            <span
+              className={`w-8 h-8 rounded-full grid place-items-center font-mono text-xs
+              ${i < currentIdx ? "bg-forest text-ivory" : i === currentIdx ? "bg-saffron text-slate" : "bg-white border"}`}
+            >
+              {i < currentIdx ? "✓" : i + 1}
             </span>
-            <span className={i <= currentIdx ? "text-forest font-medium" : "text-slate/50"}>{LABELS[s]}</span>
+            <span className={i <= currentIdx ? "text-forest font-medium" : "text-slate/50"}>
+              {LABELS[s]}
+            </span>
           </li>
         ))}
       </ol>

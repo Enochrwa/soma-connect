@@ -25,7 +25,7 @@ const SellerSchema = new Schema(
     isActive: { type: Boolean, default: true },
     holidayMode: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type SellerDoc = InferSchemaType<typeof SellerSchema> & { _id: string };

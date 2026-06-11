@@ -19,7 +19,7 @@ const createSchema = z.object({
         productId: z.string(),
         quantity: z.number().int().positive().max(99),
         variant: z.string().optional(),
-      })
+      }),
     )
     .min(1),
   deliveryAddress: z.object({
@@ -62,10 +62,10 @@ orderRouter.post(
         body.deliverySpeed === "express"
           ? 2000
           : body.deliverySpeed === "pickup"
-          ? 0
-          : subtotal >= 10_000
-          ? 0
-          : 1500;
+            ? 0
+            : subtotal >= 10_000
+              ? 0
+              : 1500;
       const total = subtotal + deliveryFee;
       const order = await Order.create({
         orderNumber: makeOrderNumber(),
@@ -92,12 +92,15 @@ orderRouter.post(
     } catch (e) {
       next(e);
     }
-  }
+  },
 );
 
 orderRouter.get("/me", requireAuth, async (req: AuthedRequest, res, next) => {
   try {
-    const orders = await Order.find({ buyerId: req.user!.id }).sort({ createdAt: -1 }).limit(50).lean();
+    const orders = await Order.find({ buyerId: req.user!.id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
     res.json({ orders });
   } catch (e) {
     next(e);
@@ -140,7 +143,7 @@ orderRouter.patch(
       const { status, note } = req.body as z.infer<typeof statusSchema>;
       const order = await Order.findById(req.params.id);
       if (!order) throw new HttpError(404, "Order not found.");
-      order.status = status as any;
+      order.status = status as unknown as typeof order.status;
       order.statusHistory.push({ status, at: new Date(), note });
       await order.save();
       emitOrderUpdate(String(order._id), { status, at: new Date(), note });
@@ -148,5 +151,5 @@ orderRouter.patch(
     } catch (e) {
       next(e);
     }
-  }
+  },
 );
