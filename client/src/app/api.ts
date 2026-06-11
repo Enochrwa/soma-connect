@@ -63,6 +63,10 @@ export const api = createApi({
       query: ({ id, ...body }) => ({ url: `/products/${id}`, method: "PUT", body }),
       invalidatesTags: (_r, _e, { id }) => [{ type: "Product", id }, "Products"],
     }),
+    deleteProduct: b.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/products/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Products"],
+    }),
 
     // ── Auth ─────────────────────────────────────────────────────────────────
     login: b.mutation<{ user: User; accessToken: string }, { phone: string; password: string }>({
@@ -269,6 +273,7 @@ export const {
   useGetProductQuery,
   useCreateProductMutation,
   useUpdateProductMutation,
+  useDeleteProductMutation,
   // Auth
   useLoginMutation,
   useRegisterMutation,

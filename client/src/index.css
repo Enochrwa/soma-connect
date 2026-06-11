@@ -71,6 +71,74 @@ body {
   background: #0a2e1f;
 }
 
+/* ── Component utilities ────────────────────────────────────────────────────── */
+.card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px 0 rgba(10, 46, 31, 0.08);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 32px 0 rgba(10, 46, 31, 0.16);
+}
+
+.btn-primary {
+  background-color: #0a2e1f;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #13452f;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f5a623;
+  color: #0a2e1f;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-secondary:hover {
+  background-color: #d88e16;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
 /* ── Price display ──────────────────────────────────────────────────────────── */
 .price {
   font-family: var(--font-mono);

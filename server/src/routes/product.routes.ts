@@ -142,3 +142,81 @@ productRouter.post(
     }
   },
 );
+
+const updateSchema = createSchema.partial().extend({
+  isActive: z.boolean().optional(),
+});
+
+productRouter.put(
+  "/:id",
+  requireAuth,
+  requireRole("seller", "admin"),
+  validate(updateSchema),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const product = await Product.findById(req.params.id);
+      if (!product) throw new HttpError(404, "Product not found.");
+
+      // Admins can edit any product; sellers only their own
+      if (req.user!.role !== "admin") {
+        const seller = await Seller.findOne({ userId: req.user!.id });
+        if (!seller || String(product.sellerId) !== String(seller._id)) {
+          throw new HttpError(403, "You can only edit your own products.");
+        }
+      }
+
+      const body = req.body as z.infer<typeof updateSchema>;
+      if (body.title) {
+        (body as Record<string, unknown>).slug =
+          `${slugify(body.title)}-${Date.now().toString(36)}`;
+      }
+      Object.assign(product, body);
+      await product.save();
+      res.json({ product });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+productRouter.delete(
+  "/:id",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const product = await Product.findById(req.params.id);
+      if (!product) throw new HttpError(404, "Product not found.");
+
+      if (req.user!.role !== "admin") {
+        const seller = await Seller.findOne({ userId: req.user!.id });
+        if (!seller || String(product.sellerId) !== String(seller._id)) {
+          throw new HttpError(403, "You can only delete your own products.");
+        }
+      }
+
+      // Soft-delete: just deactivate
+      product.isActive = false;
+      await product.save();
+      res.json({ ok: true, message: "Product removed from store." });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// Hard-delete for admins only
+productRouter.delete(
+  "/:id/hard",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const product = await Product.findByIdAndDelete(req.params.id);
+      if (!product) throw new HttpError(404, "Product not found.");
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
