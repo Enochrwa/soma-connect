@@ -1,55 +1,33 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
+**/node_modules/
 
-# Build outputs
-dist/
-dist-ssr/
-build/
-.output/
-.vinxi/
-.tanstack/
-.nitro/
+# Build output
+**/dist/
+**/build/
 
-# Environment files (NEVER commit these)
+# Environment — NEVER commit real secrets
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 server/.env
-client/.env
+client/.env.local
 
 # Logs
-logs/
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
 # Editor
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+.vscode/
 .idea/
+*.swp
 
 # TypeScript
 *.tsbuildinfo
 
-# Misc
-*.local
-.wrangler/
-.dev.vars
+# Testing
 coverage/
-server/.env
-client/.env
-
-# Workspace-local node_modules (generated per-workspace)
-client/node_modules/
-server/node_modules/

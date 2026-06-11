@@ -62,6 +62,8 @@ export interface Seller {
   accountType: AccountType;
   location?: { sector?: string; district?: string };
   verificationTier: VerificationTier;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  approvalNote?: string;
   rating: number;
   ratingCount: number;
   totalSales: number;
