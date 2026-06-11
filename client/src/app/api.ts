@@ -1,9 +1,19 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "./store";
+import type {
+  User,
+  Product,
+  Seller,
+  Order,
+  Review,
+  LoyaltyEvent,
+  PaginatedResponse,
+} from "../types";
 
 const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 
 export const api = createApi({
+  reducerPath: "api",
   baseQuery: fetchBaseQuery({
     baseUrl,
     credentials: "include",
@@ -13,60 +23,292 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Products", "Product", "Cart", "Orders", "Order", "Me", "Seller"],
+  tagTypes: [
+    "Products",
+    "Product",
+    "Cart",
+    "Orders",
+    "Order",
+    "Me",
+    "Seller",
+    "Reviews",
+    "Notifications",
+    "Loyalty",
+    "AdminStats",
+  ],
   endpoints: (b) => ({
-    listProducts: b.query<{ items: any[]; total: number }, Record<string, any>>({
+    // ── Products ─────────────────────────────────────────────────────────────
+    listProducts: b.query<PaginatedResponse<Product>, Record<string, string | number | undefined>>({
       query: (params) => ({ url: "/products", params }),
       providesTags: ["Products"],
     }),
-    flashDeals: b.query<{ items: any[] }, void>({ query: () => "/products/flash-deals" }),
-    trending: b.query<{ items: any[] }, void>({ query: () => "/products/trending" }),
-    newArrivals: b.query<{ items: any[] }, void>({ query: () => "/products/new" }),
-    getProduct: b.query<{ product: any }, string>({
+    flashDeals: b.query<{ items: Product[] }, void>({
+      query: () => "/products/flash-deals",
+    }),
+    trending: b.query<{ items: Product[] }, void>({
+      query: () => "/products/trending",
+    }),
+    newArrivals: b.query<{ items: Product[] }, void>({
+      query: () => "/products/new",
+    }),
+    getProduct: b.query<{ product: Product }, string>({
       query: (id) => `/products/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Product", id }],
     }),
-    login: b.mutation<{ user: any; accessToken: string }, { phone: string; password: string }>({
+    createProduct: b.mutation<{ product: Product }, Partial<Product>>({
+      query: (body) => ({ url: "/products", method: "POST", body }),
+      invalidatesTags: ["Products"],
+    }),
+    updateProduct: b.mutation<{ product: Product }, { id: string } & Partial<Product>>({
+      query: ({ id, ...body }) => ({ url: `/products/${id}`, method: "PUT", body }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: "Product", id }, "Products"],
+    }),
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    login: b.mutation<{ user: User; accessToken: string }, { phone: string; password: string }>({
       query: (body) => ({ url: "/auth/login", method: "POST", body }),
+      invalidatesTags: ["Me"],
     }),
-    register: b.mutation<{ user: any; accessToken: string }, any>({
+    register: b.mutation<
+      { user: User; accessToken: string },
+      { name: string; phone: string; email?: string; password: string }
+    >({
       query: (body) => ({ url: "/auth/register", method: "POST", body }),
+      invalidatesTags: ["Me"],
     }),
-    requestOtp: b.mutation<{ ok: true }, { email: string }>({
+    requestOtp: b.mutation<{ ok: boolean }, { email: string }>({
       query: (body) => ({ url: "/auth/otp/request", method: "POST", body }),
     }),
-    verifyOtp: b.mutation<{ user: any; accessToken: string }, { email: string; code: string }>({
+    verifyOtp: b.mutation<{ user: User; accessToken: string }, { email: string; code: string }>({
       query: (body) => ({ url: "/auth/otp/verify", method: "POST", body }),
+      invalidatesTags: ["Me"],
     }),
-    createOrder: b.mutation<{ order: any }, any>({
+    refreshToken: b.mutation<{ user: User; accessToken: string }, void>({
+      query: () => ({ url: "/auth/refresh", method: "POST" }),
+    }),
+    logout: b.mutation<{ ok: boolean }, void>({
+      query: () => ({ url: "/auth/logout", method: "POST" }),
+      invalidatesTags: ["Me", "Cart", "Orders"],
+    }),
+
+    // ── User ─────────────────────────────────────────────────────────────────
+    getMe: b.query<{ user: User }, void>({
+      query: () => "/users/me",
+      providesTags: ["Me"],
+    }),
+    updateProfile: b.mutation<{ user: User }, Partial<User>>({
+      query: (body) => ({ url: "/users/me", method: "PATCH", body }),
+      invalidatesTags: ["Me"],
+    }),
+    addAddress: b.mutation<
+      { addresses: User["addresses"] },
+      {
+        label?: string;
+        sector: string;
+        district?: string;
+        street?: string;
+        phone?: string;
+        isDefault?: boolean;
+      }
+    >({
+      query: (body) => ({ url: "/users/me/addresses", method: "POST", body }),
+      invalidatesTags: ["Me"],
+    }),
+    deleteAddress: b.mutation<{ addresses: User["addresses"] }, string>({
+      query: (id) => ({ url: `/users/me/addresses/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Me"],
+    }),
+    getMyOrders: b.query<{ orders: Order[] }, void>({
+      query: () => "/users/me/orders",
+      providesTags: ["Orders"],
+    }),
+
+    // ── Orders ───────────────────────────────────────────────────────────────
+    createOrder: b.mutation<
+      { order: Order },
+      {
+        items: Array<{ productId: string; quantity: number; variant?: string }>;
+        deliveryAddress: { sector: string; district?: string; street?: string; phone: string };
+        deliverySpeed: "standard" | "express" | "pickup";
+        paymentMethod: "mtn_momo" | "airtel_money" | "cod";
+        couponCode?: string;
+      }
+    >({
       query: (body) => ({ url: "/orders", method: "POST", body }),
       invalidatesTags: ["Orders"],
     }),
-    getOrder: b.query<{ order: any }, string>({
+    getOrder: b.query<{ order: Order }, string>({
       query: (id) => `/orders/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Order", id }],
     }),
-    payMock: b.mutation<{ mockRef: string; message: string }, { orderId: string; method: string; phone: string }>({
+
+    // ── Payments ─────────────────────────────────────────────────────────────
+    payMock: b.mutation<
+      { mockRef: string; message: string },
+      { orderId: string; method: "mtn_momo" | "airtel_money"; phone: string }
+    >({
       query: (body) => ({ url: "/payments/mock", method: "POST", body }),
+      invalidatesTags: (_r, _e, { orderId }) => [{ type: "Order", id: orderId }],
     }),
-    aiChat: b.mutation<{ reply: string }, { messages: Array<{ role: string; content: string }> }>({
+
+    // ── Reviews ──────────────────────────────────────────────────────────────
+    getReviews: b.query<{ reviews: Review[] }, string>({
+      query: (productId) => `/reviews/product/${productId}`,
+      providesTags: (_r, _e, id) => [{ type: "Reviews", id }],
+    }),
+    createReview: b.mutation<
+      { review: Review },
+      { productId: string; rating: number; text: string; images?: string[]; tags?: string[] }
+    >({
+      query: (body) => ({ url: "/reviews", method: "POST", body }),
+      invalidatesTags: (_r, _e, { productId }) => [
+        { type: "Reviews", id: productId },
+        { type: "Product", id: productId },
+      ],
+    }),
+
+    // ── Sellers ──────────────────────────────────────────────────────────────
+    getSeller: b.query<{ seller: Seller; products: Product[] }, string>({
+      query: (slug) => `/sellers/${slug}`,
+      providesTags: (_r, _e, slug) => [{ type: "Seller", id: slug }],
+    }),
+    applyAsSeller: b.mutation<
+      { seller: Seller },
+      {
+        storeName: string;
+        description?: string;
+        accountType?: string;
+        sector: string;
+        logo?: string;
+        banner?: string;
+      }
+    >({
+      query: (body) => ({ url: "/sellers/apply", method: "POST", body }),
+      invalidatesTags: ["Me"],
+    }),
+    getMyStore: b.query<{ seller: Seller; productCount: number }, void>({
+      query: () => "/sellers/me/overview",
+      providesTags: ["Seller"],
+    }),
+
+    // ── Uploads ──────────────────────────────────────────────────────────────
+    uploadFiles: b.mutation<{ urls: string[] }, FormData>({
+      query: (formData) => ({
+        url: "/uploads",
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+    }),
+
+    // ── AI ───────────────────────────────────────────────────────────────────
+    aiChat: b.mutation<
+      { reply: string },
+      { messages: Array<{ role: "user" | "assistant" | "system"; content: string }> }
+    >({
       query: (body) => ({ url: "/ai/chat", method: "POST", body }),
+    }),
+
+    // ── Loyalty ──────────────────────────────────────────────────────────────
+    getLoyalty: b.query<{ points: number; tier: string; events: LoyaltyEvent[] }, void>({
+      query: () => "/loyalty/me",
+      providesTags: ["Loyalty"],
+    }),
+    claimDailyLogin: b.mutation<{ awarded: number; message?: string }, void>({
+      query: () => ({ url: "/loyalty/daily-login", method: "POST" }),
+      invalidatesTags: ["Loyalty", "Me"],
+    }),
+
+    // ── Notifications ────────────────────────────────────────────────────────
+    getNotifications: b.query<{ notifications: Notification[]; unreadCount: number }, void>({
+      query: () => "/notifications",
+      providesTags: ["Notifications"],
+    }),
+    markNotificationRead: b.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/notifications/${id}/read`, method: "PATCH" }),
+      invalidatesTags: ["Notifications"],
+    }),
+    markAllRead: b.mutation<{ ok: boolean }, void>({
+      query: () => ({ url: "/notifications/read-all", method: "PATCH" }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    // ── Admin ────────────────────────────────────────────────────────────────
+    adminDashboard: b.query<{ stats: Record<string, number>; recentOrders: Order[] }, void>({
+      query: () => "/admin/dashboard",
+      providesTags: ["AdminStats"],
+    }),
+    adminUsers: b.query<
+      { users: User[]; total: number; pages: number },
+      { q?: string; role?: string; page?: number }
+    >({
+      query: (params) => ({ url: "/admin/users", params }),
+    }),
+    adminSellers: b.query<{ sellers: Seller[]; total: number }, { tier?: string; page?: number }>({
+      query: (params) => ({ url: "/admin/sellers", params }),
+    }),
+    adminUpdateSellerTier: b.mutation<{ seller: Seller }, { id: string; tier: string }>({
+      query: ({ id, ...body }) => ({ url: `/admin/sellers/${id}/tier`, method: "PATCH", body }),
+      invalidatesTags: ["AdminStats"],
+    }),
+    adminRevenueAnalytics: b.query<
+      { data: Array<{ _id: string; revenue: number; orders: number }> },
+      { days?: number }
+    >({
+      query: (params) => ({ url: "/admin/analytics/revenue", params }),
     }),
   }),
 });
 
 export const {
+  // Products
   useListProductsQuery,
   useFlashDealsQuery,
   useTrendingQuery,
   useNewArrivalsQuery,
   useGetProductQuery,
+  useCreateProductMutation,
+  useUpdateProductMutation,
+  // Auth
   useLoginMutation,
   useRegisterMutation,
   useRequestOtpMutation,
   useVerifyOtpMutation,
+  useRefreshTokenMutation,
+  useLogoutMutation,
+  // User
+  useGetMeQuery,
+  useUpdateProfileMutation,
+  useAddAddressMutation,
+  useDeleteAddressMutation,
+  useGetMyOrdersQuery,
+  // Orders
   useCreateOrderMutation,
   useGetOrderQuery,
+  // Payments
   usePayMockMutation,
+  // Reviews
+  useGetReviewsQuery,
+  useCreateReviewMutation,
+  // Sellers
+  useGetSellerQuery,
+  useApplyAsSellerMutation,
+  useGetMyStoreQuery,
+  // Uploads
+  useUploadFilesMutation,
+  // AI
   useAiChatMutation,
+  // Loyalty
+  useGetLoyaltyQuery,
+  useClaimDailyLoginMutation,
+  // Notifications
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+  useMarkAllReadMutation,
+  // Admin
+  useAdminDashboardQuery,
+  useAdminUsersQuery,
+  useAdminSellersQuery,
+  useAdminUpdateSellerTierMutation,
+  useAdminRevenueAnalyticsQuery,
 } = api;

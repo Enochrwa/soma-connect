@@ -10,7 +10,7 @@ const OrderItemSchema = new Schema(
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const StatusHistorySchema = new Schema(
@@ -19,7 +19,7 @@ const StatusHistorySchema = new Schema(
     note: String,
     at: { type: Date, default: Date.now },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const OrderSchema = new Schema(
@@ -68,7 +68,7 @@ const OrderSchema = new Schema(
     couponCode: String,
     pointsEarned: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type OrderDoc = InferSchemaType<typeof OrderSchema> & { _id: string };

@@ -9,12 +9,16 @@ export default function MarketPulse() {
   useEffect(() => {
     const socket = io(url, { transports: ["websocket"] });
     socket.on("marketPulse", (p: { activeShoppers: number }) => setCount(p.activeShoppers));
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+    };
   }, []);
   return (
     <div className="bg-forest text-ivory text-xs md:text-sm">
       <div className="mx-auto max-w-7xl px-4 py-2 flex items-center gap-6 overflow-x-auto whitespace-nowrap font-mono">
-        <span className="flex items-center gap-2 text-saffron"><Flame size={14}/> Market Pulse</span>
+        <span className="flex items-center gap-2 text-saffron">
+          <Flame size={14} /> Market Pulse
+        </span>
         <span>🛍️ {count || "—"} shopping now</span>
         <span>⚡ Flash sales live</span>
         <span className="hidden md:inline">📦 Same-day delivery in Kigali</span>

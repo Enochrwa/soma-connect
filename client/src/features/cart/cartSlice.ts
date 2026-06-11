@@ -28,7 +28,7 @@ const slice = createSlice({
   reducers: {
     addItem(state, action: PayloadAction<CartItem>) {
       const existing = state.items.find(
-        (i) => i.productId === action.payload.productId && i.variant === action.payload.variant
+        (i) => i.productId === action.payload.productId && i.variant === action.payload.variant,
       );
       if (existing) {
         existing.quantity = Math.min(existing.stock, existing.quantity + action.payload.quantity);
@@ -37,9 +37,12 @@ const slice = createSlice({
       }
       persist(state);
     },
-    updateQty(state, action: PayloadAction<{ productId: string; variant?: string; quantity: number }>) {
+    updateQty(
+      state,
+      action: PayloadAction<{ productId: string; variant?: string; quantity: number }>,
+    ) {
       const it = state.items.find(
-        (i) => i.productId === action.payload.productId && i.variant === action.payload.variant
+        (i) => i.productId === action.payload.productId && i.variant === action.payload.variant,
       );
       if (it) {
         it.quantity = Math.max(1, Math.min(it.stock, action.payload.quantity));
@@ -48,7 +51,7 @@ const slice = createSlice({
     },
     removeItem(state, action: PayloadAction<{ productId: string; variant?: string }>) {
       state.items = state.items.filter(
-        (i) => !(i.productId === action.payload.productId && i.variant === action.payload.variant)
+        (i) => !(i.productId === action.payload.productId && i.variant === action.payload.variant),
       );
       persist(state);
     },

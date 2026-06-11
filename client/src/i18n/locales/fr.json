@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "search": "Rechercher des produits…",
+    "cart": "Panier",
+    "wishlist": "Favoris",
+    "orders": "Mes Commandes",
+    "account": "Compte",
+    "sell": "Commencer à Vendre",
+    "admin": "Administration"
+  },
+  "home": {
+    "pulse": "{{count}} personnes font leurs achats",
+    "flashDeals": "Ventes Flash",
+    "trending": "Tendance à Kigali",
+    "newArrivals": "Nouveautés",
+    "featuredSeller": "Vendeur en Vedette",
+    "endsIn": "Se termine dans"
+  },
+  "product": {
+    "addToCart": "Ajouter au Panier",
+    "buyNow": "Acheter Maintenant",
+    "saveToWishlist": "Sauvegarder",
+    "inStock": "En Stock",
+    "lowStock": "Plus que {{count}}",
+    "outOfStock": "Rupture de Stock",
+    "reviews": "{{count}} avis",
+    "verifiedPurchase": "Achat Vérifié",
+    "deliveryTo": "Livrer à"
+  },
+  "cart": {
+    "empty": "Votre panier est vide",
+    "continueShopping": "Continuer vos Achats",
+    "checkout": "Valider",
+    "subtotal": "Sous-total",
+    "deliveryFee": "Frais de Livraison",
+    "total": "Total",
+    "promoCode": "Code promo",
+    "apply": "Appliquer",
+    "saveForLater": "Sauvegarder pour plus tard"
+  },
+  "checkout": {
+    "delivery": "Livraison",
+    "payment": "Paiement",
+    "confirm": "Confirmation",
+    "placeOrder": "Passer la Commande",
+    "momoPrompt": "Vous recevrez une notification USSD sur {{phone}}",
+    "momoWaiting": "En attente de confirmation…",
+    "codNote": "Payez en espèces à la livraison",
+    "success": "Commande passée !",
+    "orderNumber": "Commande #{{number}}"
+  },
+  "auth": {
+    "login": "Se Connecter",
+    "register": "Créer un Compte",
+    "phone": "Numéro de téléphone",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "otpSent": "OTP envoyé à {{email}}",
+    "continueWithGoogle": "Continuer avec Google",
+    "noAccount": "Pas encore de compte ?",
+    "haveAccount": "Vous avez déjà un compte ?"
+  },
+  "loyalty": {
+    "points": "{{count}} pts",
+    "tier": "Membre {{tier}}",
+    "earnPoints": "Gagnez des points à chaque achat",
+    "dailyLogin": "Réclamer le bonus connexion quotidien",
+    "spinWheel": "Faire tourner la roue",
+    "mysteryBox": "Boîte Mystère"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "error": "Une erreur s'est produite",
+    "retry": "Réessayer",
+    "offline": "Vous êtes hors ligne — les modifications seront synchronisées à la reconnexion",
+    "seeAll": "Voir tout",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "save": "Sauvegarder",
+    "delete": "Supprimer",
+    "confirm": "Confirmer",
+    "share": "Partager sur WhatsApp"
+  }
+}

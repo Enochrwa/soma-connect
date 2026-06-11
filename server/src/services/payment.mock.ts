@@ -38,7 +38,11 @@ export async function initiateMobileMoneyPush(opts: {
         order.paymentRef = mockRef;
         if (finalStatus === "succeeded") {
           order.status = "payment_confirmed";
-          order.statusHistory.push({ status: "payment_confirmed", at: new Date(), note: "Mock MoMo confirmed" });
+          order.statusHistory.push({
+            status: "payment_confirmed",
+            at: new Date(),
+            note: "Mock MoMo confirmed",
+          });
         }
         await order.save();
       }

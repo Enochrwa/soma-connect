@@ -1,22 +1,27 @@
-import { useEffect, useState } from "react";
+import { useOffline } from "../../hooks/useOffline";
 import { WifiOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
 
-export default function OfflineBanner() {
-  const [online, setOnline] = useState(navigator.onLine);
-  useEffect(() => {
-    const up = () => setOnline(true);
-    const down = () => setOnline(false);
-    window.addEventListener("online", up);
-    window.addEventListener("offline", down);
-    return () => {
-      window.removeEventListener("online", up);
-      window.removeEventListener("offline", down);
-    };
-  }, []);
-  if (online) return null;
+export function OfflineBanner() {
+  const isOffline = useOffline();
+  const { t } = useTranslation();
+
   return (
-    <div className="bg-vermillion text-white text-sm py-2 text-center flex items-center justify-center gap-2">
-      <WifiOff size={14} /> You're offline — changes will sync when you reconnect.
-    </div>
+    <AnimatePresence>
+      {isOffline && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="bg-slate-800 text-white text-sm overflow-hidden"
+        >
+          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2">
+            <WifiOff size={14} />
+            <span>{t("common.offline")}</span>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

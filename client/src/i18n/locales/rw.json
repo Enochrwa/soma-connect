@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "home": "Ahabanza",
+    "search": "Shakisha ibicuruzwa…",
+    "cart": "Agasanduku",
+    "wishlist": "Wishlist",
+    "orders": "Amalagizo Yanjye",
+    "account": "Konti",
+    "sell": "Tangira Kugurisha",
+    "admin": "Ubuyobozi"
+  },
+  "home": {
+    "pulse": "{{count}} abantu bagura ubu",
+    "flashDeals": "Ibicuruzwa Bigurishwa Vuba",
+    "trending": "Bikunzwe i Kigali",
+    "newArrivals": "Bishya Byageze",
+    "featuredSeller": "Umucuruzi Wa Iyi Nshuro",
+    "endsIn": "Irangira mu"
+  },
+  "product": {
+    "addToCart": "Shyira mu Gasanduku",
+    "buyNow": "Gura Ubu",
+    "saveToWishlist": "Bika mu Wishlist",
+    "inStock": "Biraboneka",
+    "lowStock": "{{count}} gusa bisigaye",
+    "outOfStock": "Ntibiraboneka",
+    "reviews": "{{count}} ibitekerezo",
+    "verifiedPurchase": "Kugura Bihamijwe",
+    "deliveryTo": "Tanga kuri"
+  },
+  "cart": {
+    "empty": "Agasanduku kawe karimo ubusa",
+    "continueShopping": "Komeza Kugura",
+    "checkout": "Ishyura",
+    "subtotal": "Igiteranyo",
+    "deliveryFee": "Amafaranga yo Gutanga",
+    "total": "Igiteranyo Cyose",
+    "promoCode": "Kode ya Promo",
+    "apply": "Shyira",
+    "saveForLater": "Bika kugurisha nyuma"
+  },
+  "checkout": {
+    "delivery": "Gutanga",
+    "payment": "Kwishyura",
+    "confirm": "Emeza",
+    "placeOrder": "Saba Kugura",
+    "momoPrompt": "Uzabona USSD kuri {{phone}}",
+    "momoWaiting": "Turategereza kwemezwa…",
+    "codNote": "Ishyura amafaranga igihe ibicuruzwa byageze",
+    "success": "Ilagizo ryashyizweho!",
+    "orderNumber": "Ilagizo #{{number}}"
+  },
+  "auth": {
+    "login": "Injira",
+    "register": "Fungura Konti",
+    "phone": "Nimero ya telefoni",
+    "email": "Imeyili",
+    "password": "Ijambo ry'ibanga",
+    "forgotPassword": "Wibagiwe ijambo ry'ibanga?",
+    "otpSent": "OTP yoherejwe kuri {{email}}",
+    "continueWithGoogle": "Komeza na Google",
+    "noAccount": "Nta konti ufite?",
+    "haveAccount": "Usanzwe ufite konti?"
+  },
+  "loyalty": {
+    "points": "{{count}} pts",
+    "tier": "Umunyamuryango wa {{tier}}",
+    "earnPoints": "Unguka amanota ku kugura",
+    "dailyLogin": "Shaka indamuro yo kwinjira buri munsi",
+    "spinWheel": "Vugurura ingurube",
+    "mysteryBox": "Agasanduku Kagize Ibanga"
+  },
+  "common": {
+    "loading": "Turategereza…",
+    "error": "Hari ikitagenze neza",
+    "retry": "Gerageza nanone",
+    "offline": "Ntimuunganye — impinduka zizaboneka igihe musubiye mu murongo",
+    "seeAll": "Reba Byose",
+    "back": "Subira Inyuma",
+    "cancel": "Siba",
+    "save": "Bika",
+    "delete": "Siba",
+    "confirm": "Emeza",
+    "share": "Sangira kuri WhatsApp"
+  }
+}

@@ -4,17 +4,18 @@ import { useFlashDealsQuery } from "../../app/api";
 import ProductCard from "../product/ProductCard";
 import { Skeleton } from "../ui/Skeleton";
 import { countdown } from "../../utils/format";
+import type { Product } from "../../types";
 
 export default function FlashDeals() {
   const { data, isLoading } = useFlashDealsQuery();
-  const items = data?.items ?? [];
+  const items: Product[] = data?.items ?? [];
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
   const soonest = items
-    .map((i: any) => i.flashSale?.endsAt)
+    .map((i) => i.flashSale?.endsAt)
     .filter(Boolean)
     .sort()[0];
 
@@ -38,7 +39,7 @@ export default function FlashDeals() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-square" />)
-          : items.slice(0, 4).map((p: any) => <ProductCard key={p._id} p={p} />)}
+          : items.slice(0, 4).map((p) => <ProductCard key={p._id} p={p} />)}
       </div>
     </section>
   );

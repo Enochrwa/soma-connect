@@ -38,7 +38,9 @@ export default function Hero() {
   const s = SLIDES[i];
   return (
     <section className="relative mx-auto max-w-7xl px-4 pt-6">
-      <div className={`rounded-3xl overflow-hidden bg-gradient-to-br ${s.bg} text-ivory shadow-soft`}>
+      <div
+        className={`rounded-3xl overflow-hidden bg-gradient-to-br ${s.bg} text-ivory shadow-soft`}
+      >
         <div className="px-6 md:px-12 py-12 md:py-20 grid md:grid-cols-2 gap-8 items-center">
           <AnimatePresence mode="wait">
             <motion.div
@@ -49,9 +51,13 @@ export default function Hero() {
               transition={{ duration: 0.4 }}
             >
               <span className="pill bg-saffron text-slate">{s.eyebrow}</span>
-              <h1 className="font-display text-4xl md:text-5xl font-semibold mt-3 leading-tight">{s.title}</h1>
+              <h1 className="font-display text-4xl md:text-5xl font-semibold mt-3 leading-tight">
+                {s.title}
+              </h1>
               <p className="mt-3 text-ivory/80 max-w-md">{s.sub}</p>
-              <Link to={s.to} className="btn-primary mt-6">{s.cta}</Link>
+              <Link to={s.to} className="btn-primary mt-6">
+                {s.cta}
+              </Link>
             </motion.div>
           </AnimatePresence>
           <div className="hidden md:flex items-center justify-end">

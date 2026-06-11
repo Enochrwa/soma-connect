@@ -7,7 +7,7 @@ const OtpSchema = new Schema(
     expiresAt: { type: Date, required: true, index: { expires: 0 } },
     attempts: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Otp = model("Otp", OtpSchema);

@@ -1,10 +1,10 @@
-export default function PageSkeleton() {
+export function PageSkeleton() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 space-y-4">
-      <div className="h-10 w-1/3 skeleton rounded-xl" />
+    <div className="max-w-7xl mx-auto px-4 py-8 animate-pulse space-y-6">
+      <div className="skeleton h-64 rounded-2xl" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-64 skeleton rounded-2xl" />
+          <div key={i} className="skeleton h-48 rounded-xl" />
         ))}
       </div>
     </div>

@@ -6,13 +6,22 @@ const LoyaltyEventSchema = new Schema(
     points: { type: Number, required: true },
     type: {
       type: String,
-      enum: ["purchase", "review", "referral", "daily_login", "profile_completed", "redeem", "mystery_box"],
+      enum: [
+        "purchase",
+        "review",
+        "referral",
+        "daily_login",
+        "profile_complete",
+        "mystery_box",
+        "spin_wheel",
+        "admin_adjustment",
+      ],
       required: true,
     },
-    description: String,
-    orderId: { type: Schema.Types.ObjectId, ref: "Order" },
+    description: { type: String, default: "" },
+    relatedId: { type: Schema.Types.ObjectId }, // orderId, reviewId, etc.
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type LoyaltyEventDoc = InferSchemaType<typeof LoyaltyEventSchema> & { _id: string };

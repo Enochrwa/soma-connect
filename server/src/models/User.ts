@@ -9,7 +9,7 @@ const AddressSchema = new Schema(
     phone: String,
     isDefault: { type: Boolean, default: false },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const UserSchema = new Schema(
@@ -42,7 +42,7 @@ const UserSchema = new Schema(
       push: { type: Boolean, default: true },
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: string };

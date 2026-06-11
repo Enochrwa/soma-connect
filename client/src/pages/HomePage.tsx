@@ -1,23 +1,8 @@
-import MarketPulse from "../components/home/MarketPulse";
-import Hero from "../components/home/Hero";
-import CategoryPills from "../components/home/CategoryPills";
-import FlashDeals from "../components/home/FlashDeals";
-import ProductRow from "../components/home/ProductRow";
-import SocialProof from "../components/home/SocialProof";
-import { useTrendingQuery, useNewArrivalsQuery } from "../app/api";
-
 export default function HomePage() {
-  const trending = useTrendingQuery();
-  const fresh = useNewArrivalsQuery();
   return (
-    <>
-      <MarketPulse />
-      <Hero />
-      <CategoryPills />
-      <FlashDeals />
-      <ProductRow title="Trending in Kigali" items={trending.data?.items ?? []} isLoading={trending.isLoading} />
-      <ProductRow title="New arrivals" items={fresh.data?.items ?? []} isLoading={fresh.isLoading} />
-      <SocialProof />
-    </>
+    <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+      <h1 className="font-display text-3xl font-bold text-forest">HomePage</h1>
+      <p className="text-gray-500 mt-2">Coming soon — Sprint 2.</p>
+    </div>
   );
 }

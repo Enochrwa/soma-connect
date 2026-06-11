@@ -86,18 +86,23 @@ authRouter.post("/login", strictLimiter, validate(loginSchema), async (req, res,
 });
 
 const otpRequestSchema = z.object({ email: z.string().email() });
-authRouter.post("/otp/request", strictLimiter, validate(otpRequestSchema), async (req, res, next) => {
-  try {
-    const { email } = req.body as { email: string };
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const codeHash = await bcrypt.hash(code, 8);
-    await Otp.create({ email, codeHash, expiresAt: new Date(Date.now() + 10 * 60_000) });
-    await sendOtpEmail(email, code);
-    res.json({ ok: true, message: "If that email exists, a code is on its way." });
-  } catch (e) {
-    next(e);
-  }
-});
+authRouter.post(
+  "/otp/request",
+  strictLimiter,
+  validate(otpRequestSchema),
+  async (req, res, next) => {
+    try {
+      const { email } = req.body as { email: string };
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const codeHash = await bcrypt.hash(code, 8);
+      await Otp.create({ email, codeHash, expiresAt: new Date(Date.now() + 10 * 60_000) });
+      await sendOtpEmail(email, code);
+      res.json({ ok: true, message: "If that email exists, a code is on its way." });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 const otpVerifySchema = z.object({ email: z.string().email(), code: z.string().length(6) });
 authRouter.post("/otp/verify", strictLimiter, validate(otpVerifySchema), async (req, res, next) => {
@@ -115,7 +120,9 @@ authRouter.post("/otp/verify", strictLimiter, validate(otpVerifySchema), async (
     let user = await User.findOne({ email });
     if (!user) {
       user = await User.create({
-        phone: `+250 ${nanoid(9).replace(/[^0-9]/g, "0").slice(0, 9)}`,
+        phone: `+250 ${nanoid(9)
+          .replace(/[^0-9]/g, "0")
+          .slice(0, 9)}`,
         email,
         emailVerifiedAt: new Date(),
         referralCode: nanoid(8).toUpperCase(),
@@ -155,7 +162,20 @@ authRouter.post("/logout", (_req, res) => {
   res.json({ ok: true });
 });
 
-function sanitize(u: any) {
+// Accepts both Mongoose Documents and lean objects — mirrors the User schema shape
+type UserLike = {
+  _id: unknown;
+  phone?: string | null;
+  email?: string | null;
+  role?: string | null;
+  profile?: unknown;
+  addresses?: unknown;
+  loyaltyPoints?: number | null;
+  tier?: string | null;
+  referralCode?: string | null;
+};
+
+function sanitize(u: UserLike) {
   return {
     id: String(u._id),
     phone: u.phone,

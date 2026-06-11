@@ -15,7 +15,7 @@ const TransactionSchema = new Schema(
     },
     rawMeta: Schema.Types.Mixed,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export type TransactionDoc = InferSchemaType<typeof TransactionSchema> & { _id: string };

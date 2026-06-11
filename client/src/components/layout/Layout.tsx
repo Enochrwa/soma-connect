@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
-import MobileBottomNav from "./MobileBottomNav";
-import OfflineBanner from "./OfflineBanner";
+import { Navbar } from "./Navbar";
+import { Footer } from "./Footer";
+import { MobileBottomNav } from "./MobileBottomNav";
+import { OfflineBanner } from "./OfflineBanner";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (

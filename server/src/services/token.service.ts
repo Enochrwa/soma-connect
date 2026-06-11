@@ -1,16 +1,16 @@
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import type { Response } from "express";
 import { env } from "../config/env.js";
 
 export function signAccessToken(user: { id: string; role: string }) {
   return jwt.sign({ sub: user.id, role: user.role }, env.JWT_ACCESS_SECRET, {
-    expiresIn: env.JWT_ACCESS_EXPIRES as any,
+    expiresIn: env.JWT_ACCESS_EXPIRES as SignOptions["expiresIn"],
   });
 }
 
 export function signRefreshToken(user: { id: string; role: string }) {
   return jwt.sign({ sub: user.id, role: user.role }, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRES as any,
+    expiresIn: env.JWT_REFRESH_EXPIRES as SignOptions["expiresIn"],
   });
 }
 

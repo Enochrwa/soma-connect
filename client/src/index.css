@@ -1,38 +1,143 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@500;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html, body, #root { height: 100%; }
-  body {
-    @apply bg-ivory text-slate font-sans antialiased;
-  }
-  h1, h2, h3, h4 { @apply font-display tracking-tight; }
+/* ── CSS Custom Properties ─────────────────────────────────────────────────── */
+:root {
+  --color-forest: #0a2e1f;
+  --color-forest-light: #13452f;
+  --color-saffron: #f5a623;
+  --color-saffron-dark: #d88e16;
+  --color-ivory: #faf7f2;
+  --color-vermillion: #e63b2e;
+  --color-slate: #1c1c1e;
+  --font-display: "Clash Display", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-@layer components {
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-saffron px-5 py-3 font-semibold text-slate shadow-gold transition hover:brightness-105 active:scale-[0.98];
-  }
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 font-semibold text-ivory transition hover:bg-forest-600 active:scale-[0.98];
-  }
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-forest/15 bg-white px-4 py-2.5 font-medium text-slate transition hover:border-forest/30;
-  }
-  .card {
-    @apply rounded-2xl bg-white shadow-soft border border-black/[0.04];
-  }
-  .price { @apply font-mono font-bold text-forest; }
-  .pill { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium; }
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-ivory);
+  color: var(--color-slate);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #c6dacf;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0a2e1f;
+}
+
+/* ── Price display ──────────────────────────────────────────────────────────── */
+.price {
+  font-family: var(--font-mono);
+  color: var(--color-saffron);
+  font-weight: 700;
+}
+
+.price-original {
+  font-family: var(--font-mono);
+  color: #9ca3af;
+  text-decoration: line-through;
+  font-size: 0.875em;
+}
+
+/* ── Flash sale pulse ───────────────────────────────────────────────────────── */
+.flash-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ── Skeleton shimmer ───────────────────────────────────────────────────────── */
 .skeleton {
-  background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+  background: linear-gradient(90deg, #e8eeeb 25%, #d4e0d9 50%, #e8eeeb 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  animation: shimmer 1.5s infinite;
 }
+
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Image lazy load blur-up ────────────────────────────────────────────────── */
+img.lazy {
+  filter: blur(8px);
+  transition: filter 0.3s ease;
+}
+
+img.lazy.loaded {
+  filter: blur(0);
+}
+
+/* ── Touch-optimised tap targets ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── Focus visible (accessibility) ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-saffron);
+  outline-offset: 2px;
 }
