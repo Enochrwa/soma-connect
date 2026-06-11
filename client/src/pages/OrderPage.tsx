@@ -41,7 +41,9 @@ export default function OrderPage() {
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <Package className="text-forest/20 mx-auto mb-3" size={48} />
         <h2 className="font-display text-xl font-bold text-forest mb-2">Order not found</h2>
-        <Link to="/orders" className="text-saffron hover:underline text-sm">Back to orders</Link>
+        <Link to="/orders" className="text-saffron hover:underline text-sm">
+          Back to orders
+        </Link>
       </div>
     );
   }
@@ -54,7 +56,10 @@ export default function OrderPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <Link to="/orders" className="text-sm text-saffron hover:underline flex items-center gap-1 mb-3">
+          <Link
+            to="/orders"
+            className="text-sm text-saffron hover:underline flex items-center gap-1 mb-3"
+          >
             ← Back to orders
           </Link>
           <h1 className="font-display text-2xl font-bold text-forest">Order {order.orderNumber}</h1>
@@ -64,11 +69,15 @@ export default function OrderPage() {
         </div>
         <div className="text-right">
           <div className="font-mono font-bold text-saffron text-xl">{formatRWF(order.total)}</div>
-          <div className={`text-xs font-semibold px-2.5 py-1 rounded-full mt-1 inline-block ${
-            order.status === "delivered" ? "bg-green-50 text-green-700" :
-            order.status === "cancelled" ? "bg-vermillion/10 text-vermillion" :
-            "bg-saffron/15 text-saffron-dark"
-          }`}>
+          <div
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full mt-1 inline-block ${
+              order.status === "delivered"
+                ? "bg-green-50 text-green-700"
+                : order.status === "cancelled"
+                  ? "bg-vermillion/10 text-vermillion"
+                  : "bg-saffron/15 text-saffron-dark"
+            }`}
+          >
             {STATUS_LABELS[order.status]}
           </div>
         </div>
@@ -85,9 +94,11 @@ export default function OrderPage() {
               const isCurrent = i === currentStep;
               return (
                 <div key={status} className="relative flex items-start gap-4 pb-5 last:pb-0">
-                  <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    isCompleted ? "bg-forest" : "bg-ivory border-2 border-forest/15"
-                  }`}>
+                  <div
+                    className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      isCompleted ? "bg-forest" : "bg-ivory border-2 border-forest/15"
+                    }`}
+                  >
                     {isCompleted ? (
                       <CheckCircle size={16} className="text-saffron" />
                     ) : (
@@ -95,10 +106,14 @@ export default function OrderPage() {
                     )}
                   </div>
                   <div className={`pt-1 ${isCompleted ? "opacity-100" : "opacity-40"}`}>
-                    <div className={`text-sm font-semibold ${isCurrent ? "text-forest" : "text-slate/70"}`}>
+                    <div
+                      className={`text-sm font-semibold ${isCurrent ? "text-forest" : "text-slate/70"}`}
+                    >
                       {STATUS_LABELS[status]}
                     </div>
-                    {isCurrent && <div className="text-xs text-saffron font-medium mt-0.5">Current status</div>}
+                    {isCurrent && (
+                      <div className="text-xs text-saffron font-medium mt-0.5">Current status</div>
+                    )}
                   </div>
                 </div>
               );
@@ -119,7 +134,10 @@ export default function OrderPage() {
                 className="w-14 h-14 rounded-xl object-cover shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <Link to={`/products/${item.productId}`} className="text-sm font-semibold text-forest hover:text-saffron transition line-clamp-2">
+                <Link
+                  to={`/products/${item.productId}`}
+                  className="text-sm font-semibold text-forest hover:text-saffron transition line-clamp-2"
+                >
                   {item.title}
                 </Link>
                 {item.variant && <p className="text-xs text-slate/50">{item.variant}</p>}
@@ -144,7 +162,9 @@ export default function OrderPage() {
             <p>{order.deliveryAddress.sector}</p>
             {order.deliveryAddress.district && <p>{order.deliveryAddress.district}</p>}
             {order.deliveryAddress.street && <p>{order.deliveryAddress.street}</p>}
-            {order.deliveryAddress.phone && <p className="font-mono">{order.deliveryAddress.phone}</p>}
+            {order.deliveryAddress.phone && (
+              <p className="font-mono">{order.deliveryAddress.phone}</p>
+            )}
           </div>
         </div>
         <div className="bg-white rounded-2xl shadow-card p-5">

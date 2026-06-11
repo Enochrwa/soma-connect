@@ -26,15 +26,16 @@ function PasswordStrength({ password }: { password: string }) {
       </div>
       <div className="flex gap-3">
         {checks.map((c) => (
-          <span key={c.label} className={`flex items-center gap-1 text-xs ${c.ok ? "text-green-600" : "text-slate/40"}`}>
+          <span
+            key={c.label}
+            className={`flex items-center gap-1 text-xs ${c.ok ? "text-green-600" : "text-slate/40"}`}
+          >
             <CheckCircle size={10} className={c.ok ? "text-green-500" : "text-slate/20"} />
             {c.label}
           </span>
         ))}
       </div>
-      {score > 0 && (
-        <p className="text-xs text-slate/60 font-medium">{labels[score]} password</p>
-      )}
+      {score > 0 && <p className="text-xs text-slate/60 font-medium">{labels[score]} password</p>}
     </div>
   );
 }
@@ -195,8 +196,9 @@ export default function RegisterPage() {
 
             <p className="text-xs text-slate/50">
               By creating an account you agree to our{" "}
-              <span className="text-forest cursor-pointer hover:underline">Terms of Service</span> and{" "}
-              <span className="text-forest cursor-pointer hover:underline">Privacy Policy</span>.
+              <span className="text-forest cursor-pointer hover:underline">Terms of Service</span>{" "}
+              and <span className="text-forest cursor-pointer hover:underline">Privacy Policy</span>
+              .
             </p>
 
             <button

@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useListProductsQuery } from "../app/api";
 import ProductCard from "../components/product/ProductCard";
 import { Skeleton } from "../components/ui/Skeleton";
 import { Filter, X, ChevronDown, Search } from "lucide-react";
 
-const CATEGORIES = ["electronics","fashion","home","food","beauty","sports","agriculture","books"];
+const CATEGORIES = [
+  "electronics",
+  "fashion",
+  "home",
+  "food",
+  "beauty",
+  "sports",
+  "agriculture",
+  "books",
+];
 const SORT_OPTIONS = [
   { value: "relevance", label: "Most relevant" },
   { value: "newest", label: "Newest first" },
@@ -61,7 +70,13 @@ export default function SearchPage() {
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <div className="flex-1 min-w-0">
           <h1 className="font-display text-2xl font-bold text-forest">
-            {q ? `Results for "${q}"` : category ? <span className="capitalize">{category}</span> : "All Products"}
+            {q ? (
+              `Results for "${q}"`
+            ) : category ? (
+              <span className="capitalize">{category}</span>
+            ) : (
+              "All Products"
+            )}
           </h1>
           {data && (
             <p className="text-sm text-slate/50 mt-0.5">
@@ -71,7 +86,10 @@ export default function SearchPage() {
         </div>
         <div className="flex items-center gap-2">
           {hasFilters && (
-            <button onClick={clearFilters} className="flex items-center gap-1.5 text-sm text-vermillion border border-vermillion/30 px-3 py-1.5 rounded-lg hover:bg-vermillion/5 transition">
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 text-sm text-vermillion border border-vermillion/30 px-3 py-1.5 rounded-lg hover:bg-vermillion/5 transition"
+            >
               <X size={14} /> Clear filters
             </button>
           )}
@@ -79,7 +97,12 @@ export default function SearchPage() {
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl border transition ${showFilters ? "bg-forest text-white border-forest" : "border-forest/15 text-forest hover:bg-forest/5"}`}
           >
-            <Filter size={15} /> Filters {hasFilters && <span className="bg-saffron text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">!</span>}
+            <Filter size={15} /> Filters{" "}
+            {hasFilters && (
+              <span className="bg-saffron text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                !
+              </span>
+            )}
           </button>
           <div className="relative">
             <select
@@ -87,9 +110,16 @@ export default function SearchPage() {
               onChange={(e) => setParam("sort", e.target.value)}
               className="appearance-none text-sm border border-forest/15 rounded-xl px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-saffron/30 bg-white cursor-pointer"
             >
-              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate/40 pointer-events-none" />
+            <ChevronDown
+              size={14}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate/40 pointer-events-none"
+            />
           </div>
         </div>
       </div>
@@ -99,14 +129,18 @@ export default function SearchPage() {
         <div className="bg-white rounded-2xl shadow-card p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up">
           {/* Category */}
           <div>
-            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">Category</label>
+            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">
+              Category
+            </label>
             <div className="flex flex-wrap gap-1.5">
               {CATEGORIES.map((c) => (
                 <button
                   key={c}
                   onClick={() => setParam("category", category === c ? "" : c)}
                   className={`text-xs px-3 py-1.5 rounded-full font-medium transition capitalize ${
-                    category === c ? "bg-forest text-white" : "bg-forest/10 text-forest hover:bg-forest/15"
+                    category === c
+                      ? "bg-forest text-white"
+                      : "bg-forest/10 text-forest hover:bg-forest/15"
                   }`}
                 >
                   {c}
@@ -117,14 +151,18 @@ export default function SearchPage() {
 
           {/* Condition */}
           <div>
-            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">Condition</label>
+            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">
+              Condition
+            </label>
             <div className="flex gap-2">
               {["new", "used"].map((c) => (
                 <button
                   key={c}
                   onClick={() => setParam("condition", condition === c ? "" : c)}
                   className={`flex-1 text-sm py-2 rounded-xl font-medium capitalize transition ${
-                    condition === c ? "bg-forest text-white" : "bg-forest/10 text-forest hover:bg-forest/15"
+                    condition === c
+                      ? "bg-forest text-white"
+                      : "bg-forest/10 text-forest hover:bg-forest/15"
                   }`}
                 >
                   {c}
@@ -135,7 +173,9 @@ export default function SearchPage() {
 
           {/* Price range */}
           <div>
-            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">Price range (RWF)</label>
+            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">
+              Price range (RWF)
+            </label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -158,7 +198,9 @@ export default function SearchPage() {
 
           {/* In Stock */}
           <div>
-            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">Availability</label>
+            <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-2">
+              Availability
+            </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -191,7 +233,10 @@ export default function SearchPage() {
           <h3 className="font-display text-xl font-bold text-forest/40">No products found</h3>
           <p className="text-slate/40 mt-2">Try different keywords or remove some filters</p>
           {hasFilters && (
-            <button onClick={clearFilters} className="mt-4 text-sm text-saffron font-semibold hover:underline">
+            <button
+              onClick={clearFilters}
+              className="mt-4 text-sm text-saffron font-semibold hover:underline"
+            >
               Clear all filters
             </button>
           )}
@@ -199,7 +244,9 @@ export default function SearchPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {data.items.map((p) => <ProductCard key={p._id} p={p} />)}
+            {data.items.map((p) => (
+              <ProductCard key={p._id} p={p} />
+            ))}
           </div>
 
           {/* Pagination */}

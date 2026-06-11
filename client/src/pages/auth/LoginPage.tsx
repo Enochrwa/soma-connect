@@ -89,15 +89,24 @@ export default function LoginPage() {
         {/* Mode toggle */}
         <div className="flex bg-forest/5 rounded-xl p-1 mb-6">
           <button
-            onClick={() => { setMode("phone"); setError(""); }}
+            onClick={() => {
+              setMode("phone");
+              setError("");
+            }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
-              mode === "phone" ? "bg-white text-forest shadow-card" : "text-slate/60 hover:text-slate"
+              mode === "phone"
+                ? "bg-white text-forest shadow-card"
+                : "text-slate/60 hover:text-slate"
             }`}
           >
             <Phone size={15} /> Phone & Password
           </button>
           <button
-            onClick={() => { setMode("otp"); setError(""); setOtpSent(false); }}
+            onClick={() => {
+              setMode("otp");
+              setError("");
+              setOtpSent(false);
+            }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition ${
               mode === "otp" ? "bg-white text-forest shadow-card" : "text-slate/60 hover:text-slate"
             }`}
@@ -191,7 +200,10 @@ export default function LoginPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => { setOtpSent(false); setOtpCode(""); }}
+                    onClick={() => {
+                      setOtpSent(false);
+                      setOtpCode("");
+                    }}
                     className="text-xs text-saffron hover:underline mt-1"
                   >
                     Use a different email

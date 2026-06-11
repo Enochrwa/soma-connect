@@ -167,7 +167,8 @@ productRouter.put(
 
       const body = req.body as z.infer<typeof updateSchema>;
       if (body.title) {
-        (body as Record<string, unknown>).slug = `${slugify(body.title)}-${Date.now().toString(36)}`;
+        (body as Record<string, unknown>).slug =
+          `${slugify(body.title)}-${Date.now().toString(36)}`;
       }
       Object.assign(product, body);
       await product.save();

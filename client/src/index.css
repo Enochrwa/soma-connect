@@ -76,7 +76,9 @@ body {
   background-color: white;
   border-radius: 1rem;
   box-shadow: 0 2px 12px 0 rgba(10, 46, 31, 0.08);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .card:hover {

@@ -11,9 +11,24 @@ type PaymentMethod = "mtn_momo" | "airtel_money" | "cod";
 type DeliverySpeed = "standard" | "express" | "pickup";
 
 const PAYMENT_OPTIONS = [
-  { value: "mtn_momo" as PaymentMethod, label: "MTN MoMo", emoji: "📱", desc: "Pay via MTN Mobile Money" },
-  { value: "airtel_money" as PaymentMethod, label: "Airtel Money", emoji: "📲", desc: "Pay via Airtel Money" },
-  { value: "cod" as PaymentMethod, label: "Cash on Delivery", emoji: "💵", desc: "Pay when order arrives" },
+  {
+    value: "mtn_momo" as PaymentMethod,
+    label: "MTN MoMo",
+    emoji: "📱",
+    desc: "Pay via MTN Mobile Money",
+  },
+  {
+    value: "airtel_money" as PaymentMethod,
+    label: "Airtel Money",
+    emoji: "📲",
+    desc: "Pay via Airtel Money",
+  },
+  {
+    value: "cod" as PaymentMethod,
+    label: "Cash on Delivery",
+    emoji: "💵",
+    desc: "Pay when order arrives",
+  },
 ];
 
 const DELIVERY_OPTIONS = [
@@ -22,7 +37,16 @@ const DELIVERY_OPTIONS = [
   { value: "pickup" as DeliverySpeed, label: "Pickup", fee: 0, eta: "Ready in 2 hrs" },
 ];
 
-const DISTRICTS = ["Kigali", "Nyarugenge", "Gasabo", "Kicukiro", "Musanze", "Rubavu", "Rusizi", "Huye"];
+const DISTRICTS = [
+  "Kigali",
+  "Nyarugenge",
+  "Gasabo",
+  "Kicukiro",
+  "Musanze",
+  "Rubavu",
+  "Rusizi",
+  "Huye",
+];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -117,17 +141,25 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">District</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    District
+                  </label>
                   <select
                     value={form.district}
                     onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))}
                     className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 bg-white"
                   >
-                    {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    {DISTRICTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Phone</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    Phone
+                  </label>
                   <input
                     type="tel"
                     value={form.phone}
@@ -137,7 +169,9 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Street / Building (optional)</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    Street / Building (optional)
+                  </label>
                   <input
                     type="text"
                     value={form.street}
@@ -169,7 +203,9 @@ export default function CheckoutPage() {
                   >
                     <div className="font-semibold text-sm text-forest">{opt.label}</div>
                     <div className="text-xs text-slate/50 mt-0.5">{opt.eta}</div>
-                    <div className={`font-mono text-sm font-bold mt-1 ${opt.fee === 0 ? "text-green-600" : "text-saffron"}`}>
+                    <div
+                      className={`font-mono text-sm font-bold mt-1 ${opt.fee === 0 ? "text-green-600" : "text-saffron"}`}
+                    >
                       {opt.fee === 0 ? "Free" : formatRWF(opt.fee)}
                     </div>
                   </button>
@@ -222,7 +258,11 @@ export default function CheckoutPage() {
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.productId} className="flex gap-3 text-sm">
-                    <img src={item.image} alt={item.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-12 h-12 rounded-lg object-cover shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-forest line-clamp-2">{item.title}</p>
                       <p className="text-xs text-slate/50">Qty: {item.quantity}</p>
@@ -240,7 +280,9 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-slate/60">
                   <span>Delivery</span>
-                  <span className={`font-mono ${deliveryFee === 0 ? "text-green-600 font-semibold" : ""}`}>
+                  <span
+                    className={`font-mono ${deliveryFee === 0 ? "text-green-600 font-semibold" : ""}`}
+                  >
                     {deliveryFee === 0 ? "FREE" : formatRWF(deliveryFee)}
                   </span>
                 </div>

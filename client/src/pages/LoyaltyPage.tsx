@@ -5,10 +5,30 @@ import { Star, Gift, Zap, Loader2, CheckCircle } from "lucide-react";
 import { useState } from "react";
 
 const TIER_CONFIG = {
-  starter: { color: "bg-slate/10 text-slate", next: "regular", pointsNeeded: 500, label: "Starter" },
-  regular: { color: "bg-blue-50 text-blue-700", next: "trusted", pointsNeeded: 1500, label: "Regular" },
-  trusted: { color: "bg-purple-50 text-purple-700", next: "vip", pointsNeeded: 5000, label: "Trusted" },
-  vip: { color: "bg-saffron/15 text-saffron-dark", next: null, pointsNeeded: null, label: "VIP 👑" },
+  starter: {
+    color: "bg-slate/10 text-slate",
+    next: "regular",
+    pointsNeeded: 500,
+    label: "Starter",
+  },
+  regular: {
+    color: "bg-blue-50 text-blue-700",
+    next: "trusted",
+    pointsNeeded: 1500,
+    label: "Regular",
+  },
+  trusted: {
+    color: "bg-purple-50 text-purple-700",
+    next: "vip",
+    pointsNeeded: 5000,
+    label: "Trusted",
+  },
+  vip: {
+    color: "bg-saffron/15 text-saffron-dark",
+    next: null,
+    pointsNeeded: null,
+    label: "VIP 👑",
+  },
 };
 
 export default function LoyaltyPage() {
@@ -24,20 +44,28 @@ export default function LoyaltyPage() {
       setClaimed(true);
       setClaimMsg(res.message ?? `+${res.awarded} points earned!`);
     } catch (err: unknown) {
-      const msg = typeof err === "object" && err !== null && "data" in err
-        ? (err as { data?: { error?: string } }).data?.error
-        : undefined;
+      const msg =
+        typeof err === "object" && err !== null && "data" in err
+          ? (err as { data?: { error?: string } }).data?.error
+          : undefined;
       setClaimMsg(msg ?? "Already claimed today.");
       setClaimed(true);
     }
   }
 
-  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="animate-spin text-forest" size={28} /></div>;
+  if (isLoading)
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="animate-spin text-forest" size={28} />
+      </div>
+    );
 
   const tier = (user?.tier ?? "starter") as keyof typeof TIER_CONFIG;
   const tierInfo = TIER_CONFIG[tier];
   const points = user?.loyaltyPoints ?? 0;
-  const progress = tierInfo.pointsNeeded ? Math.min((points / tierInfo.pointsNeeded) * 100, 100) : 100;
+  const progress = tierInfo.pointsNeeded
+    ? Math.min((points / tierInfo.pointsNeeded) * 100, 100)
+    : 100;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -48,7 +76,9 @@ export default function LoyaltyPage() {
         <div className="flex items-center justify-between mb-5">
           <div>
             <p className="text-white/60 text-sm">Available points</p>
-            <p className="font-display text-4xl font-bold text-saffron mt-1">{points.toLocaleString()}</p>
+            <p className="font-display text-4xl font-bold text-saffron mt-1">
+              {points.toLocaleString()}
+            </p>
           </div>
           <div className={`px-3 py-1.5 rounded-full text-sm font-bold ${tierInfo.color}`}>
             {tierInfo.label}
@@ -57,11 +87,18 @@ export default function LoyaltyPage() {
         {tierInfo.pointsNeeded && (
           <div>
             <div className="flex justify-between text-xs text-white/50 mb-1.5">
-              <span>Progress to {TIER_CONFIG[tierInfo.next as keyof typeof TIER_CONFIG]?.label}</span>
-              <span>{points} / {tierInfo.pointsNeeded}</span>
+              <span>
+                Progress to {TIER_CONFIG[tierInfo.next as keyof typeof TIER_CONFIG]?.label}
+              </span>
+              <span>
+                {points} / {tierInfo.pointsNeeded}
+              </span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-saffron rounded-full transition-all" style={{ width: `${progress}%` }} />
+              <div
+                className="h-full bg-saffron rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
         )}
@@ -100,15 +137,21 @@ export default function LoyaltyPage() {
           <h2 className="font-display font-bold text-forest mb-4">Points history</h2>
           <div className="space-y-3">
             {data.events.map((ev) => (
-              <div key={ev._id} className="flex items-center justify-between py-2 border-b border-forest/5 last:border-0">
+              <div
+                key={ev._id}
+                className="flex items-center justify-between py-2 border-b border-forest/5 last:border-0"
+              >
                 <div>
                   <p className="text-sm font-medium text-forest">{ev.description}</p>
                   <p className="text-xs text-slate/40 mt-0.5">
                     {new Date(ev.createdAt).toLocaleDateString("en-RW")}
                   </p>
                 </div>
-                <span className={`font-mono font-bold text-sm ${ev.points >= 0 ? "text-green-600" : "text-vermillion"}`}>
-                  {ev.points >= 0 ? "+" : ""}{ev.points}
+                <span
+                  className={`font-mono font-bold text-sm ${ev.points >= 0 ? "text-green-600" : "text-vermillion"}`}
+                >
+                  {ev.points >= 0 ? "+" : ""}
+                  {ev.points}
                 </span>
               </div>
             ))}
@@ -132,7 +175,9 @@ export default function LoyaltyPage() {
               <div className="flex items-center gap-3 text-sm text-slate/70">
                 <span>{icon}</span> {label}
               </div>
-              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">{pts}</span>
+              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
+                {pts}
+              </span>
             </div>
           ))}
         </div>

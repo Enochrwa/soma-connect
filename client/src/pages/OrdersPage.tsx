@@ -43,7 +43,10 @@ export default function OrdersPage() {
         <Package className="text-forest/20 mx-auto mb-5" size={64} />
         <h2 className="font-display text-2xl font-bold text-forest mb-2">No orders yet</h2>
         <p className="text-slate/50 mb-8">When you place an order, it will show up here.</p>
-        <Link to="/search" className="bg-forest text-white font-bold px-8 py-3 rounded-xl hover:bg-forest-light transition">
+        <Link
+          to="/search"
+          className="bg-forest text-white font-bold px-8 py-3 rounded-xl hover:bg-forest-light transition"
+        >
           Start shopping
         </Link>
       </div>
@@ -63,8 +66,12 @@ export default function OrdersPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-slate/50 font-semibold">{order.orderNumber}</span>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[order.status]}`}>
+                  <span className="font-mono text-xs text-slate/50 font-semibold">
+                    {order.orderNumber}
+                  </span>
+                  <span
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[order.status]}`}
+                  >
                     {STATUS_LABELS[order.status]}
                   </span>
                 </div>
@@ -92,7 +99,9 @@ export default function OrdersPage() {
               </div>
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-forest/8">
-              <span className="text-xs text-slate/50">{order.items.length} item{order.items.length !== 1 ? "s" : ""}</span>
+              <span className="text-xs text-slate/50">
+                {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+              </span>
               <span className="text-xs text-saffron font-semibold group-hover:gap-2 flex items-center gap-1 transition-all">
                 View details <ChevronRight size={12} />
               </span>

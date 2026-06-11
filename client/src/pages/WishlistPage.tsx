@@ -16,7 +16,10 @@ export default function WishlistPage() {
         <Heart className="text-forest/20 mx-auto mb-5" size={64} />
         <h2 className="font-display text-2xl font-bold text-forest mb-2">Your wishlist is empty</h2>
         <p className="text-slate/50 mb-8">Save products you love to revisit them later.</p>
-        <Link to="/search" className="bg-forest text-white font-bold px-8 py-3 rounded-xl hover:bg-forest-light transition">
+        <Link
+          to="/search"
+          className="bg-forest text-white font-bold px-8 py-3 rounded-xl hover:bg-forest-light transition"
+        >
           Browse products
         </Link>
       </div>
@@ -44,26 +47,35 @@ export default function WishlistPage() {
               )}
             </Link>
             <div className="p-3 space-y-2">
-              <Link to={`/products/${p._id}`} className="text-sm font-semibold text-forest hover:text-saffron transition line-clamp-2">
+              <Link
+                to={`/products/${p._id}`}
+                className="text-sm font-semibold text-forest hover:text-saffron transition line-clamp-2"
+              >
                 {p.title}
               </Link>
               <div className="flex items-baseline gap-2">
                 <span className="font-mono font-bold text-saffron">{formatRWF(p.price)}</span>
                 {p.comparePrice && p.comparePrice > p.price && (
-                  <span className="font-mono text-xs text-slate/40 line-through">{formatRWF(p.comparePrice)}</span>
+                  <span className="font-mono text-xs text-slate/40 line-through">
+                    {formatRWF(p.comparePrice)}
+                  </span>
                 )}
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => dispatch(addItem({
-                    productId: p._id,
-                    title: p.title,
-                    image: p.images?.[0] ?? "",
-                    unitPrice: p.price,
-                    quantity: 1,
-                    sellerId: typeof p.sellerId === "string" ? p.sellerId : "",
-                    stock: p.stock,
-                  }))}
+                  onClick={() =>
+                    dispatch(
+                      addItem({
+                        productId: p._id,
+                        title: p.title,
+                        image: p.images?.[0] ?? "",
+                        unitPrice: p.price,
+                        quantity: 1,
+                        sellerId: typeof p.sellerId === "string" ? p.sellerId : "",
+                        stock: p.stock,
+                      }),
+                    )
+                  }
                   disabled={p.stock === 0}
                   className="flex-1 flex items-center justify-center gap-1.5 bg-forest text-white text-xs font-semibold py-2 rounded-lg hover:bg-forest-light transition disabled:opacity-40"
                 >

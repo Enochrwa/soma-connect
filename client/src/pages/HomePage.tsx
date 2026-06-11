@@ -32,7 +32,12 @@ function ProductRowSkeleton() {
   );
 }
 
-function SectionHeader({ icon: Icon, title, href, accent = false }: {
+function SectionHeader({
+  icon: Icon,
+  title,
+  href,
+  accent = false,
+}: {
   icon: React.ElementType;
   title: string;
   href: string;
@@ -41,28 +46,55 @@ function SectionHeader({ icon: Icon, title, href, accent = false }: {
   return (
     <div className="flex items-center justify-between mb-5">
       <div className="flex items-center gap-2">
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent ? "bg-vermillion/10" : "bg-forest/10"}`}>
+        <div
+          className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent ? "bg-vermillion/10" : "bg-forest/10"}`}
+        >
           <Icon size={17} className={accent ? "text-vermillion" : "text-forest"} />
         </div>
         <h2 className="font-display text-xl font-bold text-forest">{title}</h2>
       </div>
-      <Link to={href} className="text-sm text-saffron font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+      <Link
+        to={href}
+        className="text-sm text-saffron font-semibold flex items-center gap-1 hover:gap-2 transition-all"
+      >
         See all <ArrowRight size={14} />
       </Link>
     </div>
   );
 }
 
-function FlashDealCard({ p }: { p: { _id: string; title: string; price: number; comparePrice?: number; images: string[]; flashSale?: { endsAt?: string; discountPct?: number } } }) {
-  const discountPct = p.comparePrice ? Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100) : (p.flashSale?.discountPct ?? 0);
+function FlashDealCard({
+  p,
+}: {
+  p: {
+    _id: string;
+    title: string;
+    price: number;
+    comparePrice?: number;
+    images: string[];
+    flashSale?: { endsAt?: string; discountPct?: number };
+  };
+}) {
+  const discountPct = p.comparePrice
+    ? Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100)
+    : (p.flashSale?.discountPct ?? 0);
   return (
-    <Link to={`/products/${p._id}`} className="group relative rounded-2xl overflow-hidden bg-forest shadow-card hover:shadow-card-hover transition-all block">
+    <Link
+      to={`/products/${p._id}`}
+      className="group relative rounded-2xl overflow-hidden bg-forest shadow-card hover:shadow-card-hover transition-all block"
+    >
       <div className="aspect-square">
-        <img src={p.images?.[0]} alt={p.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-90 transition" />
+        <img
+          src={p.images?.[0]}
+          alt={p.title}
+          className="w-full h-full object-cover opacity-80 group-hover:opacity-90 transition"
+        />
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-forest/90 via-forest/30 to-transparent p-3 flex flex-col justify-between">
         <div className="flex justify-between">
-          <span className="bg-vermillion text-white text-xs font-bold px-2 py-0.5 rounded-full">-{discountPct}%</span>
+          <span className="bg-vermillion text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            -{discountPct}%
+          </span>
           {p.flashSale?.endsAt && (
             <span className="bg-black/40 text-white text-xs px-2 py-0.5 rounded-full font-mono">
               ⚡ Flash
@@ -74,7 +106,9 @@ function FlashDealCard({ p }: { p: { _id: string; title: string; price: number; 
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-saffron font-mono font-bold text-base">{formatRWF(p.price)}</span>
             {p.comparePrice && (
-              <span className="text-white/50 font-mono text-xs line-through">{formatRWF(p.comparePrice)}</span>
+              <span className="text-white/50 font-mono text-xs line-through">
+                {formatRWF(p.comparePrice)}
+              </span>
             )}
           </div>
         </div>
@@ -103,7 +137,8 @@ export default function HomePage() {
               <span className="text-saffron">Support Local.</span>
             </h1>
             <p className="text-white/70 text-lg max-w-md">
-              Discover authentic products from Rwandan sellers. Pay with MoMo, get fast delivery across Kigali and beyond.
+              Discover authentic products from Rwandan sellers. Pay with MoMo, get fast delivery
+              across Kigali and beyond.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -179,7 +214,9 @@ export default function HomePage() {
           <ProductRowSkeleton />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {trendingData?.items.map((p) => <ProductCard key={p._id} p={p} />)}
+            {trendingData?.items.map((p) => (
+              <ProductCard key={p._id} p={p} />
+            ))}
           </div>
         )}
       </section>
@@ -191,7 +228,9 @@ export default function HomePage() {
           <ProductRowSkeleton />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {newData?.items.map((p) => <ProductCard key={p._id} p={p} />)}
+            {newData?.items.map((p) => (
+              <ProductCard key={p._id} p={p} />
+            ))}
           </div>
         )}
       </section>

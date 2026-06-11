@@ -48,7 +48,9 @@ export default function ProductPage() {
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
         <AlertCircle className="text-vermillion mx-auto mb-3" size={40} />
         <h2 className="font-display text-xl font-bold text-forest mb-2">Product not found</h2>
-        <button onClick={() => navigate(-1)} className="btn-primary mt-4">Go back</button>
+        <button onClick={() => navigate(-1)} className="btn-primary mt-4">
+          Go back
+        </button>
       </div>
     );
   }
@@ -56,7 +58,9 @@ export default function ProductPage() {
   const p = data.product;
   const seller = typeof p.sellerId === "object" ? (p.sellerId as unknown as Seller) : null;
   const onSale = p.comparePrice && p.comparePrice > p.price;
-  const discountPct = onSale ? Math.round(((p.comparePrice! - p.price) / p.comparePrice!) * 100) : 0;
+  const discountPct = onSale
+    ? Math.round(((p.comparePrice! - p.price) / p.comparePrice!) * 100)
+    : 0;
   const isWishlisted = wishlistItems.some((w) => w._id === p._id);
 
   function handleAddToCart() {
@@ -84,9 +88,14 @@ export default function ProductPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-slate/50 mb-6">
-        <Link to="/" className="hover:text-forest transition">Home</Link>
+        <Link to="/" className="hover:text-forest transition">
+          Home
+        </Link>
         <span>/</span>
-        <Link to={`/search?category=${p.category}`} className="hover:text-forest transition capitalize">
+        <Link
+          to={`/search?category=${p.category}`}
+          className="hover:text-forest transition capitalize"
+        >
           {p.category}
         </Link>
         <span>/</span>
@@ -164,11 +173,15 @@ export default function ProductPage() {
                 <Star
                   key={s}
                   size={16}
-                  className={s <= Math.round(p.avgRating) ? "fill-saffron text-saffron" : "text-slate/20"}
+                  className={
+                    s <= Math.round(p.avgRating) ? "fill-saffron text-saffron" : "text-slate/20"
+                  }
                 />
               ))}
             </div>
-            <span className="text-sm font-semibold text-forest">{(p.avgRating ?? 0).toFixed(1)}</span>
+            <span className="text-sm font-semibold text-forest">
+              {(p.avgRating ?? 0).toFixed(1)}
+            </span>
             <span className="text-sm text-slate/50">({p.reviewCount} reviews)</span>
             <span className="text-sm text-slate/40">·</span>
             <span className="text-sm text-slate/50">{p.salesCount} sold</span>
@@ -190,7 +203,9 @@ export default function ProductPage() {
           </div>
 
           {/* Stock */}
-          <div className={`flex items-center gap-2 text-sm font-medium ${p.stock > 0 ? "text-green-600" : "text-vermillion"}`}>
+          <div
+            className={`flex items-center gap-2 text-sm font-medium ${p.stock > 0 ? "text-green-600" : "text-vermillion"}`}
+          >
             <Package size={16} />
             {p.stock > 0 ? `${p.stock} in stock` : "Out of stock"}
           </div>
@@ -217,9 +232,7 @@ export default function ProductPage() {
               <button
                 onClick={handleAddToCart}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition ${
-                  added
-                    ? "bg-green-500 text-white"
-                    : "bg-forest text-white hover:bg-forest-light"
+                  added ? "bg-green-500 text-white" : "bg-forest text-white hover:bg-forest-light"
                 }`}
               >
                 <ShoppingCart size={17} />

@@ -14,14 +14,32 @@ import type { RootState } from "../../app/store";
 import { formatRWF } from "../../utils/format";
 import type { Product } from "../../types";
 import {
-  Package, Plus, Edit3, Trash2, Eye, BarChart2, Store, Loader2,
-  AlertCircle, CheckCircle, X, Upload, Tag, DollarSign, Layers
+  Package,
+  Plus,
+  Edit3,
+  Trash2,
+  Eye,
+  BarChart2,
+  Store,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  X,
+  Upload,
+  Tag,
+  DollarSign,
+  Layers,
 } from "lucide-react";
 
 // ── Onboarding form ──────────────────────────────────────────────────────────
 
 function SellerOnboarding({ onDone }: { onDone: () => void }) {
-  const [form, setForm] = useState({ storeName: "", description: "", accountType: "individual", sector: "Kigali" });
+  const [form, setForm] = useState({
+    storeName: "",
+    description: "",
+    accountType: "individual",
+    sector: "Kigali",
+  });
   const [apply, { isLoading }] = useApplyAsSellerMutation();
   const [error, setError] = useState("");
 
@@ -32,9 +50,10 @@ function SellerOnboarding({ onDone }: { onDone: () => void }) {
       await apply(form).unwrap();
       onDone();
     } catch (err: unknown) {
-      const msg = typeof err === "object" && err !== null && "data" in err
-        ? (err as { data?: { error?: string } }).data?.error
-        : undefined;
+      const msg =
+        typeof err === "object" && err !== null && "data" in err
+          ? (err as { data?: { error?: string } }).data?.error
+          : undefined;
       setError(msg ?? "Something went wrong. Please try again.");
     }
   }
@@ -46,7 +65,9 @@ function SellerOnboarding({ onDone }: { onDone: () => void }) {
           <Store size={28} className="text-white" />
         </div>
         <h1 className="font-display text-2xl font-bold text-forest">Open your store</h1>
-        <p className="text-slate/60 mt-1 text-sm">Fill in your store details to start selling on SOMA</p>
+        <p className="text-slate/60 mt-1 text-sm">
+          Fill in your store details to start selling on SOMA
+        </p>
       </div>
       {error && (
         <div className="bg-vermillion/10 border border-vermillion/20 text-vermillion rounded-xl px-4 py-3 text-sm mb-4">
@@ -103,7 +124,9 @@ function SellerOnboarding({ onDone }: { onDone: () => void }) {
                 key={t}
                 onClick={() => setForm((f) => ({ ...f, accountType: t }))}
                 className={`border-2 rounded-xl py-3 text-sm font-medium capitalize transition ${
-                  form.accountType === t ? "border-forest bg-forest/5 text-forest" : "border-forest/10 text-slate/60 hover:border-forest/25"
+                  form.accountType === t
+                    ? "border-forest bg-forest/5 text-forest"
+                    : "border-forest/10 text-slate/60 hover:border-forest/25"
                 }`}
               >
                 {t}
@@ -132,7 +155,17 @@ interface ProductFormProps {
   onSaved: () => void;
 }
 
-const CATEGORIES = ["electronics","fashion","home","food","beauty","sports","agriculture","books","other"];
+const CATEGORIES = [
+  "electronics",
+  "fashion",
+  "home",
+  "food",
+  "beauty",
+  "sports",
+  "agriculture",
+  "books",
+  "other",
+];
 
 function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
   const [form, setForm] = useState({
@@ -153,9 +186,10 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
   const isLoading = creating || updating;
   const isEdit = !!initial?._id;
 
-  const field = (key: keyof typeof form) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const field =
+    (key: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setForm((f) => ({ ...f, [key]: e.target.value }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -179,7 +213,10 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
       comparePrice: form.comparePrice ? Number(form.comparePrice) : undefined,
       stock: Number(form.stock),
       condition: form.condition as "new" | "used",
-      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags: form.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
       images,
     };
 
@@ -192,9 +229,10 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
       onSaved();
       onClose();
     } catch (err: unknown) {
-      const msg = typeof err === "object" && err !== null && "data" in err
-        ? (err as { data?: { error?: string } }).data?.error
-        : undefined;
+      const msg =
+        typeof err === "object" && err !== null && "data" in err
+          ? (err as { data?: { error?: string } }).data?.error
+          : undefined;
       setError(msg ?? "Failed to save product.");
     }
   }
@@ -203,8 +241,13 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-card-hover w-full max-w-xl my-4">
         <div className="flex items-center justify-between p-5 border-b border-forest/8">
-          <h2 className="font-display font-bold text-forest">{isEdit ? "Edit product" : "Add new product"}</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-forest/5 text-slate/50">
+          <h2 className="font-display font-bold text-forest">
+            {isEdit ? "Edit product" : "Add new product"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-forest/5 text-slate/50"
+          >
             <X size={18} />
           </button>
         </div>
@@ -218,7 +261,11 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
             <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
               <Tag size={11} className="inline mr-1" /> Product title *
             </label>
-            <input type="text" value={form.title} onChange={field("title")} required
+            <input
+              type="text"
+              value={form.title}
+              onChange={field("title")}
+              required
               className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30"
               placeholder="e.g. Rwandan Hand-Woven Basket"
             />
@@ -227,7 +274,10 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
             <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
               Description
             </label>
-            <textarea value={form.description} onChange={field("description")} rows={3}
+            <textarea
+              value={form.description}
+              onChange={field("description")}
+              rows={3}
               className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 resize-none"
               placeholder="Describe your product..."
             />
@@ -237,15 +287,25 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
               <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
                 <Layers size={11} className="inline mr-1" /> Category *
               </label>
-              <select value={form.category} onChange={field("category")}
+              <select
+                value={form.category}
+                onChange={field("category")}
                 className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 bg-white capitalize"
               >
-                {CATEGORIES.map((c) => <option key={c} value={c} className="capitalize">{c}</option>)}
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c} className="capitalize">
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Condition</label>
-              <select value={form.condition} onChange={field("condition")}
+              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                Condition
+              </label>
+              <select
+                value={form.condition}
+                onChange={field("condition")}
                 className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 bg-white"
               >
                 <option value="new">New</option>
@@ -258,21 +318,38 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
               <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
                 <DollarSign size={11} className="inline mr-1" /> Price (RWF) *
               </label>
-              <input type="number" value={form.price} onChange={field("price")} required min={1}
+              <input
+                type="number"
+                value={form.price}
+                onChange={field("price")}
+                required
+                min={1}
                 className="w-full rounded-xl border border-forest/15 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 font-mono"
                 placeholder="5000"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Original price</label>
-              <input type="number" value={form.comparePrice} onChange={field("comparePrice")} min={1}
+              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                Original price
+              </label>
+              <input
+                type="number"
+                value={form.comparePrice}
+                onChange={field("comparePrice")}
+                min={1}
                 className="w-full rounded-xl border border-forest/15 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 font-mono"
                 placeholder="7000"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Stock qty</label>
-              <input type="number" value={form.stock} onChange={field("stock")} min={0}
+              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                Stock qty
+              </label>
+              <input
+                type="number"
+                value={form.stock}
+                onChange={field("stock")}
+                min={0}
                 className="w-full rounded-xl border border-forest/15 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 font-mono"
                 placeholder="10"
               />
@@ -282,7 +359,10 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
             <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
               <Upload size={11} className="inline mr-1" /> Image URLs * (one per line)
             </label>
-            <textarea value={form.images} onChange={field("images")} rows={3}
+            <textarea
+              value={form.images}
+              onChange={field("images")}
+              rows={3}
               className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30 resize-none font-mono"
               placeholder={"https://example.com/image1.jpg\nhttps://example.com/image2.jpg"}
             />
@@ -291,19 +371,26 @@ function ProductForm({ initial, onClose, onSaved }: ProductFormProps) {
             <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
               Tags (comma-separated)
             </label>
-            <input type="text" value={form.tags} onChange={field("tags")}
+            <input
+              type="text"
+              value={form.tags}
+              onChange={field("tags")}
               className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30"
               placeholder="handmade, rwandan, craft"
             />
           </div>
         </form>
         <div className="p-5 border-t border-forest/8 flex gap-3">
-          <button type="button" onClick={onClose}
+          <button
+            type="button"
+            onClick={onClose}
             className="flex-1 border border-forest/15 rounded-xl py-2.5 text-sm font-semibold text-slate/60 hover:bg-forest/5 transition"
           >
             Cancel
           </button>
-          <button onClick={handleSubmit as unknown as React.MouseEventHandler} disabled={isLoading}
+          <button
+            onClick={handleSubmit as unknown as React.MouseEventHandler}
+            disabled={isLoading}
             className="flex-1 bg-forest text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-forest-light transition disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {isLoading && <Loader2 size={15} className="animate-spin" />}
@@ -339,7 +426,9 @@ function ProductsTab() {
       refetch();
       setSuccess("Product removed from store.");
       setTimeout(() => setSuccess(""), 3000);
-    } catch { /* */ }
+    } catch {
+      /* */
+    }
   }
 
   return (
@@ -352,7 +441,10 @@ function ProductsTab() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-display font-bold text-forest">My Products</h2>
         <button
-          onClick={() => { setEditProduct(null); setShowForm(true); }}
+          onClick={() => {
+            setEditProduct(null);
+            setShowForm(true);
+          }}
           className="flex items-center gap-2 bg-forest text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-forest-light transition"
         >
           <Plus size={16} /> Add product
@@ -373,7 +465,10 @@ function ProductsTab() {
       ) : (
         <div className="space-y-3">
           {data.items.map((p) => (
-            <div key={p._id} className="bg-white rounded-2xl shadow-card p-4 flex gap-4 items-center">
+            <div
+              key={p._id}
+              className="bg-white rounded-2xl shadow-card p-4 flex gap-4 items-center"
+            >
               <img
                 src={p.images?.[0] ?? "/placeholder.png"}
                 alt={p.title}
@@ -382,9 +477,13 @@ function ProductsTab() {
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm text-forest line-clamp-1">{p.title}</div>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="font-mono text-saffron font-bold text-sm">{formatRWF(p.price)}</span>
+                  <span className="font-mono text-saffron font-bold text-sm">
+                    {formatRWF(p.price)}
+                  </span>
                   <span className="text-xs text-slate/40">{p.stock} in stock</span>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.isActive ? "bg-green-50 text-green-700" : "bg-slate/10 text-slate/50"}`}>
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.isActive ? "bg-green-50 text-green-700" : "bg-slate/10 text-slate/50"}`}
+                  >
                     {p.isActive ? "Active" : "Hidden"}
                   </span>
                 </div>
@@ -398,7 +497,10 @@ function ProductsTab() {
                   <Eye size={14} />
                 </Link>
                 <button
-                  onClick={() => { setEditProduct(p); setShowForm(true); }}
+                  onClick={() => {
+                    setEditProduct(p);
+                    setShowForm(true);
+                  }}
                   className="w-8 h-8 flex items-center justify-center rounded-lg border border-forest/15 text-slate/50 hover:text-forest hover:border-forest/30 transition"
                   title="Edit"
                 >
@@ -421,7 +523,10 @@ function ProductsTab() {
       {showForm && (
         <ProductForm
           initial={editProduct ?? undefined}
-          onClose={() => { setShowForm(false); setEditProduct(null); }}
+          onClose={() => {
+            setShowForm(false);
+            setEditProduct(null);
+          }}
           onSaved={handleSaved}
         />
       )}
@@ -432,9 +537,14 @@ function ProductsTab() {
           <div className="bg-white rounded-2xl shadow-card-hover p-6 w-full max-w-sm text-center">
             <Trash2 className="text-vermillion mx-auto mb-3" size={32} />
             <h3 className="font-display font-bold text-forest mb-2">Remove product?</h3>
-            <p className="text-sm text-slate/60 mb-5">This will hide the product from your store. You can re-activate it later.</p>
+            <p className="text-sm text-slate/60 mb-5">
+              This will hide the product from your store. You can re-activate it later.
+            </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 border border-forest/15 rounded-xl py-2.5 text-sm font-semibold hover:bg-forest/5 transition">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="flex-1 border border-forest/15 rounded-xl py-2.5 text-sm font-semibold hover:bg-forest/5 transition"
+              >
                 Cancel
               </button>
               <button
@@ -455,7 +565,11 @@ function ProductsTab() {
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ seller }: { seller: { storeName: string; rating: number; totalSales: number; verificationTier: string } }) {
+function OverviewTab({
+  seller,
+}: {
+  seller: { storeName: string; rating: number; totalSales: number; verificationTier: string };
+}) {
   const { data: productsData } = useListProductsQuery({ limit: 4 });
 
   return (
@@ -469,7 +583,10 @@ function OverviewTab({ seller }: { seller: { storeName: string; rating: number; 
           { label: "Tier", value: seller.verificationTier, suffix: "" },
         ].map(({ label, value, suffix }) => (
           <div key={label} className="bg-white rounded-2xl shadow-card p-4 text-center">
-            <div className="font-display text-2xl font-bold text-forest">{value}{suffix}</div>
+            <div className="font-display text-2xl font-bold text-forest">
+              {value}
+              {suffix}
+            </div>
             <div className="text-xs text-slate/50 mt-0.5">{label}</div>
           </div>
         ))}
@@ -479,7 +596,9 @@ function OverviewTab({ seller }: { seller: { storeName: string; rating: number; 
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display font-bold text-forest">Recent products</h3>
-          <Link to="/seller/products" className="text-sm text-saffron hover:underline">Manage all</Link>
+          <Link to="/seller/products" className="text-sm text-saffron hover:underline">
+            Manage all
+          </Link>
         </div>
         {!productsData?.items?.length ? (
           <div className="text-center py-8 bg-white rounded-2xl shadow-card">
@@ -489,10 +608,16 @@ function OverviewTab({ seller }: { seller: { storeName: string; rating: number; 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {productsData.items.slice(0, 4).map((p) => (
               <div key={p._id} className="bg-white rounded-xl shadow-card overflow-hidden">
-                <img src={p.images?.[0]} alt={p.title} className="w-full aspect-square object-cover" />
+                <img
+                  src={p.images?.[0]}
+                  alt={p.title}
+                  className="w-full aspect-square object-cover"
+                />
                 <div className="p-2">
                   <p className="text-xs font-semibold text-forest line-clamp-1">{p.title}</p>
-                  <p className="font-mono text-xs text-saffron font-bold mt-0.5">{formatRWF(p.price)}</p>
+                  <p className="font-mono text-xs text-saffron font-bold mt-0.5">
+                    {formatRWF(p.price)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -509,7 +634,7 @@ export default function SellerDashboard() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAppSelector((s: RootState) => s.auth.user);
-  const { data: meData } = useGetMeQuery(undefined, { skip: !user });
+  useGetMeQuery(undefined, { skip: !user });
   const { data: storeData, isLoading, refetch } = useGetMyStoreQuery(undefined, { skip: !user });
 
   const activeTab = location.pathname.includes("products") ? "products" : "overview";
@@ -548,7 +673,9 @@ export default function SellerDashboard() {
         </div>
         <div>
           <h1 className="font-display text-lg font-bold text-white">{seller.storeName}</h1>
-          <p className="text-white/50 text-sm capitalize">{seller.accountType} · {seller.verificationTier}</p>
+          <p className="text-white/50 text-sm capitalize">
+            {seller.accountType} · {seller.verificationTier}
+          </p>
         </div>
         <div className="ml-auto hidden sm:flex items-center gap-2">
           <Link

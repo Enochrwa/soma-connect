@@ -4,11 +4,28 @@ import { useGetMeQuery, useUpdateProfileMutation, useLogoutMutation } from "../a
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { clearAuth, setAuth } from "../features/auth/authSlice";
 import type { RootState } from "../app/store";
-import { User, Package, Heart, Star, LogOut, Settings, Camera, Loader2, ChevronRight, Shield } from "lucide-react";
+import {
+  User,
+  Package,
+  Heart,
+  Star,
+  LogOut,
+  Settings,
+  Camera,
+  Loader2,
+  ChevronRight,
+  Shield,
+} from "lucide-react";
 
 function Avatar({ name, avatar }: { name?: string; avatar?: string }) {
   if (avatar) return <img src={avatar} alt={name} className="w-20 h-20 rounded-2xl object-cover" />;
-  const initials = name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
+  const initials =
+    name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) ?? "?";
   return (
     <div className="w-20 h-20 rounded-2xl bg-forest flex items-center justify-center text-saffron font-bold text-2xl font-display">
       {initials}
@@ -34,11 +51,15 @@ export default function AccountPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const res = await updateProfile({ profile: { name, language: lang as "en" | "rw" | "fr" } }).unwrap();
+      const res = await updateProfile({
+        profile: { name, language: lang as "en" | "rw" | "fr" },
+      }).unwrap();
       dispatch(setAuth({ user: res.user, accessToken: "" }));
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch { /* */ }
+    } catch {
+      /* */
+    }
   }
 
   async function handleLogout() {
@@ -66,7 +87,9 @@ export default function AccountPage() {
           </button>
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-display text-xl font-bold text-white">{me?.profile?.name ?? "SOMA User"}</h1>
+          <h1 className="font-display text-xl font-bold text-white">
+            {me?.profile?.name ?? "SOMA User"}
+          </h1>
           <p className="text-white/60 text-sm mt-0.5">{me?.phone}</p>
           <div className="flex items-center gap-3 mt-2">
             <span className="bg-saffron/20 text-saffron text-xs font-bold px-2.5 py-1 rounded-full capitalize">
@@ -76,12 +99,18 @@ export default function AccountPage() {
           </div>
         </div>
         {me?.role === "seller" && (
-          <Link to="/seller" className="bg-saffron text-forest font-bold px-4 py-2 rounded-xl text-sm hover:bg-saffron-dark transition flex items-center gap-2">
+          <Link
+            to="/seller"
+            className="bg-saffron text-forest font-bold px-4 py-2 rounded-xl text-sm hover:bg-saffron-dark transition flex items-center gap-2"
+          >
             <Star size={14} /> Seller Dashboard
           </Link>
         )}
         {me?.role === "admin" && (
-          <Link to="/admin" className="bg-vermillion text-white font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 transition flex items-center gap-2">
+          <Link
+            to="/admin"
+            className="bg-vermillion text-white font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 transition flex items-center gap-2"
+          >
             <Shield size={14} /> Admin Panel
           </Link>
         )}
@@ -95,7 +124,9 @@ export default function AccountPage() {
               key={key}
               onClick={() => setTab(key)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-left ${
-                tab === key ? "bg-forest text-white" : "text-slate/70 hover:bg-forest/10 hover:text-forest"
+                tab === key
+                  ? "bg-forest text-white"
+                  : "text-slate/70 hover:bg-forest/10 hover:text-forest"
               }`}
             >
               <Icon size={16} /> {label}
@@ -116,7 +147,9 @@ export default function AccountPage() {
               <h2 className="font-display font-bold text-forest mb-5">Personal information</h2>
               <form onSubmit={handleSave} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Full name</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    Full name
+                  </label>
                   <input
                     type="text"
                     value={name}
@@ -126,7 +159,9 @@ export default function AccountPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Phone number</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    Phone number
+                  </label>
                   <input
                     type="tel"
                     value={me?.phone ?? ""}
@@ -136,7 +171,9 @@ export default function AccountPage() {
                   <p className="text-xs text-slate/40 mt-1">Phone number cannot be changed.</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Email</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    Email
+                  </label>
                   <input
                     type="email"
                     value={me?.email ?? ""}
@@ -145,7 +182,9 @@ export default function AccountPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Language</label>
+                  <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                    Language
+                  </label>
                   <select
                     value={lang}
                     onChange={(e) => setLang(e.target.value)}
@@ -176,7 +215,10 @@ export default function AccountPage() {
               <div className="flex flex-col items-center py-8 text-center">
                 <Package className="text-forest/20 mb-3" size={40} />
                 <p className="text-slate/50 mb-4">View all your orders here</p>
-                <Link to="/orders" className="flex items-center gap-2 bg-forest text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-forest-light transition text-sm">
+                <Link
+                  to="/orders"
+                  className="flex items-center gap-2 bg-forest text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-forest-light transition text-sm"
+                >
                   View orders <ChevronRight size={15} />
                 </Link>
               </div>
@@ -187,17 +229,28 @@ export default function AccountPage() {
             <div className="bg-white rounded-2xl shadow-card p-6 space-y-5">
               <h2 className="font-display font-bold text-forest">Account Settings</h2>
               <div className="space-y-3">
-                <Link to="/rewards" className="flex items-center justify-between p-4 rounded-xl border border-forest/10 hover:bg-forest/5 transition group">
+                <Link
+                  to="/rewards"
+                  className="flex items-center justify-between p-4 rounded-xl border border-forest/10 hover:bg-forest/5 transition group"
+                >
                   <div className="flex items-center gap-3">
                     <Star size={18} className="text-saffron" />
                     <div>
                       <div className="font-semibold text-sm text-forest">Loyalty Rewards</div>
-                      <div className="text-xs text-slate/50">{me?.loyaltyPoints ?? 0} points · {me?.tier}</div>
+                      <div className="text-xs text-slate/50">
+                        {me?.loyaltyPoints ?? 0} points · {me?.tier}
+                      </div>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate/30 group-hover:text-forest transition" />
+                  <ChevronRight
+                    size={16}
+                    className="text-slate/30 group-hover:text-forest transition"
+                  />
                 </Link>
-                <Link to="/wishlist" className="flex items-center justify-between p-4 rounded-xl border border-forest/10 hover:bg-forest/5 transition group">
+                <Link
+                  to="/wishlist"
+                  className="flex items-center justify-between p-4 rounded-xl border border-forest/10 hover:bg-forest/5 transition group"
+                >
                   <div className="flex items-center gap-3">
                     <Heart size={18} className="text-vermillion" />
                     <div>
@@ -205,7 +258,10 @@ export default function AccountPage() {
                       <div className="text-xs text-slate/50">Saved products</div>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate/30 group-hover:text-forest transition" />
+                  <ChevronRight
+                    size={16}
+                    className="text-slate/30 group-hover:text-forest transition"
+                  />
                 </Link>
               </div>
               <div className="pt-3 border-t border-forest/8">

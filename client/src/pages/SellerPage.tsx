@@ -25,7 +25,9 @@ export default function SellerPage() {
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <AlertCircle className="text-vermillion mx-auto mb-3" size={40} />
         <h2 className="font-display text-xl font-bold text-forest mb-2">Store not found</h2>
-        <Link to="/" className="text-saffron hover:underline text-sm">Back to home</Link>
+        <Link to="/" className="text-saffron hover:underline text-sm">
+          Back to home
+        </Link>
       </div>
     );
   }
@@ -49,7 +51,8 @@ export default function SellerPage() {
             <h1 className="font-display text-xl font-bold text-white">{seller.storeName}</h1>
             <div className="flex items-center gap-3 mt-1">
               <span className="flex items-center gap-1 text-white/70 text-xs">
-                <Star size={12} className="fill-saffron text-saffron" /> {seller.rating?.toFixed(1) ?? "—"}
+                <Star size={12} className="fill-saffron text-saffron" />{" "}
+                {seller.rating?.toFixed(1) ?? "—"}
               </span>
               <span className="text-white/40 text-xs">·</span>
               <span className="text-white/70 text-xs">{seller.totalSales ?? 0} sales</span>
@@ -83,7 +86,10 @@ export default function SellerPage() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-2xl overflow-hidden">
               <Skeleton className="aspect-square" />
-              <div className="p-3 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div>
+              <div className="p-3 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
             </div>
           ))}
         </div>
@@ -94,7 +100,9 @@ export default function SellerPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {productsData.items.map((p) => <ProductCard key={p._id} p={p} />)}
+          {productsData.items.map((p) => (
+            <ProductCard key={p._id} p={p} />
+          ))}
         </div>
       )}
     </div>
