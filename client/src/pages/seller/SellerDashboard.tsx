@@ -124,9 +124,7 @@ function OverviewTab() {
     },
     {
       label: "Store rating",
-      value: analytics
-        ? `★ ${(analytics.rating || 0).toFixed(1)} (${analytics.ratingCount})`
-        : "—",
+      value: analytics ? `★ ${(analytics.rating || 0).toFixed(1)} (${analytics.ratingCount})` : "—",
     },
     { label: "Active products", value: analytics?.activeProducts ?? "—" },
     { label: "Total products", value: analytics?.totalProducts ?? "—" },
@@ -136,7 +134,11 @@ function OverviewTab() {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl shadow-card p-5 flex gap-4 items-start">
         {seller.logo && (
-          <img src={seller.logo} alt={seller.storeName} className="w-16 h-16 rounded-xl object-cover" />
+          <img
+            src={seller.logo}
+            alt={seller.storeName}
+            className="w-16 h-16 rounded-xl object-cover"
+          />
         )}
         <div>
           <h2 className="font-display text-xl text-forest">{seller.storeName}</h2>
@@ -161,7 +163,15 @@ function OverviewTab() {
 // ── Products ─────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  "Electronics","Fashion","Food","Health","Home","Agriculture","Beauty","Books","Services",
+  "Electronics",
+  "Fashion",
+  "Food",
+  "Health",
+  "Home",
+  "Agriculture",
+  "Beauty",
+  "Books",
+  "Services",
 ];
 
 function emptyForm() {
@@ -181,13 +191,11 @@ function emptyForm() {
 function ProductsTab() {
   const { data: storeData } = useGetMyStoreQuery();
   const seller = storeData?.seller;
-  const sellerId =
-    seller && "_id" in seller ? (seller as { _id: string })._id : undefined;
+  const sellerId = seller && "_id" in seller ? (seller as { _id: string })._id : undefined;
 
-  const { data, isLoading, refetch } = useListProductsQuery(
-    sellerId ? { sellerId } : {},
-    { skip: !sellerId },
-  );
+  const { data, isLoading, refetch } = useListProductsQuery(sellerId ? { sellerId } : {}, {
+    skip: !sellerId,
+  });
 
   const [createProduct, { isLoading: creating }] = useCreateProductMutation();
   const [updateProduct, { isLoading: updating }] = useUpdateProductMutation();
@@ -401,11 +409,7 @@ function ProductsTab() {
                 {(creating || updating) && <Loader2 size={14} className="animate-spin" />}
                 {editId ? "Save Changes" : "Create Product"}
               </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="btn-ghost"
-              >
+              <button type="button" onClick={() => setShowForm(false)} className="btn-ghost">
                 Cancel
               </button>
             </div>
@@ -625,25 +629,25 @@ function OrdersTab() {
                     {/* Status update */}
                     {o.status !== "delivered" && o.status !== "cancelled" && (
                       <div className="flex flex-wrap gap-2">
-                        {ORDER_STATUSES.filter(
-                          (s) => !["placed", "cancelled"].includes(s),
-                        ).map((s) => (
-                          <button
-                            key={s}
-                            disabled={updating === String(o._id) || o.status === s}
-                            onClick={() => handleStatusChange(String(o._id), s)}
-                            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                              o.status === s
-                                ? "bg-forest text-saffron border-forest"
-                                : "border-forest/20 text-forest hover:bg-forest/5"
-                            }`}
-                          >
-                            {updating === String(o._id) ? (
-                              <Loader2 size={10} className="animate-spin inline" />
-                            ) : null}{" "}
-                            {STATUS_LABELS[s]}
-                          </button>
-                        ))}
+                        {ORDER_STATUSES.filter((s) => !["placed", "cancelled"].includes(s)).map(
+                          (s) => (
+                            <button
+                              key={s}
+                              disabled={updating === String(o._id) || o.status === s}
+                              onClick={() => handleStatusChange(String(o._id), s)}
+                              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                                o.status === s
+                                  ? "bg-forest text-saffron border-forest"
+                                  : "border-forest/20 text-forest hover:bg-forest/5"
+                              }`}
+                            >
+                              {updating === String(o._id) ? (
+                                <Loader2 size={10} className="animate-spin inline" />
+                              ) : null}{" "}
+                              {STATUS_LABELS[s]}
+                            </button>
+                          ),
+                        )}
                       </div>
                     )}
                   </div>

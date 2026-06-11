@@ -197,7 +197,7 @@ async function main() {
       accountType: "business",
       location: { sector: s.sector, district: "Gasabo" },
       verificationTier: "verified",
-      approvalStatus: "approved",   // seed sellers are pre-approved
+      approvalStatus: "approved", // seed sellers are pre-approved
       isActive: true,
       rating: 4.4 + Math.random() * 0.5,
       ratingCount: 20 + Math.floor(Math.random() * 200),
@@ -250,9 +250,15 @@ async function main() {
   }
 
   console.log(`[seed] done. ${total} products, ${SELLERS.length} sellers.`);
-  console.log(`[seed] admin login  → phone +250 788 000 001 / email admin@somamarket.rw / pw admin1234`);
-  console.log(`[seed] buyer login  → phone +250 788 000 002 / email buyer@somamarket.rw / pw buyer1234`);
-  console.log(`[seed] seller login → phone +250 788 000 003 / email seller@somamarket.rw / pw seller1234`);
+  console.log(
+    `[seed] admin login  → phone +250 788 000 001 / email admin@somamarket.rw / pw admin1234`,
+  );
+  console.log(
+    `[seed] buyer login  → phone +250 788 000 002 / email buyer@somamarket.rw / pw buyer1234`,
+  );
+  console.log(
+    `[seed] seller login → phone +250 788 000 003 / email seller@somamarket.rw / pw seller1234`,
+  );
   await mongoose.disconnect();
 }
 

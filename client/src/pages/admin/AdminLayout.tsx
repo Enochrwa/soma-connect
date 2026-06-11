@@ -385,10 +385,16 @@ function SellersTab() {
                         </option>
                       ))}
                     </select>
-                    <button onClick={() => saveTier(s._id)} className="text-green-600 hover:text-green-700">
+                    <button
+                      onClick={() => saveTier(s._id)}
+                      className="text-green-600 hover:text-green-700"
+                    >
                       <CheckCircle size={16} />
                     </button>
-                    <button onClick={() => setEditId(null)} className="text-slate/40 hover:text-slate">
+                    <button
+                      onClick={() => setEditId(null)}
+                      className="text-slate/40 hover:text-slate"
+                    >
                       <X size={16} />
                     </button>
                   </div>
@@ -398,7 +404,10 @@ function SellersTab() {
                       {s.verificationTier}
                     </span>
                     <button
-                      onClick={() => { setEditId(s._id); setTierVal(s.verificationTier); }}
+                      onClick={() => {
+                        setEditId(s._id);
+                        setTierVal(s.verificationTier);
+                      }}
                       className="text-slate/40 hover:text-forest transition"
                     >
                       <Edit3 size={14} />
@@ -439,7 +448,10 @@ function SellersTab() {
             )}
             <div className="flex gap-3">
               <button
-                onClick={() => { setApprovalModal(null); setRejectNote(""); }}
+                onClick={() => {
+                  setApprovalModal(null);
+                  setRejectNote("");
+                }}
                 className="flex-1 border border-forest/15 rounded-xl py-2.5 text-sm font-semibold hover:bg-forest/5 transition"
               >
                 Cancel
@@ -631,4 +643,3 @@ export default function AdminLayout() {
   );
 }
 // Note: SellersTab has been extended above with approval workflow — injecting into existing file below
-

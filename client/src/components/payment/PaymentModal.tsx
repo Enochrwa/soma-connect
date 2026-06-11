@@ -65,12 +65,19 @@ export function PaymentModal({
 
       if (method === "cod") {
         setState("success");
-        setTimeout(() => { onSuccess(); navigate(`/orders/${orderId}`); }, 1500);
+        setTimeout(() => {
+          onSuccess();
+          navigate(`/orders/${orderId}`);
+        }, 1500);
         return;
       }
 
       // For MoMo: poll via txRef / mockRef
-      setTxRef((result as { mockRef?: string; txRef?: string }).mockRef ?? (result as { mockRef?: string; txRef?: string }).txRef ?? null);
+      setTxRef(
+        (result as { mockRef?: string; txRef?: string }).mockRef ??
+          (result as { mockRef?: string; txRef?: string }).txRef ??
+          null,
+      );
       setState("awaiting_confirmation");
     } catch (err: unknown) {
       const e = err as { data?: { error?: string } };
@@ -81,9 +88,17 @@ export function PaymentModal({
 
   const isMoMo = method !== "cod";
   const methodLabel =
-    method === "mtn_momo" ? "MTN MoMo" : method === "airtel_money" ? "Airtel Money" : "Cash on Delivery";
+    method === "mtn_momo"
+      ? "MTN MoMo"
+      : method === "airtel_money"
+        ? "Airtel Money"
+        : "Cash on Delivery";
   const headerColor =
-    method === "mtn_momo" ? "bg-yellow-400" : method === "airtel_money" ? "bg-red-500" : "bg-green-600";
+    method === "mtn_momo"
+      ? "bg-yellow-400"
+      : method === "airtel_money"
+        ? "bg-red-500"
+        : "bg-green-600";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
@@ -170,9 +185,9 @@ export function PaymentModal({
               <div>
                 <p className="font-bold text-forest">Check your phone</p>
                 <p className="text-sm text-slate/60 mt-1">
-                  USSD prompt sent to{" "}
-                  <span className="font-mono font-semibold">{phone}</span>.
-                  <br />Approve to complete payment.
+                  USSD prompt sent to <span className="font-mono font-semibold">{phone}</span>.
+                  <br />
+                  Approve to complete payment.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate/40 mt-1">
@@ -201,7 +216,10 @@ export function PaymentModal({
               </div>
               <div className="flex gap-3 w-full">
                 <button
-                  onClick={() => { setState("idle"); setErrorMsg(""); }}
+                  onClick={() => {
+                    setState("idle");
+                    setErrorMsg("");
+                  }}
                   className="flex-1 bg-forest text-white font-bold py-2.5 rounded-xl text-sm"
                 >
                   Try again

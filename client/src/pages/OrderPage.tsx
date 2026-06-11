@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useGetOrderQuery } from "../app/api";
 import { useOrderTracking } from "../hooks/useSocket";
 import { formatRWF } from "../utils/format";
-import {
-  Loader2, Package, MapPin, CheckCircle, Circle, Clock, Zap,
-} from "lucide-react";
+import { Loader2, Package, MapPin, CheckCircle, Circle, Clock, Zap } from "lucide-react";
 import type { OrderStatus } from "../types";
 
 const STATUSES: OrderStatus[] = [

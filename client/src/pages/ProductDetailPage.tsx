@@ -5,7 +5,16 @@ import { useGetProductQuery, useGetReviewsQuery, useCreateReviewMutation } from 
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { addItem } from "../features/cart/cartSlice";
 import { formatRWF } from "../utils/format";
-import { Heart, Shield, Truck, BadgeCheck, Star, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  Heart,
+  Shield,
+  Truck,
+  BadgeCheck,
+  Star,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
 import type { RootState } from "../app/store";
 
 function StarRating({
@@ -195,8 +204,7 @@ export default function ProductDetailPage() {
     );
 
   const p = data?.product;
-  if (!p)
-    return <div className="mx-auto max-w-7xl px-4 py-12">Product not found.</div>;
+  if (!p) return <div className="mx-auto max-w-7xl px-4 py-12">Product not found.</div>;
 
   const seller =
     p.sellerId && typeof p.sellerId === "object"
@@ -208,7 +216,10 @@ export default function ProductDetailPage() {
       {/* SEO Meta Tags */}
       <Helmet>
         <title>{p.title} — SOMA Market</title>
-        <meta name="description" content={p.description?.slice(0, 155) ?? `${p.title} on SOMA Market`} />
+        <meta
+          name="description"
+          content={p.description?.slice(0, 155) ?? `${p.title} on SOMA Market`}
+        />
         <meta property="og:title" content={`${p.title} — SOMA Market`} />
         <meta property="og:description" content={p.description?.slice(0, 155) ?? ""} />
         {p.images?.[0] && <meta property="og:image" content={p.images[0]} />}
@@ -295,7 +306,10 @@ export default function ProductDetailPage() {
                       image: p.images?.[0],
                       unitPrice: p.price,
                       quantity: 1,
-                      sellerId: typeof p.sellerId === "string" ? p.sellerId : (p.sellerId as unknown as { _id: string })?._id,
+                      sellerId:
+                        typeof p.sellerId === "string"
+                          ? p.sellerId
+                          : (p.sellerId as unknown as { _id: string })?._id,
                       stock: p.stock,
                     }),
                   )

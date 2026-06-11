@@ -3,7 +3,6 @@ import { z } from "zod";
 import { Seller } from "../models/Seller.js";
 import { Product } from "../models/Product.js";
 import { Order } from "../models/Order.js";
-import { User } from "../models/User.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -89,11 +88,7 @@ sellerRouter.get(
       const seller = await Seller.findOne({ userId: req.user!.id });
       if (!seller) throw new HttpError(404, "No store found.");
 
-      const {
-        status,
-        page = "1",
-        limit = "20",
-      } = req.query as Record<string, string | undefined>;
+      const { status, page = "1", limit = "20" } = req.query as Record<string, string | undefined>;
       const filter: Record<string, unknown> = { sellerIds: String(seller._id) };
       if (status) filter.status = status;
 
@@ -137,30 +132,30 @@ sellerRouter.get(
       const sellerId = String(seller._id);
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-      const [
-        totalOrders,
-        pendingOrders,
-        recentRevenue,
-        totalProducts,
-        activeProducts,
-      ] = await Promise.all([
-        Order.countDocuments({ sellerIds: sellerId }),
-        Order.countDocuments({ sellerIds: sellerId, status: "placed" }),
-        Order.aggregate([
-          {
-            $match: {
-              sellerIds: sellerId,
-              paymentStatus: "paid",
-              createdAt: { $gte: thirtyDaysAgo },
+      const [totalOrders, pendingOrders, recentRevenue, totalProducts, activeProducts] =
+        await Promise.all([
+          Order.countDocuments({ sellerIds: sellerId }),
+          Order.countDocuments({ sellerIds: sellerId, status: "placed" }),
+          Order.aggregate([
+            {
+              $match: {
+                sellerIds: sellerId,
+                paymentStatus: "paid",
+                createdAt: { $gte: thirtyDaysAgo },
+              },
             },
-          },
-          { $unwind: "$items" },
-          { $match: { "items.sellerId": seller._id } },
-          { $group: { _id: null, total: { $sum: { $multiply: ["$items.unitPrice", "$items.quantity"] } } } },
-        ]),
-        Product.countDocuments({ sellerId: seller._id }),
-        Product.countDocuments({ sellerId: seller._id, isActive: true }),
-      ]);
+            { $unwind: "$items" },
+            { $match: { "items.sellerId": seller._id } },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: { $multiply: ["$items.unitPrice", "$items.quantity"] } },
+              },
+            },
+          ]),
+          Product.countDocuments({ sellerId: seller._id }),
+          Product.countDocuments({ sellerId: seller._id, isActive: true }),
+        ]);
 
       res.json({
         totalOrders,

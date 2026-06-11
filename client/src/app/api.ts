@@ -10,7 +10,6 @@ import type {
   PaginatedResponse,
 } from "../types";
 
-
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,
@@ -292,10 +291,7 @@ export const api = createApi({
       query: () => "/sellers/me/analytics",
       providesTags: ["Seller"],
     }),
-    updateOrderStatus: b.mutation<
-      { order: Order },
-      { id: string; status: string; note?: string }
-    >({
+    updateOrderStatus: b.mutation<{ order: Order }, { id: string; status: string; note?: string }>({
       query: ({ id, ...body }) => ({ url: `/orders/${id}/status`, method: "PATCH", body }),
       invalidatesTags: (_r, _e, { id }) => [{ type: "Order", id }, "Orders"],
     }),

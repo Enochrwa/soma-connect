@@ -13,9 +13,24 @@ type PaymentMethod = "mtn_momo" | "airtel_money" | "cod";
 type DeliverySpeed = "standard" | "express" | "pickup";
 
 const PAYMENT_OPTIONS = [
-  { value: "mtn_momo" as PaymentMethod, label: "MTN MoMo", emoji: "📱", desc: "Pay via MTN Mobile Money USSD push" },
-  { value: "airtel_money" as PaymentMethod, label: "Airtel Money", emoji: "📲", desc: "Pay via Airtel Money USSD push" },
-  { value: "cod" as PaymentMethod, label: "Cash on Delivery", emoji: "💵", desc: "Pay when your order arrives" },
+  {
+    value: "mtn_momo" as PaymentMethod,
+    label: "MTN MoMo",
+    emoji: "📱",
+    desc: "Pay via MTN Mobile Money USSD push",
+  },
+  {
+    value: "airtel_money" as PaymentMethod,
+    label: "Airtel Money",
+    emoji: "📲",
+    desc: "Pay via Airtel Money USSD push",
+  },
+  {
+    value: "cod" as PaymentMethod,
+    label: "Cash on Delivery",
+    emoji: "💵",
+    desc: "Pay when your order arrives",
+  },
 ];
 
 const DELIVERY_OPTIONS = [
@@ -24,7 +39,16 @@ const DELIVERY_OPTIONS = [
   { value: "pickup" as DeliverySpeed, label: "Pickup", fee: 0, eta: "Ready in 2 hrs" },
 ];
 
-const DISTRICTS = ["Kigali", "Nyarugenge", "Gasabo", "Kicukiro", "Musanze", "Rubavu", "Rusizi", "Huye"];
+const DISTRICTS = [
+  "Kigali",
+  "Nyarugenge",
+  "Gasabo",
+  "Kicukiro",
+  "Musanze",
+  "Rubavu",
+  "Rusizi",
+  "Huye",
+];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -33,14 +57,21 @@ export default function CheckoutPage() {
   const user = useAppSelector((s: RootState) => s.auth.user);
   const [createOrder, { isLoading }] = useCreateOrderMutation();
 
-  const [form, setForm] = useState({ sector: "", district: "Kigali", street: "", phone: user?.phone ?? "" });
+  const [form, setForm] = useState({
+    sector: "",
+    district: "Kigali",
+    street: "",
+    phone: user?.phone ?? "",
+  });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mtn_momo");
   const [deliverySpeed, setDeliverySpeed] = useState<DeliverySpeed>("standard");
   const [error, setError] = useState("");
 
   // After order creation, show payment modal
   const [pendingOrder, setPendingOrder] = useState<{
-    id: string; number: string; total: number;
+    id: string;
+    number: string;
+    total: number;
   } | null>(null);
 
   const deliveryFee = DELIVERY_OPTIONS.find((d) => d.value === deliverySpeed)?.fee ?? 1500;
@@ -55,8 +86,14 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.sector.trim()) { setError("Please enter your sector/neighbourhood."); return; }
-    if (!form.phone.trim()) { setError("Please enter your phone number."); return; }
+    if (!form.sector.trim()) {
+      setError("Please enter your sector/neighbourhood.");
+      return;
+    }
+    if (!form.phone.trim()) {
+      setError("Please enter your phone number.");
+      return;
+    }
 
     try {
       const result = await createOrder({
@@ -139,13 +176,19 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">District</label>
+                    <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                      District
+                    </label>
                     <select
                       value={form.district}
                       onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))}
                       className="w-full rounded-xl border border-forest/15 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-saffron/30"
                     >
-                      {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                      {DISTRICTS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -162,7 +205,9 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">Street / Landmark (optional)</label>
+                    <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                      Street / Landmark (optional)
+                    </label>
                     <input
                       type="text"
                       value={form.street}
@@ -190,7 +235,9 @@ export default function CheckoutPage() {
                     >
                       <div className="font-semibold text-sm text-forest">{opt.label}</div>
                       <div className="text-xs text-slate/50 mt-0.5">{opt.eta}</div>
-                      <div className={`font-mono text-sm font-bold mt-1 ${opt.fee === 0 ? "text-green-600" : "text-saffron"}`}>
+                      <div
+                        className={`font-mono text-sm font-bold mt-1 ${opt.fee === 0 ? "text-green-600" : "text-saffron"}`}
+                      >
                         {opt.fee === 0 ? "Free" : formatRWF(opt.fee)}
                       </div>
                     </button>
@@ -210,13 +257,22 @@ export default function CheckoutPage() {
                       key={opt.value}
                       className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${paymentMethod === opt.value ? "border-forest bg-forest/5" : "border-forest/10 hover:border-forest/25"}`}
                     >
-                      <input type="radio" name="payment" value={opt.value} checked={paymentMethod === opt.value} onChange={() => setPaymentMethod(opt.value)} className="sr-only" />
+                      <input
+                        type="radio"
+                        name="payment"
+                        value={opt.value}
+                        checked={paymentMethod === opt.value}
+                        onChange={() => setPaymentMethod(opt.value)}
+                        className="sr-only"
+                      />
                       <span className="text-2xl">{opt.emoji}</span>
                       <div>
                         <div className="font-semibold text-sm text-forest">{opt.label}</div>
                         <div className="text-xs text-slate/50">{opt.desc}</div>
                       </div>
-                      {paymentMethod === opt.value && <CheckCircle size={18} className="text-forest ml-auto" />}
+                      {paymentMethod === opt.value && (
+                        <CheckCircle size={18} className="text-forest ml-auto" />
+                      )}
                     </label>
                   ))}
                 </div>
@@ -230,12 +286,18 @@ export default function CheckoutPage() {
                 <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
                   {items.map((item) => (
                     <div key={item.productId} className="flex gap-3 text-sm">
-                      <img src={item.image} alt={item.title} className="w-12 h-12 rounded-lg object-cover shrink-0 bg-slate/10" />
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-12 h-12 rounded-lg object-cover shrink-0 bg-slate/10"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-forest line-clamp-2">{item.title}</p>
                         <p className="text-xs text-slate/50">Qty: {item.quantity}</p>
                       </div>
-                      <span className="font-mono text-xs font-bold text-saffron shrink-0">{formatRWF(item.unitPrice * item.quantity)}</span>
+                      <span className="font-mono text-xs font-bold text-saffron shrink-0">
+                        {formatRWF(item.unitPrice * item.quantity)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -246,7 +308,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-slate/60">
                     <span>Delivery</span>
-                    <span className={`font-mono ${deliveryFee === 0 ? "text-green-600 font-semibold" : ""}`}>
+                    <span
+                      className={`font-mono ${deliveryFee === 0 ? "text-green-600 font-semibold" : ""}`}
+                    >
                       {deliveryFee === 0 ? "FREE" : formatRWF(deliveryFee)}
                     </span>
                   </div>

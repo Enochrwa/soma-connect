@@ -45,7 +45,7 @@ function emailWrapper(content: string, footer = "") {
     <p style="color:#a8c5b5;margin:4px 0 0;font-size:13px">Rwanda's marketplace</p>
   </div>
   <div style="${bodyStyle}">${content}</div>
-  <div style="${footerStyle}">${footer || "© SOMA Market · Kigali, Rwanda · <a href=\"#\" style=\"color:#888\">Unsubscribe</a>"}</div>
+  <div style="${footerStyle}">${footer || '© SOMA Market · Kigali, Rwanda · <a href="#" style="color:#888">Unsubscribe</a>'}</div>
 </div>`;
 }
 
