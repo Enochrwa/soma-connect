@@ -6,6 +6,8 @@ import {
   useAdminSellersQuery,
   useAdminRevenueAnalyticsQuery,
   useAdminUpdateSellerTierMutation,
+  useAdminApproveSellerMutation,
+  useAdminPendingSellersQuery,
   useListProductsQuery,
   useDeleteProductMutation,
   useUpdateProductMutation,
@@ -251,87 +253,211 @@ function UsersTab() {
 
 // ── Sellers tab ──────────────────────────────────────────────────────────────
 function SellersTab() {
-  const { data, isLoading } = useAdminSellersQuery({});
+  const { data, isLoading, refetch } = useAdminSellersQuery({});
+  const { data: pendingData } = useAdminPendingSellersQuery();
   const [updateTier] = useAdminUpdateSellerTierMutation();
+  const [approveSeller, { isLoading: approving }] = useAdminApproveSellerMutation();
   const [editId, setEditId] = useState<string | null>(null);
   const [tierVal, setTierVal] = useState("");
+  const [approvalModal, setApprovalModal] = useState<{
+    id: string;
+    name: string;
+    action: "approved" | "rejected";
+  } | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
 
   async function saveTier(id: string) {
     await updateTier({ id, tier: tierVal }).unwrap();
     setEditId(null);
   }
 
+  async function handleApproval() {
+    if (!approvalModal) return;
+    await approveSeller({
+      id: approvalModal.id,
+      status: approvalModal.action,
+      note: rejectNote || undefined,
+    }).unwrap();
+    setApprovalModal(null);
+    setRejectNote("");
+    refetch();
+  }
+
+  const pendingSellers = pendingData?.sellers ?? [];
+
   return (
-    <div>
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="animate-spin text-forest" size={24} />
+    <div className="space-y-6">
+      {/* Pending approvals */}
+      {pendingSellers.length > 0 && (
+        <div>
+          <h3 className="font-display text-forest font-bold mb-3 flex items-center gap-2">
+            <span className="w-5 h-5 bg-saffron text-white rounded-full text-xs flex items-center justify-center font-bold">
+              {pendingSellers.length}
+            </span>
+            Pending Approval
+          </h3>
+          <div className="space-y-3">
+            {pendingSellers.map((s) => (
+              <div
+                key={s._id}
+                className="bg-saffron/5 border border-saffron/25 rounded-2xl p-4 flex items-center gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl bg-saffron/20 flex items-center justify-center text-saffron font-bold shrink-0 text-lg">
+                  {s.storeName[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-forest">{s.storeName}</div>
+                  <div className="text-xs text-slate/60 capitalize mt-0.5">
+                    {s.accountType} · {s.location?.sector}
+                  </div>
+                  {s.description && (
+                    <div className="text-xs text-slate/50 mt-0.5 line-clamp-1">{s.description}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() =>
+                      setApprovalModal({ id: s._id, name: s.storeName, action: "approved" })
+                    }
+                    className="flex items-center gap-1.5 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition"
+                  >
+                    <CheckCircle size={12} /> Approve
+                  </button>
+                  <button
+                    onClick={() =>
+                      setApprovalModal({ id: s._id, name: s.storeName, action: "rejected" })
+                    }
+                    className="flex items-center gap-1.5 text-xs bg-vermillion/10 text-vermillion px-3 py-1.5 rounded-lg hover:bg-vermillion/20 transition"
+                  >
+                    <X size={12} /> Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {(data?.sellers ?? []).map((s) => (
-            <div
-              key={s._id}
-              className="bg-white rounded-2xl shadow-card p-4 flex items-center gap-4"
-            >
-              <div className="w-10 h-10 rounded-xl bg-forest flex items-center justify-center text-saffron font-bold shrink-0">
-                {s.storeName[0]?.toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm text-forest">{s.storeName}</div>
-                <div className="text-xs text-slate/50 capitalize">
-                  {s.accountType} · {s.totalSales ?? 0} sales · ★ {s.rating?.toFixed(1) ?? "—"}
+      )}
+
+      {/* All sellers */}
+      <div>
+        <h3 className="font-display text-forest font-bold mb-3">All Sellers</h3>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="animate-spin text-forest" size={24} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {(data?.sellers ?? []).map((s) => (
+              <div
+                key={s._id}
+                className="bg-white rounded-2xl shadow-card p-4 flex items-center gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl bg-forest flex items-center justify-center text-saffron font-bold shrink-0">
+                  {s.storeName[0]?.toUpperCase()}
                 </div>
-              </div>
-              {editId === s._id ? (
-                <div className="flex items-center gap-2">
-                  <select
-                    value={tierVal}
-                    onChange={(e) => setTierVal(e.target.value)}
-                    className="text-xs rounded-lg border border-forest/15 px-2 py-1.5 bg-white focus:outline-none"
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-forest">{s.storeName}</div>
+                  <div className="text-xs text-slate/50 capitalize">
+                    {s.accountType} · {s.totalSales ?? 0} sales · ★ {s.rating?.toFixed(1) ?? "—"}
+                  </div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full mt-0.5 inline-block font-medium ${
+                      s.approvalStatus === "approved"
+                        ? "bg-green-50 text-green-700"
+                        : s.approvalStatus === "rejected"
+                          ? "bg-vermillion/10 text-vermillion"
+                          : "bg-saffron/10 text-saffron-dark"
+                    }`}
                   >
-                    {["basic", "trusted", "verified", "top_seller"].map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => saveTier(s._id)}
-                    className="text-green-600 hover:text-green-700"
-                  >
-                    <CheckCircle size={16} />
-                  </button>
-                  <button
-                    onClick={() => setEditId(null)}
-                    className="text-slate/40 hover:text-slate"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs bg-forest/10 text-forest px-2.5 py-1 rounded-full font-semibold capitalize">
-                    {s.verificationTier}
+                    {s.approvalStatus ?? "pending"}
                   </span>
-                  <button
-                    onClick={() => {
-                      setEditId(s._id);
-                      setTierVal(s.verificationTier);
-                    }}
-                    className="text-slate/40 hover:text-forest transition"
-                  >
-                    <Edit3 size={14} />
-                  </button>
                 </div>
-              )}
+                {editId === s._id ? (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={tierVal}
+                      onChange={(e) => setTierVal(e.target.value)}
+                      className="text-xs rounded-lg border border-forest/15 px-2 py-1.5 bg-white focus:outline-none"
+                    >
+                      {["basic", "trusted", "verified", "top_seller"].map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={() => saveTier(s._id)} className="text-green-600 hover:text-green-700">
+                      <CheckCircle size={16} />
+                    </button>
+                    <button onClick={() => setEditId(null)} className="text-slate/40 hover:text-slate">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs bg-forest/10 text-forest px-2.5 py-1 rounded-full font-semibold capitalize">
+                      {s.verificationTier}
+                    </span>
+                    <button
+                      onClick={() => { setEditId(s._id); setTierVal(s.verificationTier); }}
+                      className="text-slate/40 hover:text-forest transition"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {!data?.sellers?.length && (
+              <div className="text-center py-12 bg-white rounded-2xl shadow-card text-slate/40 text-sm">
+                No sellers found.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Approval confirmation modal */}
+      {approvalModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="font-bold text-forest mb-1">
+              {approvalModal.action === "approved" ? "✅ Approve Store" : "❌ Reject Store"}
+            </h3>
+            <p className="text-sm text-slate/60 mb-4">
+              <strong>{approvalModal.name}</strong>{" "}
+              {approvalModal.action === "approved"
+                ? "will be approved and the seller can start listing products."
+                : "will be rejected and notified."}
+            </p>
+            {approvalModal.action === "rejected" && (
+              <textarea
+                className="w-full border border-forest/20 rounded-xl px-3 py-2 text-sm h-20 resize-none mb-3"
+                placeholder="Reason for rejection (will be sent to seller)…"
+                value={rejectNote}
+                onChange={(e) => setRejectNote(e.target.value)}
+              />
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setApprovalModal(null); setRejectNote(""); }}
+                className="flex-1 border border-forest/15 rounded-xl py-2.5 text-sm font-semibold hover:bg-forest/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApproval}
+                disabled={approving}
+                className={`flex-1 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition ${
+                  approvalModal.action === "approved"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-vermillion hover:bg-vermillion/90"
+                }`}
+              >
+                {approving && <Loader2 size={14} className="animate-spin" />}
+                {approvalModal.action === "approved" ? "Approve" : "Reject"}
+              </button>
             </div>
-          ))}
-          {!data?.sellers?.length && (
-            <div className="text-center py-12 bg-white rounded-2xl shadow-card text-slate/40 text-sm">
-              No sellers found.
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
@@ -504,3 +630,5 @@ export default function AdminLayout() {
     </div>
   );
 }
+// Note: SellersTab has been extended above with approval workflow — injecting into existing file below
+

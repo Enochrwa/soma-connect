@@ -3,11 +3,13 @@ import { z } from "zod";
 import { User } from "../models/User.js";
 import { Seller } from "../models/Seller.js";
 import { Product } from "../models/Product.js";
+import { sendSellerApprovalEmail } from "../services/email.service.js";
 import { Order } from "../models/Order.js";
 import { Transaction } from "../models/Transaction.js";
 import { Review } from "../models/Review.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
+import { HttpError } from "../middleware/errorHandler.js";
 
 export const adminRouter = Router();
 
@@ -261,6 +263,65 @@ adminRouter.get("/analytics/revenue", async (req, res, next) => {
       { $sort: { _id: 1 } },
     ]);
     res.json({ data });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Seller Approval Workflow ──────────────────────────────────────────────────
+
+const approvalSchema = z.object({
+  status: z.enum(["approved", "rejected"]),
+  note: z.string().max(500).optional(),
+});
+
+adminRouter.patch(
+  "/sellers/:id/approve",
+  validate(approvalSchema),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const { status, note } = req.body as z.infer<typeof approvalSchema>;
+      const seller = await Seller.findById(req.params.id).populate<{
+        userId: { _id: string; role: string };
+      }>("userId");
+      if (!seller) throw new HttpError(404, "Seller not found.");
+
+      seller.approvalStatus = status as "approved" | "rejected";
+      seller.approvalNote = note;
+      if (status === "approved") {
+        seller.isActive = true;
+        await User.findByIdAndUpdate(seller.userId, { role: "seller" });
+      } else {
+        seller.isActive = false;
+      }
+      await seller.save();
+
+      // Email the seller about the decision
+      const sellerUser = await User.findById(seller.userId).lean();
+      if (sellerUser?.email) {
+        sendSellerApprovalEmail(
+          sellerUser.email,
+          seller.storeName,
+          status === "approved",
+          note,
+        ).catch((e) => console.error("[email] seller approval email failed", e));
+      }
+
+      res.json({ seller, message: `Seller ${status} successfully.` });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// List pending sellers for review
+adminRouter.get("/sellers/pending", async (_req, res, next) => {
+  try {
+    const sellers = await Seller.find({ approvalStatus: "pending" })
+      .populate("userId", "profile phone email")
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ sellers, total: sellers.length });
   } catch (e) {
     next(e);
   }

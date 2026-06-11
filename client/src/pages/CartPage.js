@@ -1,0 +1,41 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Link, useNavigate } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "../app/hooks";
+import { updateQty, removeItem, clearCart } from "../features/cart/cartSlice";
+import { formatRWF } from "../utils/format";
+import { Trash2, ShoppingBag, ChevronRight, Plus, Minus, Tag } from "lucide-react";
+export default function CartPage() {
+    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
+    const items = useAppSelector((s) => s.cart.items);
+    const user = useAppSelector((s) => s.auth.user);
+    const subtotal = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+    const deliveryFee = subtotal > 50000 ? 0 : 2000;
+    const total = subtotal + deliveryFee;
+    if (!items.length) {
+        return (_jsxs("div", { className: "max-w-2xl mx-auto px-4 py-20 text-center", children: [_jsx(ShoppingBag, { className: "text-forest/20 mx-auto mb-5", size: 64 }), _jsx("h2", { className: "font-display text-2xl font-bold text-forest mb-2", children: "Your cart is empty" }), _jsx("p", { className: "text-slate/50 mb-8", children: "Browse products and add them to your cart to get started." }), _jsxs(Link, { to: "/search", className: "bg-forest text-white font-bold px-8 py-3 rounded-xl hover:bg-forest-light transition inline-flex items-center gap-2", children: [_jsx(ShoppingBag, { size: 17 }), " Start shopping"] })] }));
+    }
+    return (_jsxs("div", { className: "max-w-6xl mx-auto px-4 py-8", children: [_jsxs("div", { className: "flex items-center justify-between mb-6", children: [_jsxs("h1", { className: "font-display text-2xl font-bold text-forest", children: ["Cart", " ", _jsxs("span", { className: "text-slate/40 font-normal text-lg", children: ["(", items.length, " ", items.length === 1 ? "item" : "items", ")"] })] }), _jsxs("button", { onClick: () => dispatch(clearCart()), className: "text-sm text-vermillion hover:underline flex items-center gap-1", children: [_jsx(Trash2, { size: 14 }), " Clear all"] })] }), _jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6", children: [_jsx("div", { className: "lg:col-span-2 space-y-3", children: items.map((item) => (_jsxs("div", { className: "bg-white rounded-2xl shadow-card p-4 flex gap-4", children: [_jsx(Link, { to: `/products/${item.productId}`, className: "shrink-0", children: _jsx("img", { src: item.image || "/placeholder.png", alt: item.title, className: "w-20 h-20 rounded-xl object-cover" }) }), _jsxs("div", { className: "flex-1 min-w-0", children: [_jsx(Link, { to: `/products/${item.productId}`, className: "font-semibold text-sm text-forest hover:text-saffron transition line-clamp-2", children: item.title }), item.variant && (_jsx("span", { className: "text-xs text-slate/50 mt-0.5 block", children: item.variant })), item.sellerName && (_jsxs("span", { className: "text-xs text-slate/40 block", children: ["by ", item.sellerName] })), _jsxs("div", { className: "flex items-center justify-between mt-3", children: [_jsxs("div", { className: "flex items-center border border-forest/15 rounded-xl overflow-hidden", children: [_jsx("button", { onClick: () => {
+                                                                if (item.quantity === 1) {
+                                                                    dispatch(removeItem({ productId: item.productId, variant: item.variant }));
+                                                                }
+                                                                else {
+                                                                    dispatch(updateQty({
+                                                                        productId: item.productId,
+                                                                        variant: item.variant,
+                                                                        quantity: item.quantity - 1,
+                                                                    }));
+                                                                }
+                                                            }, className: "w-8 h-8 flex items-center justify-center hover:bg-forest/5 transition text-slate", children: _jsx(Minus, { size: 14 }) }), _jsx("span", { className: "w-8 text-center font-mono text-sm font-semibold", children: item.quantity }), _jsx("button", { onClick: () => dispatch(updateQty({
+                                                                productId: item.productId,
+                                                                variant: item.variant,
+                                                                quantity: item.quantity + 1,
+                                                            })), disabled: item.quantity >= item.stock, className: "w-8 h-8 flex items-center justify-center hover:bg-forest/5 transition text-slate disabled:opacity-30", children: _jsx(Plus, { size: 14 }) })] }), _jsxs("div", { className: "text-right", children: [_jsx("div", { className: "font-mono font-bold text-forest", children: formatRWF(item.unitPrice * item.quantity) }), _jsxs("div", { className: "text-xs text-slate/40 font-mono", children: [formatRWF(item.unitPrice), " each"] })] })] })] }), _jsx("button", { onClick: () => dispatch(removeItem({ productId: item.productId, variant: item.variant })), className: "text-slate/30 hover:text-vermillion transition shrink-0 self-start", children: _jsx(Trash2, { size: 16 }) })] }, `${item.productId}-${item.variant}`))) }), _jsxs("div", { className: "space-y-4", children: [_jsxs("div", { className: "bg-white rounded-2xl shadow-card p-5 space-y-4", children: [_jsx("h2", { className: "font-display text-lg font-bold text-forest", children: "Order summary" }), _jsxs("div", { className: "space-y-2 text-sm", children: [_jsxs("div", { className: "flex justify-between text-slate/70", children: [_jsxs("span", { children: ["Subtotal (", items.reduce((a, i) => a + i.quantity, 0), " items)"] }), _jsx("span", { className: "font-mono", children: formatRWF(subtotal) })] }), _jsxs("div", { className: "flex justify-between text-slate/70", children: [_jsx("span", { children: "Delivery" }), _jsx("span", { className: `font-mono ${deliveryFee === 0 ? "text-green-600 font-semibold" : ""}`, children: deliveryFee === 0 ? "FREE" : formatRWF(deliveryFee) })] }), deliveryFee > 0 && (_jsxs("p", { className: "text-xs text-slate/40 italic", children: ["Free delivery on orders over ", formatRWF(50000)] }))] }), _jsxs("div", { className: "border-t border-forest/8 pt-3 flex justify-between font-bold", children: [_jsx("span", { className: "text-forest", children: "Total" }), _jsx("span", { className: "font-mono text-xl text-saffron", children: formatRWF(total) })] }), _jsxs("button", { onClick: () => {
+                                            if (!user) {
+                                                navigate("/login", { state: { from: "/checkout" } });
+                                            }
+                                            else {
+                                                navigate("/checkout");
+                                            }
+                                        }, className: "w-full bg-forest text-white font-bold py-3 rounded-xl hover:bg-forest-light transition flex items-center justify-center gap-2", children: ["Proceed to checkout ", _jsx(ChevronRight, { size: 17 })] }), _jsx(Link, { to: "/search", className: "block text-center text-sm text-saffron hover:underline", children: "Continue shopping" })] }), _jsxs("div", { className: "bg-white rounded-2xl shadow-card p-5", children: [_jsxs("div", { className: "flex items-center gap-2 mb-3", children: [_jsx(Tag, { size: 16, className: "text-forest" }), _jsx("span", { className: "font-semibold text-sm text-forest", children: "Have a coupon?" })] }), _jsxs("div", { className: "flex gap-2", children: [_jsx("input", { type: "text", placeholder: "Enter code", className: "flex-1 rounded-xl border border-forest/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30" }), _jsx("button", { className: "bg-forest text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-forest-light transition", children: "Apply" })] })] })] })] })] }));
+}

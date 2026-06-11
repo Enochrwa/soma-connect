@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useFlashDealsQuery, useTrendingQuery, useNewArrivalsQuery } from "../app/api";
 import ProductCard from "../components/product/ProductCard";
 import { Skeleton } from "../components/ui/Skeleton";

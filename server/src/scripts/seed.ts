@@ -197,6 +197,8 @@ async function main() {
       accountType: "business",
       location: { sector: s.sector, district: "Gasabo" },
       verificationTier: "verified",
+      approvalStatus: "approved",   // seed sellers are pre-approved
+      isActive: true,
       rating: 4.4 + Math.random() * 0.5,
       ratingCount: 20 + Math.floor(Math.random() * 200),
       totalSales: 50 + Math.floor(Math.random() * 500),
@@ -236,9 +238,21 @@ async function main() {
     }
   }
 
+  // Ensure text search index exists (required for $text queries)
+  try {
+    await Product.collection.createIndex(
+      { title: "text", description: "text", tags: "text" },
+      { weights: { title: 10, tags: 5, description: 1 }, name: "product_text_search" },
+    );
+    console.log("[seed] text index ensured on products");
+  } catch (e) {
+    console.warn("[seed] text index already exists or failed:", (e as Error).message);
+  }
+
   console.log(`[seed] done. ${total} products, ${SELLERS.length} sellers.`);
-  console.log(`[seed] admin login → phone +250 788 000 001 / pw admin1234`);
-  console.log(`[seed] buyer login → phone +250 788 000 002 / pw buyer1234`);
+  console.log(`[seed] admin login  → phone +250 788 000 001 / email admin@somamarket.rw / pw admin1234`);
+  console.log(`[seed] buyer login  → phone +250 788 000 002 / email buyer@somamarket.rw / pw buyer1234`);
+  console.log(`[seed] seller login → phone +250 788 000 003 / email seller@somamarket.rw / pw seller1234`);
   await mongoose.disconnect();
 }
 

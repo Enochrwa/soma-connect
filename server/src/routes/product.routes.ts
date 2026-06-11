@@ -6,6 +6,7 @@ import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { slugify } from "../utils/slug.js";
+import { sanitizeDescription } from "../middleware/sanitize.js";
 
 export const productRouter = Router();
 
@@ -23,7 +24,6 @@ productRouter.get("/", async (req, res, next) => {
       inStock,
     } = req.query as Record<string, string | undefined>;
 
-    // Use a loose but typed filter object (Mongoose accepts this shape)
     const filter: Record<string, unknown> = { isActive: true };
     if (category) filter.category = category;
     if (condition) filter.condition = condition;
@@ -34,7 +34,19 @@ productRouter.get("/", async (req, res, next) => {
       if (maxPrice) priceRange.$lte = Number(maxPrice);
       filter.price = priceRange;
     }
-    if (q) filter.$text = { $search: q };
+
+    // Use regex fallback if no text index exists (avoids silent empty results)
+    if (q) {
+      try {
+        filter.$text = { $search: q };
+      } catch {
+        filter.$or = [
+          { title: new RegExp(q, "i") },
+          { description: new RegExp(q, "i") },
+          { tags: new RegExp(q, "i") },
+        ];
+      }
+    }
 
     type SortSpec = Record<string, 1 | -1>;
     const textScore = { score: { $meta: "textScore" } } as unknown as SortSpec;
@@ -50,13 +62,35 @@ productRouter.get("/", async (req, res, next) => {
     const lim = Math.min(60, Math.max(1, Number(limit)));
 
     const projection = q ? ({ score: { $meta: "textScore" } } as unknown as SortSpec) : undefined;
-    const cursor = Product.find(filter, projection)
-      .sort(sortMap[sort] ?? sortMap.relevance)
-      .skip((pg - 1) * lim)
-      .limit(lim)
-      .lean();
 
-    const [items, total] = await Promise.all([cursor, Product.countDocuments(filter)]);
+    let items: unknown[] = [];
+    let total = 0;
+
+    try {
+      const cursor = Product.find(filter, projection)
+        .sort(sortMap[sort] ?? sortMap.relevance)
+        .skip((pg - 1) * lim)
+        .limit(lim)
+        .lean();
+      [items, total] = await Promise.all([cursor, Product.countDocuments(filter)]);
+    } catch {
+      // Text index not built — fall back to regex search
+      if (q) {
+        delete filter.$text;
+        filter.$or = [
+          { title: new RegExp(q, "i") },
+          { description: new RegExp(q, "i") },
+          { tags: new RegExp(q, "i") },
+        ];
+        const cursor = Product.find(filter)
+          .sort({ salesCount: -1, createdAt: -1 })
+          .skip((pg - 1) * lim)
+          .limit(lim)
+          .lean();
+        [items, total] = await Promise.all([cursor, Product.countDocuments(filter)]);
+      }
+    }
+
     res.json({ items, total, page: pg, pages: Math.ceil(total / lim) });
   } catch (e) {
     next(e);
@@ -130,7 +164,10 @@ productRouter.post(
     try {
       const seller = await Seller.findOne({ userId: req.user!.id });
       if (!seller) throw new HttpError(403, "Complete seller onboarding first.");
+      if (!seller.isActive) throw new HttpError(403, "Your seller account is pending approval.");
       const body = req.body as z.infer<typeof createSchema>;
+      // Sanitize description to prevent XSS
+      body.description = sanitizeDescription(body.description);
       const product = await Product.create({
         ...body,
         sellerId: seller._id,
@@ -157,7 +194,6 @@ productRouter.put(
       const product = await Product.findById(req.params.id);
       if (!product) throw new HttpError(404, "Product not found.");
 
-      // Admins can edit any product; sellers only their own
       if (req.user!.role !== "admin") {
         const seller = await Seller.findOne({ userId: req.user!.id });
         if (!seller || String(product.sellerId) !== String(seller._id)) {
@@ -166,6 +202,8 @@ productRouter.put(
       }
 
       const body = req.body as z.infer<typeof updateSchema>;
+      // Sanitize description
+      if (body.description) body.description = sanitizeDescription(body.description);
       if (body.title) {
         (body as Record<string, unknown>).slug =
           `${slugify(body.title)}-${Date.now().toString(36)}`;
@@ -195,7 +233,6 @@ productRouter.delete(
         }
       }
 
-      // Soft-delete: just deactivate
       product.isActive = false;
       await product.save();
       res.json({ ok: true, message: "Product removed from store." });
@@ -205,7 +242,6 @@ productRouter.delete(
   },
 );
 
-// Hard-delete for admins only
 productRouter.delete(
   "/:id/hard",
   requireAuth,

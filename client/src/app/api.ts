@@ -1,5 +1,5 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import type { RootState } from "./store";
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQueryWithReauth } from "./baseQuery";
 import type {
   User,
   Product,
@@ -10,19 +10,10 @@ import type {
   PaginatedResponse,
 } from "../types";
 
-const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
 
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({
-    baseUrl,
-    credentials: "include",
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.accessToken;
-      if (token) headers.set("authorization", `Bearer ${token}`);
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: [
     "Products",
     "Product",
@@ -196,6 +187,17 @@ export const api = createApi({
     }),
 
     // ── Uploads ──────────────────────────────────────────────────────────────
+    initiatePayment: b.mutation<
+      { mockRef?: string; txRef?: string; message: string },
+      { orderId: string; method: string; phone: string }
+    >({
+      query: (body) => ({ url: "/payment/mock", method: "POST", body }),
+      invalidatesTags: ["Orders"],
+    }),
+    getPaymentStatus: b.query<{ status: string; method: string }, string>({
+      query: (ref) => `/payment/status/${ref}`,
+    }),
+
     uploadFiles: b.mutation<{ urls: string[] }, FormData>({
       query: (formData) => ({
         url: "/uploads",
@@ -255,6 +257,49 @@ export const api = createApi({
       query: ({ id, ...body }) => ({ url: `/admin/sellers/${id}/tier`, method: "PATCH", body }),
       invalidatesTags: ["AdminStats"],
     }),
+    adminApproveSeller: b.mutation<
+      { seller: Seller; message: string },
+      { id: string; status: "approved" | "rejected"; note?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/admin/sellers/${id}/approve`, method: "PATCH", body }),
+      invalidatesTags: ["AdminStats"],
+    }),
+    adminPendingSellers: b.query<{ sellers: Seller[]; total: number }, void>({
+      query: () => "/admin/sellers/pending",
+      providesTags: ["AdminStats"],
+    }),
+
+    // ── Seller Orders & Analytics ────────────────────────────────────────────
+    getSellerOrders: b.query<
+      { orders: Order[]; total: number; page: number; pages: number },
+      { status?: string; page?: number }
+    >({
+      query: (params) => ({ url: "/sellers/me/orders", params }),
+      providesTags: ["Orders"],
+    }),
+    getSellerAnalytics: b.query<
+      {
+        totalOrders: number;
+        pendingOrders: number;
+        revenueThisMonth: number;
+        totalProducts: number;
+        activeProducts: number;
+        rating: number;
+        ratingCount: number;
+      },
+      void
+    >({
+      query: () => "/sellers/me/analytics",
+      providesTags: ["Seller"],
+    }),
+    updateOrderStatus: b.mutation<
+      { order: Order },
+      { id: string; status: string; note?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/orders/${id}/status`, method: "PATCH", body }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: "Order", id }, "Orders"],
+    }),
+
     adminRevenueAnalytics: b.query<
       { data: Array<{ _id: string; revenue: number; orders: number }> },
       { days?: number }
@@ -315,5 +360,15 @@ export const {
   useAdminUsersQuery,
   useAdminSellersQuery,
   useAdminUpdateSellerTierMutation,
+  useAdminApproveSellerMutation,
+  useAdminPendingSellersQuery,
   useAdminRevenueAnalyticsQuery,
+  // Seller
+  useGetSellerOrdersQuery,
+  useGetSellerAnalyticsQuery,
+  useUpdateOrderStatusMutation,
+  // Payment
+  useInitiatePaymentMutation,
+  useGetPaymentStatusQuery,
+  // Upload
 } = api;

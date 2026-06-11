@@ -19,10 +19,18 @@ const SellerSchema = new Schema(
       enum: ["basic", "trusted", "verified", "top_seller"],
       default: "basic",
     },
+    // Approval workflow: new sellers start as pending
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+      index: true,
+    },
+    approvalNote: String, // Admin note on rejection
     rating: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
     totalSales: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: false }, // false until admin approves
     holidayMode: { type: Boolean, default: false },
   },
   { timestamps: true },
