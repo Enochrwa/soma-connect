@@ -1,6 +1,7 @@
 # SOMA Connect — Production Deployment Guide
 
 ## Architecture
+
 - **Frontend**: Vercel (React + Vite)
 - **Backend**: Render.com (Node.js + Express)
 - **Database**: MongoDB Atlas (free M0 tier)
@@ -71,7 +72,7 @@
 1. Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
 2. Select the `soma-connect` repo
 3. Configure:
-   - **Root Directory**: `client`  ← important
+   - **Root Directory**: `client` ← important
    - **Framework Preset**: Vite
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
@@ -100,6 +101,7 @@ Then go back to Render and update `CLIENT_URL` with the Vercel URL → Manual de
 The mock payment service is in `server/src/services/payment.mock.ts`.
 
 To swap in the real MTN MoMo API:
+
 1. Replace `initiateMobileMoneyPush` with a call to MTN's Collection API
 2. Set up the callback webhook at `POST /api/payment/webhook/mtn`
 3. Verify the webhook signature, then update the `Transaction` and `Order` status
@@ -112,16 +114,16 @@ Airtel Money Rwanda: https://developers.airtel.africa
 
 ## 8. Environment variables quick reference
 
-| Variable | Where to get it |
-|---|---|
-| `MONGO_URI` | MongoDB Atlas connection string |
-| `JWT_ACCESS_SECRET` | `openssl rand -hex 64` |
-| `JWT_REFRESH_SECRET` | `openssl rand -hex 64` |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary dashboard |
-| `CLOUDINARY_API_KEY` | Cloudinary dashboard |
-| `CLOUDINARY_API_SECRET` | Cloudinary dashboard |
-| `SMTP_USER` | Your Brevo login email |
-| `SMTP_PASS` | Brevo SMTP key |
-| `CLIENT_URL` | Your Vercel deployment URL |
-| `GOOGLE_CLIENT_ID` | Google Cloud Console (optional) |
-| `GOOGLE_CLIENT_SECRET` | Google Cloud Console (optional) |
+| Variable                | Where to get it                 |
+| ----------------------- | ------------------------------- |
+| `MONGO_URI`             | MongoDB Atlas connection string |
+| `JWT_ACCESS_SECRET`     | `openssl rand -hex 64`          |
+| `JWT_REFRESH_SECRET`    | `openssl rand -hex 64`          |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary dashboard            |
+| `CLOUDINARY_API_KEY`    | Cloudinary dashboard            |
+| `CLOUDINARY_API_SECRET` | Cloudinary dashboard            |
+| `SMTP_USER`             | Your Brevo login email          |
+| `SMTP_PASS`             | Brevo SMTP key                  |
+| `CLIENT_URL`            | Your Vercel deployment URL      |
+| `GOOGLE_CLIENT_ID`      | Google Cloud Console (optional) |
+| `GOOGLE_CLIENT_SECRET`  | Google Cloud Console (optional) |

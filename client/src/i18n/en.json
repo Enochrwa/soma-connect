@@ -1,5 +1,11 @@
 {
-  "nav": { "home": "Home", "shop": "Shop", "sellers": "Sellers", "cart": "Cart", "signIn": "Sign in" },
+  "nav": {
+    "home": "Home",
+    "shop": "Shop",
+    "sellers": "Sellers",
+    "cart": "Cart",
+    "signIn": "Sign in"
+  },
   "home": {
     "heroTitle": "Rwanda's marketplace, reimagined.",
     "heroSubtitle": "Verified sellers, mobile money checkout, and same-day delivery in Kigali.",
