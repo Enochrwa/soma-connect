@@ -22,6 +22,7 @@ const LoyaltyPage = lazy(() => import("./pages/LoyaltyPage"));
 const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
+const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
             <Route path="/cart" element={<CartPage />} />
 
             {/* Auth required */}
