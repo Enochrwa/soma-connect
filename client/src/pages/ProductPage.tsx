@@ -21,6 +21,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { Seller } from "../types";
+import { Breadcrumb } from "../components/ui/Breadcrumb";
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +35,7 @@ export default function ProductPage() {
   const [activeTab, setActiveTab] = useState<"desc" | "reviews">("desc");
 
   const wishlistItems = useAppSelector((s: RootState) => s.wishlist.items);
+  const user = useAppSelector((s: RootState) => s.auth.user);
 
   if (isLoading) {
     return (
@@ -81,26 +83,23 @@ export default function ProductPage() {
   }
 
   function handleToggleWishlist() {
+    if (!user) {
+      navigate("/login", { state: { from: `/products/${p._id}` } });
+      return;
+    }
     dispatch(dispatchToggleWishlist(p));
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate/50 mb-6">
-        <Link to="/" className="hover:text-forest transition">
-          Home
-        </Link>
-        <span>/</span>
-        <Link
-          to={`/search?category=${p.category}`}
-          className="hover:text-forest transition capitalize"
-        >
-          {p.category}
-        </Link>
-        <span>/</span>
-        <span className="text-slate line-clamp-1">{p.title}</span>
-      </div>
+      <Breadcrumb
+        className="mb-6"
+        items={[
+          { label: p.category, to: `/search?category=${p.category}` },
+          { label: p.title },
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Image Gallery */}

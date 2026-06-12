@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { Breadcrumb } from "../components/ui/Breadcrumb";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { updateQty, removeItem, clearCart } from "../features/cart/cartSlice";
 import type { RootState } from "../app/store";
@@ -35,6 +36,7 @@ export default function CartPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      <Breadcrumb className="mb-4" items={[{ label: "Cart" }]} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl font-bold text-forest">
           Cart{" "}
