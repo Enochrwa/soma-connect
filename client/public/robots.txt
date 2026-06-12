@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin/
+Disallow: /seller
+Disallow: /seller/
+Disallow: /account
+Disallow: /checkout
+Disallow: /orders
+Allow: /
+
+Sitemap: https://soma-connect.vercel.app/sitemap.xml

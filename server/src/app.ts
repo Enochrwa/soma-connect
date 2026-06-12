@@ -33,8 +33,22 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://placehold.co"],
-        connectSrc: ["'self'", env.CLIENT_URL],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://res.cloudinary.com",
+          "https://placehold.co",
+          // Google OAuth profile pictures
+          "https://lh3.googleusercontent.com",
+        ],
+        connectSrc: [
+          "'self'",
+          env.CLIENT_URL,
+          // Allow WebSocket connections back to this server (Socket.IO).
+          // wss: covers production; ws: covers local dev.
+          "wss:",
+          "ws:",
+        ],
       },
     },
   }),

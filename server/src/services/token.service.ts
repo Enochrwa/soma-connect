@@ -18,13 +18,20 @@ export function setRefreshCookie(res: Response, token: string) {
   res.cookie("soma_rt", token, {
     httpOnly: true,
     secure: env.COOKIE_SECURE,
-    sameSite: "lax",
-    domain: env.COOKIE_DOMAIN,
+    // "none" is required for cross-origin (Vercel frontend → Render API).
+    // "lax" only works when frontend and backend share the same domain.
+    sameSite: env.COOKIE_SECURE ? "none" : "lax",
+    // Omit domain when the env var is empty — setting it to a specific Render
+    // subdomain causes browsers to reject the cookie on cross-origin requests.
+    domain: env.COOKIE_DOMAIN || undefined,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/api/auth",
   });
 }
 
 export function clearRefreshCookie(res: Response) {
-  res.clearCookie("soma_rt", { path: "/api/auth", domain: env.COOKIE_DOMAIN });
+  res.clearCookie("soma_rt", {
+    path: "/api/auth",
+    domain: env.COOKIE_DOMAIN || undefined,
+  });
 }

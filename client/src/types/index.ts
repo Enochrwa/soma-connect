@@ -257,6 +257,15 @@ export interface Dispute {
   createdAt: string;
 }
 
+// ─── Notification ────────────────────────────────────────────────────────────
+
+export interface AppNotification {
+  _id: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
 // ─── Order update (add discount/tracking fields) ─────────────────────────────
 
 // Extends Order with new fields

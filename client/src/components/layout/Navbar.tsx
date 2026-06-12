@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Heart,
   Bell,
+  CheckCheck,
   User,
   Search,
   Menu,
@@ -18,7 +19,12 @@ import {
   Shield,
 } from "lucide-react";
 import type { RootState } from "../../app/store";
-import { useLogoutMutation, useGetNotificationsQuery } from "../../app/api";
+import type { AppNotification } from "../../types";
+import {
+  useLogoutMutation,
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+} from "../../app/api";
 import { clearAuth } from "../../features/auth/authSlice";
 
 function UserAvatar({ name, avatar }: { name?: string; avatar?: string }) {
@@ -55,8 +61,10 @@ export function Navbar() {
   const dispatch = useDispatch();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const accountRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const cartCount = useSelector((s: RootState) =>
     s.cart.items.reduce((acc, i) => acc + i.quantity, 0),
@@ -64,6 +72,7 @@ export function Navbar() {
   const user = useSelector((s: RootState) => s.auth.user);
   const wishlistCount = useSelector((s: RootState) => s.wishlist.items.length);
   const { data: notifData } = useGetNotificationsQuery(undefined, { skip: !user });
+  const [markRead] = useMarkNotificationReadMutation();
   const [logout] = useLogoutMutation();
 
   // Close account dropdown on outside click
@@ -71,6 +80,9 @@ export function Navbar() {
     function handleClick(e: MouseEvent) {
       if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
         setAccountMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -165,17 +177,70 @@ export function Navbar() {
 
           {/* Notifications */}
           {user && (
-            <button
-              className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition"
-              aria-label="Notifications"
-            >
-              <Bell size={20} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-vermillion text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center font-mono">
-                  {unreadCount}
-                </span>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotifOpen((o) => !o)}
+                className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition"
+                aria-label="Notifications"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-vermillion text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center font-mono">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="absolute right-0 top-11 w-80 bg-white rounded-xl shadow-2xl border border-slate/10 z-50 overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate/10">
+                    <span className="font-semibold text-forest text-sm">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={() =>
+                          (notifData?.notifications as AppNotification[])
+                            ?.filter((n) => !n.read)
+                            .forEach((n) => markRead(n._id))
+                        }
+                        className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
+                      >
+                        <CheckCheck size={13} />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* List */}
+                  <ul className="max-h-72 overflow-y-auto divide-y divide-slate/5">
+                    {notifData?.notifications?.length ? (
+                      (notifData.notifications as AppNotification[]).slice(0, 20).map((n) => (
+                        <li
+                          key={n._id}
+                          onClick={() => !n.read && markRead(n._id)}
+                          className={`px-4 py-3 cursor-pointer hover:bg-slate/5 transition ${
+                            !n.read ? "bg-saffron/5" : ""
+                          }`}
+                        >
+                          <p
+                            className={`text-sm ${!n.read ? "font-medium text-forest" : "text-slate/70"}`}
+                          >
+                            {n.message}
+                          </p>
+                          <p className="text-[11px] text-slate/40 mt-0.5">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </p>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-4 py-8 text-center text-sm text-slate/40">
+                        No notifications yet
+                      </li>
+                    )}
+                  </ul>
+                </div>
               )}
-            </button>
+            </div>
           )}
 
           {/* Cart */}

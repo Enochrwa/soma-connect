@@ -11,6 +11,7 @@ import type {
   Coupon,
   Payout,
   Dispute,
+  AppNotification,
 } from "../types";
 
 export const api = createApi({
@@ -233,7 +234,7 @@ export const api = createApi({
     }),
 
     // ── Notifications ────────────────────────────────────────────────────────
-    getNotifications: b.query<{ notifications: Notification[]; unreadCount: number }, void>({
+    getNotifications: b.query<{ notifications: AppNotification[]; unreadCount: number }, void>({
       query: () => "/notifications",
       providesTags: ["Notifications"],
     }),
