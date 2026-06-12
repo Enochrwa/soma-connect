@@ -2,7 +2,10 @@ export default function TermsOfServicePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 prose prose-sm text-slate">
       <h1 className="font-display text-3xl font-bold text-forest mb-2">Terms of Service</h1>
-      <p className="text-slate/50 text-sm mb-8">Last updated: {new Date().toLocaleDateString("en-RW", { year: "numeric", month: "long", day: "numeric" })}</p>
+      <p className="text-slate/50 text-sm mb-8">
+        Last updated:{" "}
+        {new Date().toLocaleDateString("en-RW", { year: "numeric", month: "long", day: "numeric" })}
+      </p>
 
       <p>
         Welcome to SOMA Connect. By creating an account or using our platform you agree to these
@@ -11,8 +14,8 @@ export default function TermsOfServicePage() {
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">1. Who We Are</h2>
       <p>
-        SOMA Connect is a digital marketplace that connects buyers and sellers across Rwanda.
-        We provide the platform; individual sellers are responsible for their listings and fulfilment.
+        SOMA Connect is a digital marketplace that connects buyers and sellers across Rwanda. We
+        provide the platform; individual sellers are responsible for their listings and fulfilment.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">2. Eligibility</h2>
@@ -31,18 +34,32 @@ export default function TermsOfServicePage() {
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">4. Buying</h2>
       <ul className="space-y-1 list-disc list-inside">
-        <li>Prices are shown in Rwandan Francs (RWF) and include applicable taxes unless stated otherwise.</li>
+        <li>
+          Prices are shown in Rwandan Francs (RWF) and include applicable taxes unless stated
+          otherwise.
+        </li>
         <li>Placing an order creates a binding contract between you and the seller.</li>
-        <li>For mobile money orders, payment must be sent within 24 hours or the order may be cancelled.</li>
+        <li>
+          For mobile money orders, payment must be sent within 24 hours or the order may be
+          cancelled.
+        </li>
         <li>SOMA Connect is not liable for seller disputes, but we will mediate in good faith.</li>
       </ul>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">5. Selling</h2>
       <ul className="space-y-1 list-disc list-inside">
         <li>Sellers must apply and be approved before listing products.</li>
-        <li>All listings must accurately describe the product. Misleading listings will be removed.</li>
-        <li>Prohibited items include: counterfeit goods, illegal substances, weapons, and items that violate Rwandan law.</li>
-        <li>SOMA Connect charges a commission on completed sales as detailed in the Seller Fee Schedule.</li>
+        <li>
+          All listings must accurately describe the product. Misleading listings will be removed.
+        </li>
+        <li>
+          Prohibited items include: counterfeit goods, illegal substances, weapons, and items that
+          violate Rwandan law.
+        </li>
+        <li>
+          SOMA Connect charges a commission on completed sales as detailed in the Seller Fee
+          Schedule.
+        </li>
         <li>Payouts are processed within 7 business days of order delivery confirmation.</li>
       </ul>
 
@@ -63,7 +80,9 @@ export default function TermsOfServicePage() {
         to open a dispute. Refunds are processed within 14 business days of a resolved dispute.
       </p>
 
-      <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">8. Prohibited Conduct</h2>
+      <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">
+        8. Prohibited Conduct
+      </h2>
       <p>You may not:</p>
       <ul className="space-y-1 list-disc list-inside">
         <li>Use SOMA Connect for any unlawful purpose.</li>
@@ -73,14 +92,18 @@ export default function TermsOfServicePage() {
         <li>Harass other users or SOMA Connect staff.</li>
       </ul>
 
-      <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">9. Intellectual Property</h2>
+      <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">
+        9. Intellectual Property
+      </h2>
       <p>
-        SOMA Connect's branding, design, and code are our property. Seller product images remain
-        the seller's property; by uploading them, sellers grant us a non-exclusive licence to
-        display them on the platform.
+        SOMA Connect's branding, design, and code are our property. Seller product images remain the
+        seller's property; by uploading them, sellers grant us a non-exclusive licence to display
+        them on the platform.
       </p>
 
-      <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">10. Limitation of Liability</h2>
+      <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">
+        10. Limitation of Liability
+      </h2>
       <p>
         To the maximum extent permitted by Rwandan law, SOMA Connect is not liable for indirect,
         incidental, or consequential damages arising from use of the platform. Our liability is
@@ -96,8 +119,8 @@ export default function TermsOfServicePage() {
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">12. Changes</h2>
       <p>
         We may update these terms. Continued use of the platform after changes take effect
-        constitutes acceptance of the new terms. Material changes will be communicated 14 days
-        in advance.
+        constitutes acceptance of the new terms. Material changes will be communicated 14 days in
+        advance.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">13. Contact</h2>

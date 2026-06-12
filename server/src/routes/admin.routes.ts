@@ -445,10 +445,9 @@ adminRouter.post("/orders/:orderId/confirm-payment", async (req: AuthedRequest, 
     await order.save();
 
     if (order.paymentRef) {
-      await (await import("../models/Transaction.js")).Transaction.updateOne(
-        { mockRef: order.paymentRef },
-        { status: "succeeded" },
-      );
+      await (
+        await import("../models/Transaction.js")
+      ).Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
     }
 
     const { emitOrderUpdate } = await import("../socket/index.js");

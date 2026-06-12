@@ -60,16 +60,16 @@ paymentRouter.post(
       });
 
       order.paymentMethod = method;
-      order.paymentStatus = "pending_payment";
+      order.paymentStatus = "pending"; // awaiting manual transfer confirmation by admin
       order.paymentRef = orderRef;
-      order.status = "pending_payment";
+      order.status = "placed"; // stays in placed until admin confirms payment
       order.statusHistory.push({
-        status: "pending_payment",
+        status: "placed",
         at: new Date(),
-        note: `Manual ${method === "mtn_momo" ? "MTN MoMo" : "Airtel Money"} transfer — awaiting admin confirmation`,
+        note: `Manual ${method === "mtn_momo" ? "MTN MoMo" : "Airtel Money"} transfer — awaiting admin payment confirmation`,
       });
       await order.save();
-      emitOrderUpdate(String(order._id), { status: "pending_payment", at: new Date() });
+      emitOrderUpdate(String(order._id), { status: "placed", at: new Date() });
 
       res.json({
         orderRef,

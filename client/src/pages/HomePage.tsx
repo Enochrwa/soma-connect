@@ -235,7 +235,10 @@ export default function HomePage() {
           <div className="text-center py-12 text-slate/40">
             <Sparkles size={40} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm">New products coming soon — be the first to discover them.</p>
-            <Link to="/seller/apply" className="inline-block mt-3 text-forest text-sm font-semibold hover:underline">
+            <Link
+              to="/seller/apply"
+              className="inline-block mt-3 text-forest text-sm font-semibold hover:underline"
+            >
               Become a seller →
             </Link>
           </div>

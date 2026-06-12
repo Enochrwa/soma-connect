@@ -51,8 +51,7 @@ export function PaymentModal({
         ? "bg-red-500"
         : "bg-green-600";
 
-  const businessNumber =
-    method === "mtn_momo" ? SOMA_MTN_NUMBER : SOMA_AIRTEL_NUMBER;
+  const businessNumber = method === "mtn_momo" ? SOMA_MTN_NUMBER : SOMA_AIRTEL_NUMBER;
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {
