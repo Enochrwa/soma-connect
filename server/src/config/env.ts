@@ -30,6 +30,6 @@ export const env = {
   GOOGLE_CALLBACK_URL:
     process.env.GOOGLE_CALLBACK_URL ?? "http://localhost:4000/api/auth/google/callback",
   HF_API_TOKEN: process.env.HF_API_TOKEN ?? "",
-  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? "localhost",
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? "",
   COOKIE_SECURE: process.env.COOKIE_SECURE === "true",
 };

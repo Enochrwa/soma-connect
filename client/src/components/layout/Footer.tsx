@@ -12,16 +12,16 @@ const SHOP_LINKS = [
 
 const HELP_LINKS = [
   { label: "Track your order", to: "/orders" },
-  { label: "Returns & refunds", to: "/" },
-  { label: "Contact support", to: "/" },
-  { label: "FAQ", to: "/" },
+  { label: "Returns & refunds", to: "/terms#returns" },
+  { label: "Contact support", to: "mailto:support@soma.rw", external: true },
+  { label: "Privacy Policy", to: "/privacy" },
 ];
 
 const SELLER_LINKS = [
   { label: "Become a seller", to: "/seller/apply" },
   { label: "Seller dashboard", to: "/seller" },
-  { label: "Seller policies", to: "/" },
-  { label: "Seller fees", to: "/" },
+  { label: "Seller policies", to: "/terms#selling" },
+  { label: "Terms of Service", to: "/terms" },
 ];
 
 export function Footer() {
@@ -108,10 +108,10 @@ export function Footer() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ivory/40">
           <span>© {new Date().getFullYear()} SOMA Market. Murakoze!</span>
           <div className="flex items-center gap-4">
-            <Link to="/" className="hover:text-ivory/70 transition">
+            <Link to="/privacy" className="hover:text-ivory/70 transition">
               Privacy Policy
             </Link>
-            <Link to="/" className="hover:text-ivory/70 transition">
+            <Link to="/terms" className="hover:text-ivory/70 transition">
               Terms of Service
             </Link>
           </div>

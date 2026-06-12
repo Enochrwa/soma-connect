@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useInitiatePaymentMutation, useGetPaymentStatusQuery } from "../../app/api";
-import { Loader2, CheckCircle, XCircle, Smartphone, Banknote, Info } from "lucide-react";
+import { useInitiatePaymentMutation } from "../../app/api";
+import { CheckCircle, XCircle, Smartphone, Banknote, Info, Copy, Loader2 } from "lucide-react";
 import { formatRWF } from "../../utils/format";
 
 interface PaymentModalProps {
@@ -14,7 +14,11 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-type PaymentState = "idle" | "initiating" | "awaiting_confirmation" | "success" | "failed";
+type PaymentState = "idle" | "submitting" | "instructions" | "success" | "failed";
+
+// SOMA Connect business payment details
+const SOMA_MTN_NUMBER = "+250 788 000 000";
+const SOMA_AIRTEL_NUMBER = "+250 732 000 000";
 
 export function PaymentModal({
   orderId,
@@ -28,63 +32,9 @@ export function PaymentModal({
   const navigate = useNavigate();
   const [phone, setPhone] = useState(defaultPhone);
   const [state, setState] = useState<PaymentState>("idle");
-  const [txRef, setTxRef] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
   const [initiatePayment] = useInitiatePaymentMutation();
-
-  // Poll payment status every 3s while awaiting USSD confirmation
-  const { data: statusData } = useGetPaymentStatusQuery(txRef ?? "", {
-    skip: !txRef || state !== "awaiting_confirmation",
-    pollingInterval: 3000,
-  });
-
-  useEffect(() => {
-    if (!statusData) return;
-    if (statusData.status === "succeeded") {
-      setState("success");
-      setTimeout(() => {
-        onSuccess();
-        navigate(`/orders/${orderId}`);
-      }, 1800);
-    } else if (statusData.status === "failed") {
-      setState("failed");
-      setErrorMsg("Payment was declined or timed out. Please try again.");
-    }
-  }, [statusData, orderId, navigate, onSuccess]);
-
-  async function handlePay() {
-    if (method !== "cod" && !phone.trim()) {
-      setErrorMsg("Please enter your mobile money number.");
-      return;
-    }
-    setErrorMsg("");
-    setState("initiating");
-
-    try {
-      const result = await initiatePayment({ orderId, method, phone: phone.trim() }).unwrap();
-
-      if (method === "cod") {
-        setState("success");
-        setTimeout(() => {
-          onSuccess();
-          navigate(`/orders/${orderId}`);
-        }, 1500);
-        return;
-      }
-
-      // For MoMo: poll via txRef / mockRef
-      setTxRef(
-        (result as { mockRef?: string; txRef?: string }).mockRef ??
-          (result as { mockRef?: string; txRef?: string }).txRef ??
-          null,
-      );
-      setState("awaiting_confirmation");
-    } catch (err: unknown) {
-      const e = err as { data?: { error?: string } };
-      setState("failed");
-      setErrorMsg(e?.data?.error ?? "Payment initiation failed. Please try again.");
-    }
-  }
 
   const isMoMo = method !== "cod";
   const methodLabel =
@@ -93,12 +43,56 @@ export function PaymentModal({
       : method === "airtel_money"
         ? "Airtel Money"
         : "Cash on Delivery";
+
   const headerColor =
     method === "mtn_momo"
       ? "bg-yellow-400"
       : method === "airtel_money"
         ? "bg-red-500"
         : "bg-green-600";
+
+  const businessNumber = method === "mtn_momo" ? SOMA_MTN_NUMBER : SOMA_AIRTEL_NUMBER;
+
+  function copyToClipboard(text: string, key: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }
+
+  async function handlePay() {
+    if (isMoMo && !phone.trim()) {
+      setErrorMsg("Please enter your mobile money number.");
+      return;
+    }
+    setErrorMsg("");
+    setState("submitting");
+
+    try {
+      if (method === "cod") {
+        await initiatePayment({ orderId, method, phone: "" }).unwrap();
+        setState("success");
+        setTimeout(() => {
+          onSuccess();
+          navigate(`/orders/${orderId}`);
+        }, 1800);
+        return;
+      }
+
+      // For MoMo: place order in pending_payment status and show instructions
+      await initiatePayment({ orderId, method, phone: phone.trim() }).unwrap();
+      setState("instructions");
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string } };
+      setState("failed");
+      setErrorMsg(e?.data?.error ?? "Failed to place order. Please try again.");
+    }
+  }
+
+  function handleDone() {
+    onSuccess();
+    navigate(`/orders/${orderId}`);
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
@@ -120,7 +114,7 @@ export function PaymentModal({
               {isMoMo && (
                 <div>
                   <label className="block text-sm font-semibold text-forest mb-1.5">
-                    {method === "mtn_momo" ? "MTN" : "Airtel"} number
+                    Your {method === "mtn_momo" ? "MTN" : "Airtel"} number
                   </label>
                   <input
                     type="tel"
@@ -132,12 +126,8 @@ export function PaymentModal({
                   <div className="flex items-start gap-2 mt-2.5 bg-blue-50 rounded-lg p-2.5">
                     <Info size={13} className="text-blue-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-700">
-                      A USSD push will be sent to this number — approve it on your phone to confirm.
-                      {import.meta.env.DEV && (
-                        <span className="block mt-0.5 font-medium text-blue-500">
-                          Demo mode: auto-confirms in ~3 seconds.
-                        </span>
-                      )}
+                      You'll receive payment instructions to send manually to our business number.
+                      Your order will be confirmed once we verify the transfer.
                     </p>
                   </div>
                 </div>
@@ -158,7 +148,7 @@ export function PaymentModal({
                   onClick={handlePay}
                   className="flex-1 bg-forest text-white font-bold py-3 rounded-xl hover:bg-forest/90 transition text-sm"
                 >
-                  {isMoMo ? "Send USSD Push" : "Place Order"}
+                  {isMoMo ? "Continue to Payment" : "Place Order"}
                 </button>
                 <button
                   onClick={onClose}
@@ -170,30 +160,100 @@ export function PaymentModal({
             </>
           )}
 
-          {state === "initiating" && (
+          {state === "submitting" && (
             <div className="flex flex-col items-center py-6 gap-3">
               <Loader2 className="animate-spin text-forest" size={32} />
-              <p className="text-sm text-slate/70 font-medium">Sending payment request…</p>
+              <p className="text-sm text-slate/70 font-medium">Placing your order…</p>
             </div>
           )}
 
-          {state === "awaiting_confirmation" && (
-            <div className="flex flex-col items-center py-4 gap-3 text-center">
-              <div className="w-14 h-14 rounded-full bg-saffron/15 flex items-center justify-center">
-                <Smartphone size={26} className="text-saffron" />
+          {state === "instructions" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-forest font-bold">
+                <Smartphone size={18} />
+                <span>Send payment manually</span>
               </div>
-              <div>
-                <p className="font-bold text-forest">Check your phone</p>
-                <p className="text-sm text-slate/60 mt-1">
-                  USSD prompt sent to <span className="font-mono font-semibold">{phone}</span>.
-                  <br />
-                  Approve to complete payment.
+              <p className="text-xs text-slate/60">
+                Open your {methodLabel} app and send the exact amount to our business number below.
+                Use the order reference as your payment reason.
+              </p>
+
+              {/* Step 1 */}
+              <div className="bg-saffron/10 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
+                  Step 1 — Send to this number
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-forest text-base">
+                    {businessNumber}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(businessNumber, "phone")}
+                    className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
+                  >
+                    <Copy size={12} />
+                    {copied === "phone" ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <p className="text-xs text-slate/50">SOMA Connect — {methodLabel}</p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="bg-forest/5 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
+                  Step 2 — Amount to send
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-forest text-base">
+                    {formatRWF(total)}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(String(total), "amount")}
+                    className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
+                  >
+                    <Copy size={12} />
+                    {copied === "amount" ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-forest/5 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
+                  Step 3 — Payment reason / reference
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-forest text-sm">{orderNumber}</span>
+                  <button
+                    onClick={() => copyToClipboard(orderNumber, "ref")}
+                    className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
+                  >
+                    <Copy size={12} />
+                    {copied === "ref" ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 bg-amber-50 rounded-lg p-2.5">
+                <Info size={13} className="text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700">
+                  After sending, click "I've Paid" below. Our team will confirm your payment within
+                  1–2 hours and your order will proceed.
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate/40 mt-1">
-                <Loader2 size={12} className="animate-spin" />
-                Waiting for confirmation…
-              </div>
+
+              <button
+                onClick={handleDone}
+                className="w-full bg-forest text-white font-bold py-3 rounded-xl hover:bg-forest/90 transition text-sm"
+              >
+                I've Paid — View My Order
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full text-center text-xs text-slate/40 hover:text-slate/60 transition"
+              >
+                I'll pay later
+              </button>
             </div>
           )}
 
@@ -201,7 +261,7 @@ export function PaymentModal({
             <div className="flex flex-col items-center py-6 gap-3 text-center">
               <CheckCircle size={44} className="text-green-500" />
               <div>
-                <p className="font-bold text-forest text-lg">Payment confirmed!</p>
+                <p className="font-bold text-forest text-lg">Order placed!</p>
                 <p className="text-sm text-slate/60 mt-1">Redirecting to your order…</p>
               </div>
             </div>
@@ -211,7 +271,7 @@ export function PaymentModal({
             <div className="flex flex-col items-center py-4 gap-3 text-center">
               <XCircle size={44} className="text-vermillion" />
               <div>
-                <p className="font-bold text-forest">Payment failed</p>
+                <p className="font-bold text-forest">Something went wrong</p>
                 <p className="text-sm text-slate/60 mt-1">{errorMsg}</p>
               </div>
               <div className="flex gap-3 w-full">
