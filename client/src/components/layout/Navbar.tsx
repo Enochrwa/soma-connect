@@ -130,7 +130,9 @@ export function Navbar() {
                   <img
                     src={user.profile.avatar}
                     alt="avatar"
-                    className="w-7 h-7 rounded-full object-cover"
+                    className="w-7 h-7 rounded-full object-cover ring-2 ring-saffron/40"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
                 ) : (
                   <User size={20} />

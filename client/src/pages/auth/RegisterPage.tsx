@@ -5,6 +5,29 @@ import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
 import { Eye, EyeOff, Loader2, UserPlus, CheckCircle } from "lucide-react";
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9A8.78 8.78 0 0 0 17.64 9.2z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26A5.4 5.4 0 0 1 9 14.5a5.42 5.42 0 0 1-5.1-3.55H.86v2.33A9 9 0 0 0 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.9 10.95A5.42 5.42 0 0 1 3.6 9c0-.68.12-1.34.3-1.95V4.72H.86A9 9 0 0 0 0 9c0 1.45.35 2.83.86 4.28l3.04-2.33z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.5c1.32 0 2.5.45 3.44 1.34l2.58-2.58A8.97 8.97 0 0 0 9 0 9 9 0 0 0 .86 4.72L3.9 7.05A5.42 5.42 0 0 1 9 3.5z"
+      />
+    </svg>
+  );
+}
+
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
     { label: "8+ characters", ok: password.length >= 8 },
@@ -104,6 +127,20 @@ export default function RegisterPage() {
               {error}
             </div>
           )}
+
+          <a
+            href={`${import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"}/auth/google`}
+            className="w-full flex items-center justify-center gap-2 border border-forest/15 rounded-xl py-3 text-sm font-semibold text-slate hover:bg-forest/5 transition"
+          >
+            <GoogleIcon />
+            Sign up with Google
+          </a>
+
+          <div className="flex items-center gap-3">
+            <hr className="flex-1 border-forest/10" />
+            <span className="text-xs text-slate/40 uppercase tracking-wide">or</span>
+            <hr className="flex-1 border-forest/10" />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

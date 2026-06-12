@@ -18,7 +18,17 @@ import {
 } from "lucide-react";
 
 function Avatar({ name, avatar }: { name?: string; avatar?: string }) {
-  if (avatar) return <img src={avatar} alt={name} className="w-20 h-20 rounded-2xl object-cover" />;
+  const [imgError, setImgError] = React.useState(false);
+  if (avatar && !imgError)
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        className="w-20 h-20 rounded-2xl object-cover ring-2 ring-saffron/20"
+        referrerPolicy="no-referrer"
+        onError={() => setImgError(true)}
+      />
+    );
   const initials =
     name
       ?.split(" ")

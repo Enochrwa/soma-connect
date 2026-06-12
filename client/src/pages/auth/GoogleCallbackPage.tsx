@@ -8,8 +8,8 @@ import { setAuth } from "../../features/auth/authSlice";
 /**
  * Lands here after the backend redirects from /api/auth/google/callback with
  * ?accessToken=... in the URL. The refresh-token cookie has already been set
- * (httpOnly) by the backend, so we just hit /auth/refresh to fetch the user
- * profile and finish signing the user in.
+ * (httpOnly) by the backend, so we hit /auth/refresh to get the full user
+ * profile (including avatar) and finish signing in.
  */
 export default function GoogleCallbackPage() {
   const navigate = useNavigate();
@@ -32,19 +32,23 @@ export default function GoogleCallbackPage() {
       }
 
       try {
+        // Use refresh to get full user profile (avatar, name, etc.) from the
+        // httpOnly cookie the backend already set during the OAuth callback.
         const res = await refresh().unwrap();
         dispatch(setAuth({ user: res.user, accessToken: res.accessToken }));
         navigate("/", { replace: true });
       } catch {
+        // Fallback: if refresh fails, we at least have the access token.
+        // Redirect to home — the user will need to log in again for full profile.
         navigate("/login?error=google", { replace: true });
       }
     })();
   }, [navigate, dispatch, refresh]);
 
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-forest">
-      <Loader2 className="animate-spin" size={28} />
-      <p className="text-sm text-slate/60">Signing you in…</p>
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-forest">
+      <Loader2 className="animate-spin text-saffron" size={32} />
+      <p className="text-sm text-slate/60 font-medium">Completing Google sign-in…</p>
     </div>
   );
 }
