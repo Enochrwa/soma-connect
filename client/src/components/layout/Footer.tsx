@@ -18,7 +18,7 @@ const HELP_LINKS = [
 ];
 
 const SELLER_LINKS = [
-  { label: "Become a seller", to: "/seller" },
+  { label: "Become a seller", to: "/seller/apply" },
   { label: "Seller dashboard", to: "/seller" },
   { label: "Seller policies", to: "/" },
   { label: "Seller fees", to: "/" },
