@@ -16,6 +16,8 @@ import {
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service.js";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { passport, googleOAuthEnabled } from "../config/passport.js";
+import type { UserDoc } from "../models/User.js";
 
 export const authRouter = Router();
 
@@ -269,3 +271,40 @@ authRouter.post("/password/reset", strictLimiter, validate(resetSchema), async (
     next(e);
   }
 });
+
+// ── Google OAuth ───────────────────────────────────────────────────────────────
+// Stateless OAuth flow (no server-side sessions): passport authenticates the
+// user, then we issue the same JWT access/refresh tokens used by phone/OTP login
+// and redirect back to the SPA.
+
+authRouter.get("/google", (req, res, next) => {
+  if (!googleOAuthEnabled) {
+    throw new HttpError(503, "Google sign-in is not configured.");
+  }
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  })(req, res, next);
+});
+
+authRouter.get(
+  "/google/callback",
+  (req, res, next) => {
+    if (!googleOAuthEnabled) {
+      throw new HttpError(503, "Google sign-in is not configured.");
+    }
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect: `${env.CLIENT_URL}/login?error=google`,
+    })(req, res, next);
+  },
+  (req, res) => {
+    const user = req.user as unknown as UserDoc;
+    const access = signAccessToken({ id: String(user._id), role: user.role ?? "buyer" });
+    const refresh = signRefreshToken({ id: String(user._id), role: user.role ?? "buyer" });
+    setRefreshCookie(res, refresh);
+    // Hand the access token to the SPA via a short-lived redirect; the SPA
+    // exchanges it for the user profile via /auth/refresh on load.
+    res.redirect(`${env.CLIENT_URL}/auth/google/callback?accessToken=${access}`);
+  },
+);

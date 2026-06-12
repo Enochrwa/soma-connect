@@ -12,6 +12,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const cartCount = useSelector((s: RootState) =>
@@ -116,8 +117,15 @@ export function Navbar() {
 
           {/* Account */}
           {user ? (
-            <div className="relative group hidden md:block">
-              <button className="flex items-center gap-2 text-white/70 hover:text-white">
+            <div
+              className="relative hidden md:block"
+              onMouseEnter={() => setAccountMenuOpen(true)}
+              onMouseLeave={() => setAccountMenuOpen(false)}
+            >
+              <button
+                className="flex items-center gap-2 text-white/70 hover:text-white"
+                onClick={() => setAccountMenuOpen((o) => !o)}
+              >
                 {user.profile?.avatar ? (
                   <img
                     src={user.profile.avatar}
@@ -128,18 +136,28 @@ export function Navbar() {
                   <User size={20} />
                 )}
               </button>
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover py-1 min-w-44 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition z-50">
+              <div
+                className={`absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover py-1 min-w-44 transition z-50 ${
+                  accountMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
+                }`}
+              >
                 <Link
                   to="/account"
+                  onClick={() => setAccountMenuOpen(false)}
                   className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
                 >
                   {t("nav.account")}
                 </Link>
-                <Link to="/orders" className="block px-4 py-2 text-sm text-slate hover:bg-forest/5">
+                <Link
+                  to="/orders"
+                  onClick={() => setAccountMenuOpen(false)}
+                  className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
+                >
                   {t("nav.orders")}
                 </Link>
                 <Link
                   to="/rewards"
+                  onClick={() => setAccountMenuOpen(false)}
                   className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
                 >
                   🏆 Rewards
@@ -147,6 +165,7 @@ export function Navbar() {
                 {user.role === "seller" && (
                   <Link
                     to="/seller"
+                    onClick={() => setAccountMenuOpen(false)}
                     className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
                   >
                     Seller Dashboard
@@ -155,6 +174,7 @@ export function Navbar() {
                 {user.role === "admin" && (
                   <Link
                     to="/admin"
+                    onClick={() => setAccountMenuOpen(false)}
                     className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
                   >
                     {t("nav.admin")}
@@ -162,7 +182,10 @@ export function Navbar() {
                 )}
                 <hr className="my-1 border-gray-100" />
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    handleLogout();
+                  }}
                   className="block w-full text-left px-4 py-2 text-sm text-vermillion hover:bg-vermillion/5"
                 >
                   Log out
@@ -244,6 +267,24 @@ export function Navbar() {
               >
                 🏆 Rewards
               </Link>
+              {user.role === "seller" && (
+                <Link
+                  to="/seller"
+                  onClick={() => setMenuOpen(false)}
+                  className="block py-2 text-white"
+                >
+                  Seller Dashboard
+                </Link>
+              )}
+              {user.role === "admin" && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  className="block py-2 text-saffron font-semibold"
+                >
+                  {t("nav.admin")}
+                </Link>
+              )}
               <button
                 onClick={() => {
                   handleLogout();

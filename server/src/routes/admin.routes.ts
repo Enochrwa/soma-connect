@@ -26,13 +26,15 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
       totalProducts,
       totalOrders,
       pendingSellerApprovals,
+      pendingOrders,
       paidTransactions,
     ] = await Promise.all([
       User.countDocuments(),
       Seller.countDocuments(),
       Product.countDocuments({ isActive: true }),
       Order.countDocuments(),
-      Seller.countDocuments({ verificationTier: "basic" }),
+      Seller.countDocuments({ approvalStatus: "pending" }),
+      Order.countDocuments({ status: { $nin: ["delivered", "cancelled"] } }),
       Transaction.aggregate([
         { $match: { status: "succeeded" } },
         { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -45,6 +47,8 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
       .populate("buyerId", "profile phone")
       .lean();
 
+    const gmv = paidTransactions[0]?.total ?? 0;
+
     res.json({
       stats: {
         totalUsers,
@@ -52,7 +56,9 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
         totalProducts,
         totalOrders,
         pendingSellerApprovals,
-        gmv: paidTransactions[0]?.total ?? 0,
+        pendingOrders,
+        gmv,
+        totalRevenue: gmv,
       },
       recentOrders,
     });
@@ -105,6 +111,20 @@ adminRouter.patch("/users/:id/ban", validate(banSchema), async (req, res, next) 
 });
 
 // ── Sellers ──────────────────────────────────────────────────────────────────
+
+// IMPORTANT: /sellers/pending must be registered BEFORE /sellers, otherwise
+// Express matches /sellers first and /sellers/pending is never reached.
+adminRouter.get("/sellers/pending", async (_req, res, next) => {
+  try {
+    const sellers = await Seller.find({ approvalStatus: "pending" })
+      .populate("userId", "profile phone email")
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ sellers, total: sellers.length });
+  } catch (e) {
+    next(e);
+  }
+});
 
 adminRouter.get("/sellers", async (req, res, next) => {
   try {
@@ -313,19 +333,6 @@ adminRouter.patch(
     }
   },
 );
-
-// List pending sellers for review
-adminRouter.get("/sellers/pending", async (_req, res, next) => {
-  try {
-    const sellers = await Seller.find({ approvalStatus: "pending" })
-      .populate("userId", "profile phone email")
-      .sort({ createdAt: -1 })
-      .lean();
-    res.json({ sellers, total: sellers.length });
-  } catch (e) {
-    next(e);
-  }
-});
 
 // ── Coupon Management ────────────────────────────────────────────────────────
 import { Coupon } from "../models/Coupon.js";

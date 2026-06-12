@@ -5,6 +5,7 @@ import morgan from "morgan";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
+import { passport } from "./config/passport.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import { authRouter } from "./routes/auth.routes.js";
@@ -52,6 +53,7 @@ app.use(
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser());
+app.use(passport.initialize());
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(rateLimiter);
 
