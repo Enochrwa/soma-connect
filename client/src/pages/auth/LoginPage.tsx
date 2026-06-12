@@ -130,7 +130,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* <a
+          <a
             href={`${import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"}/auth/google`}
             className="w-full flex items-center justify-center gap-2 border border-forest/15 rounded-xl py-3 text-sm font-semibold text-slate hover:bg-forest/5 transition"
           >
@@ -153,10 +153,7 @@ export default function LoginPage() {
               />
             </svg>
             Continue with Google
-          </a> */}
-          <button>
-            Continue With Google
-          </button>
+          </a>
 
           <div className="flex items-center gap-3">
             <hr className="flex-1 border-forest/10" />

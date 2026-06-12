@@ -21,8 +21,8 @@
     "prettier": "^3.4.2"
   },
   "lint-staged": {
-    "**/*.{ts,tsx}": [
-      "eslint --fix --max-warnings=0",
+    "client/**/*.{ts,tsx}": [
+      "npm --prefix client exec -- eslint --fix --max-warnings=0 --config client/eslint.config.js",
       "prettier --write"
     ],
     "**/*.{js,json,md,css}": [
