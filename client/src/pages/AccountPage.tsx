@@ -18,7 +18,17 @@ import {
 } from "lucide-react";
 
 function Avatar({ name, avatar }: { name?: string; avatar?: string }) {
-  if (avatar) return <img src={avatar} alt={name} className="w-20 h-20 rounded-2xl object-cover" />;
+  const [imgError, setImgError] = useState(false);
+  if (avatar && !imgError)
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        className="w-20 h-20 rounded-2xl object-cover ring-2 ring-saffron/20"
+        referrerPolicy="no-referrer"
+        onError={() => setImgError(true)}
+      />
+    );
   const initials =
     name
       ?.split(" ")
@@ -40,6 +50,7 @@ export default function AccountPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("profile");
   const user = useAppSelector((s: RootState) => s.auth.user);
+  const accessToken = useAppSelector((s: RootState) => s.auth.accessToken ?? "");
   const { data } = useGetMeQuery(undefined, { skip: !user });
   const [updateProfile, { isLoading: saving }] = useUpdateProfileMutation();
   const [logout] = useLogoutMutation();
@@ -54,7 +65,7 @@ export default function AccountPage() {
       const res = await updateProfile({
         profile: { name, language: lang as "en" | "rw" | "fr" },
       }).unwrap();
-      dispatch(setAuth({ user: res.user, accessToken: "" }));
+      dispatch(setAuth({ user: res.user, accessToken }));
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {

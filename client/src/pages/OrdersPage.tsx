@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Breadcrumb } from "../components/ui/Breadcrumb";
 import { useGetMyOrdersQuery } from "../app/api";
 import { formatRWF } from "../utils/format";
 import { Package, Loader2, ChevronRight, Clock } from "lucide-react";
@@ -55,6 +56,7 @@ export default function OrdersPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
+      <Breadcrumb className="mb-4" items={[{ label: "My Orders" }]} />
       <h1 className="font-display text-2xl font-bold text-forest mb-6">My Orders</h1>
       <div className="space-y-4">
         {data.orders.map((order) => (

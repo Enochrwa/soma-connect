@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Breadcrumb } from "../components/ui/Breadcrumb";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { toggleWishlist } from "../features/wishlist/wishlistSlice";
 import { addItem } from "../features/cart/cartSlice";
@@ -28,6 +29,7 @@ export default function WishlistPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+      <Breadcrumb className="mb-4" items={[{ label: "Wishlist" }]} />
       <h1 className="font-display text-2xl font-bold text-forest mb-6">
         Wishlist <span className="text-slate/40 font-normal text-lg">({items.length})</span>
       </h1>

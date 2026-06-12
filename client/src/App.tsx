@@ -1,10 +1,11 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "./app/store";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { Navbar } from "./components/layout/Navbar";
 import { MobileBottomNav } from "./components/layout/MobileBottomNav";
+import { Footer } from "./components/layout/Footer";
 import { PageSkeleton } from "./components/ui/PageSkeleton";
 
 // ── Lazy pages ─────────────────────────────────────────────────────────────
@@ -30,7 +31,12 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 // ── Auth guard ─────────────────────────────────────────────────────────────
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useSelector((s: RootState) => s.auth.accessToken);
-  return token ? <>{children}</> : <Navigate to="/login" replace />;
+  const location = useLocation();
+  return token ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/login" state={{ from: location.pathname }} replace />
+  );
 }
 
 function RequireRole({ role, children }: { role: string; children: React.ReactNode }) {
@@ -45,7 +51,7 @@ export default function App() {
     <>
       <OfflineBanner />
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         <Suspense fallback={<PageSkeleton />}>
           <Routes>
             {/* Public */}
@@ -132,6 +138,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </main>
+      <Footer />
       <MobileBottomNav />
     </>
   );

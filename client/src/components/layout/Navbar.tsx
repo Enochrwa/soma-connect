@@ -1,19 +1,62 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
-import { ShoppingCart, Heart, Bell, User, Search, Menu, X, Globe } from "lucide-react";
+import {
+  ShoppingCart,
+  Heart,
+  Bell,
+  User,
+  Search,
+  Menu,
+  X,
+  Globe,
+  Package,
+  Star,
+  LogOut,
+  LayoutDashboard,
+  Shield,
+} from "lucide-react";
 import type { RootState } from "../../app/store";
 import { useLogoutMutation, useGetNotificationsQuery } from "../../app/api";
 import { clearAuth } from "../../features/auth/authSlice";
 
+function UserAvatar({ name, avatar }: { name?: string; avatar?: string }) {
+  const [err, setErr] = useState(false);
+  const initials =
+    name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) ?? "?";
+  if (avatar && !err) {
+    return (
+      <img
+        src={avatar}
+        alt={name ?? "avatar"}
+        className="w-8 h-8 rounded-full object-cover ring-2 ring-saffron/50"
+        referrerPolicy="no-referrer"
+        onError={() => setErr(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-full bg-saffron flex items-center justify-center text-forest font-bold text-xs">
+      {initials}
+    </div>
+  );
+}
+
 export function Navbar() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const accountRef = useRef<HTMLDivElement>(null);
 
   const cartCount = useSelector((s: RootState) =>
     s.cart.items.reduce((acc, i) => acc + i.quantity, 0),
@@ -23,12 +66,30 @@ export function Navbar() {
   const { data: notifData } = useGetNotificationsQuery(undefined, { skip: !user });
   const [logout] = useLogoutMutation();
 
+  // Close account dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
   const handleLogout = async () => {
+    setAccountMenuOpen(false);
+    setMenuOpen(false);
     await logout();
     dispatch(clearAuth());
     navigate("/");
@@ -40,19 +101,24 @@ export function Navbar() {
     { code: "fr", label: "FR 🇫🇷" },
   ];
 
+  const unreadCount = notifData?.unreadCount ?? 0;
+
   return (
     <header className="sticky top-0 z-50 bg-forest shadow-md">
       {/* ── Desktop navbar ─────────────────────────────────────────────────── */}
       <nav className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
         {/* Logo */}
-        <Link to="/" className="font-display text-xl font-bold text-saffron shrink-0">
+        <Link
+          to="/"
+          className="font-display text-xl font-bold text-saffron shrink-0 hover:opacity-90 transition"
+        >
           SOMA
         </Link>
 
-        {/* Search bar */}
+        {/* Search bar — desktop */}
         <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden md:flex">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-forest/60 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 w-4 h-4 pointer-events-none" />
             <input
               type="search"
               value={searchQuery}
@@ -63,19 +129,19 @@ export function Navbar() {
           </div>
         </form>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1">
           {/* Language switcher */}
           <div className="relative group hidden md:block">
-            <button className="flex items-center gap-1 text-white/70 hover:text-white text-sm px-2 py-1 rounded-lg">
+            <button className="flex items-center gap-1 text-white/70 hover:text-white text-sm px-2 py-1.5 rounded-lg hover:bg-white/10 transition">
               <Globe size={14} />
               {i18n.language.toUpperCase()}
             </button>
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover py-1 min-w-24 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition">
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover py-1 min-w-[6rem] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
               {languages.map((l) => (
                 <button
                   key={l.code}
                   onClick={() => i18n.changeLanguage(l.code)}
-                  className="block w-full text-left px-3 py-1.5 text-sm text-slate hover:bg-forest/5"
+                  className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-forest/5 transition ${i18n.language === l.code ? "text-forest font-semibold" : "text-slate"}`}
                 >
                   {l.label}
                 </button>
@@ -84,10 +150,14 @@ export function Navbar() {
           </div>
 
           {/* Wishlist */}
-          <Link to="/wishlist" className="relative p-2 text-white/70 hover:text-white">
+          <Link
+            to={user ? "/wishlist" : "/login"}
+            className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition"
+            aria-label="Wishlist"
+          >
             <Heart size={20} />
             {wishlistCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-vermillion text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-mono">
+              <span className="absolute -top-0.5 -right-0.5 bg-vermillion text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center font-mono">
                 {wishlistCount}
               </span>
             )}
@@ -95,124 +165,140 @@ export function Navbar() {
 
           {/* Notifications */}
           {user && (
-            <button className="relative p-2 text-white/70 hover:text-white">
+            <button
+              className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition"
+              aria-label="Notifications"
+            >
               <Bell size={20} />
-              {(notifData?.unreadCount ?? 0) > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-vermillion text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-mono">
-                  {notifData!.unreadCount}
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-vermillion text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center font-mono">
+                  {unreadCount}
                 </span>
               )}
             </button>
           )}
 
           {/* Cart */}
-          <Link to="/cart" className="relative p-2 text-white/70 hover:text-white">
+          <Link
+            to="/cart"
+            className="relative p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition"
+            aria-label="Cart"
+          >
             <ShoppingCart size={20} />
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-saffron text-forest text-xs w-4 h-4 rounded-full flex items-center justify-center font-mono font-bold">
+              <span className="absolute -top-0.5 -right-0.5 bg-saffron text-forest text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center font-mono">
                 {cartCount}
               </span>
             )}
           </Link>
 
-          {/* Account */}
+          {/* Account — desktop */}
           {user ? (
-            <div
-              className="relative hidden md:block"
-              onMouseEnter={() => setAccountMenuOpen(true)}
-              onMouseLeave={() => setAccountMenuOpen(false)}
-            >
+            <div className="relative hidden md:block" ref={accountRef}>
               <button
-                className="flex items-center gap-2 text-white/70 hover:text-white"
+                className="flex items-center gap-2 text-white/80 hover:text-white px-2 py-1.5 rounded-xl hover:bg-white/10 transition"
                 onClick={() => setAccountMenuOpen((o) => !o)}
+                aria-expanded={accountMenuOpen}
+                aria-haspopup="true"
               >
-                {user.profile?.avatar ? (
-                  <img
-                    src={user.profile.avatar}
-                    alt="avatar"
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
-                ) : (
-                  <User size={20} />
-                )}
+                <UserAvatar name={user.profile?.name} avatar={user.profile?.avatar} />
+                <span className="text-sm font-medium max-w-[96px] truncate">
+                  {user.profile?.name?.split(" ")[0] ?? "Account"}
+                </span>
               </button>
-              <div
-                className={`absolute right-0 top-full mt-1 bg-white rounded-xl shadow-card-hover py-1 min-w-44 transition z-50 ${
-                  accountMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
-                }`}
-              >
-                <Link
-                  to="/account"
-                  onClick={() => setAccountMenuOpen(false)}
-                  className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
-                >
-                  {t("nav.account")}
-                </Link>
-                <Link
-                  to="/orders"
-                  onClick={() => setAccountMenuOpen(false)}
-                  className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
-                >
-                  {t("nav.orders")}
-                </Link>
-                <Link
-                  to="/rewards"
-                  onClick={() => setAccountMenuOpen(false)}
-                  className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
-                >
-                  🏆 Rewards
-                </Link>
-                {user.role === "seller" && (
+
+              {accountMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-card-hover py-2 min-w-[200px] z-50 animate-slide-up border border-forest/5">
+                  {/* User info header */}
+                  <div className="px-4 py-2 border-b border-gray-50 mb-1">
+                    <p className="text-sm font-semibold text-forest truncate">
+                      {user.profile?.name ?? "SOMA User"}
+                    </p>
+                    <p className="text-xs text-slate/50 truncate">{user.email ?? user.phone}</p>
+                  </div>
+
                   <Link
-                    to="/seller"
+                    to="/account"
                     onClick={() => setAccountMenuOpen(false)}
-                    className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate hover:bg-forest/5 transition"
                   >
-                    Seller Dashboard
+                    <User size={15} className="text-slate/50" /> {t("nav.account")}
                   </Link>
-                )}
-                {user.role === "admin" && (
                   <Link
-                    to="/admin"
+                    to="/orders"
                     onClick={() => setAccountMenuOpen(false)}
-                    className="block px-4 py-2 text-sm text-slate hover:bg-forest/5"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate hover:bg-forest/5 transition"
                   >
-                    {t("nav.admin")}
+                    <Package size={15} className="text-slate/50" /> {t("nav.orders")}
                   </Link>
-                )}
-                <hr className="my-1 border-gray-100" />
-                <button
-                  onClick={() => {
-                    setAccountMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-vermillion hover:bg-vermillion/5"
-                >
-                  Log out
-                </button>
-              </div>
+                  <Link
+                    to="/rewards"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate hover:bg-forest/5 transition"
+                  >
+                    <Star size={15} className="text-slate/50" /> Rewards
+                  </Link>
+                  {user.role === "seller" && (
+                    <Link
+                      to="/seller"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate hover:bg-forest/5 transition"
+                    >
+                      <LayoutDashboard size={15} className="text-slate/50" /> Seller Dashboard
+                    </Link>
+                  )}
+                  {user.role === "admin" && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate hover:bg-forest/5 transition"
+                    >
+                      <Shield size={15} className="text-slate/50" /> {t("nav.admin")}
+                    </Link>
+                  )}
+                  <hr className="my-1 border-gray-100" />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-sm text-vermillion hover:bg-vermillion/5 transition"
+                  >
+                    <LogOut size={15} /> Log out
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            <Link
-              to="/login"
-              className="hidden md:flex items-center gap-1 bg-saffron text-forest font-semibold text-sm px-4 py-2 rounded-xl hover:bg-saffron-dark transition"
-            >
-              {t("auth.login")}
-            </Link>
+            <div className="hidden md:flex items-center gap-2 ml-1">
+              <Link
+                to="/login"
+                className="text-white/80 hover:text-white text-sm font-medium px-3 py-2 rounded-xl hover:bg-white/10 transition"
+              >
+                {t("auth.login")}
+              </Link>
+              <Link
+                to="/register"
+                className="bg-saffron text-forest font-semibold text-sm px-4 py-2 rounded-xl hover:bg-saffron-dark transition shadow-gold/30 shadow-sm"
+              >
+                {t("auth.register")}
+              </Link>
+            </div>
           )}
 
-          {/* Mobile menu */}
-          <button className="md:hidden p-2 text-white" onClick={() => setMenuOpen(!menuOpen)}>
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+          >
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </nav>
 
-      {/* ── Mobile search ──────────────────────────────────────────────────── */}
+      {/* ── Mobile search bar ──────────────────────────────────────────────── */}
       <div className="md:hidden px-4 pb-3">
         <form onSubmit={handleSearch}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 w-4 h-4 pointer-events-none" />
             <input
               type="search"
               value={searchQuery}
@@ -224,87 +310,113 @@ export function Navbar() {
         </form>
       </div>
 
-      {/* ── Mobile menu drawer ─────────────────────────────────────────────── */}
+      {/* ── Mobile drawer ──────────────────────────────────────────────────── */}
       {menuOpen && (
-        <div className="md:hidden bg-forest-light border-t border-white/10 px-4 py-3 space-y-2">
-          {!user ? (
+        <div className="md:hidden bg-forest-light border-t border-white/10 px-4 py-4 space-y-1 animate-slide-up">
+          {user ? (
             <>
-              <Link
-                to="/login"
-                onClick={() => setMenuOpen(false)}
-                className="block py-2 text-white"
-              >
-                {t("auth.login")}
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setMenuOpen(false)}
-                className="block py-2 text-saffron"
-              >
-                {t("auth.register")}
-              </Link>
-            </>
-          ) : (
-            <>
+              {/* User identity strip */}
+              <div className="flex items-center gap-3 px-2 py-3 mb-2 border-b border-white/10">
+                <UserAvatar name={user.profile?.name} avatar={user.profile?.avatar} />
+                <div className="min-w-0">
+                  <p className="text-white font-semibold text-sm truncate">
+                    {user.profile?.name ?? "SOMA User"}
+                  </p>
+                  <p className="text-white/50 text-xs truncate">{user.email ?? user.phone}</p>
+                </div>
+              </div>
               <Link
                 to="/account"
-                onClick={() => setMenuOpen(false)}
-                className="block py-2 text-white"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
               >
-                {t("nav.account")}
+                <User size={17} className="text-white/60" /> {t("nav.account")}
               </Link>
               <Link
                 to="/orders"
-                onClick={() => setMenuOpen(false)}
-                className="block py-2 text-white"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
               >
-                {t("nav.orders")}
+                <Package size={17} className="text-white/60" /> {t("nav.orders")}
+              </Link>
+              <Link
+                to="/wishlist"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
+                <Heart size={17} className="text-white/60" /> Wishlist
+                {wishlistCount > 0 && (
+                  <span className="ml-auto bg-vermillion text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+              <Link
+                to="/cart"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
+                <ShoppingCart size={17} className="text-white/60" /> Cart
+                {cartCount > 0 && (
+                  <span className="ml-auto bg-saffron text-forest text-xs font-bold px-2 py-0.5 rounded-full">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
               <Link
                 to="/rewards"
-                onClick={() => setMenuOpen(false)}
-                className="block py-2 text-white"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
               >
-                🏆 Rewards
+                <Star size={17} className="text-white/60" /> Rewards
               </Link>
               {user.role === "seller" && (
                 <Link
                   to="/seller"
-                  onClick={() => setMenuOpen(false)}
-                  className="block py-2 text-white"
+                  className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
                 >
-                  Seller Dashboard
+                  <LayoutDashboard size={17} className="text-white/60" /> Seller Dashboard
                 </Link>
               )}
               {user.role === "admin" && (
                 <Link
                   to="/admin"
-                  onClick={() => setMenuOpen(false)}
-                  className="block py-2 text-saffron font-semibold"
+                  className="flex items-center gap-3 px-2 py-3 text-saffron font-semibold hover:bg-white/10 rounded-xl transition"
                 >
-                  {t("nav.admin")}
+                  <Shield size={17} className="text-saffron/80" /> {t("nav.admin")}
                 </Link>
               )}
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setMenuOpen(false);
-                }}
-                className="block py-2 text-vermillion"
+              <div className="pt-2 border-t border-white/10 mt-2">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-2 py-3 text-vermillion hover:bg-vermillion/10 rounded-xl transition"
+                >
+                  <LogOut size={17} /> Log out
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="flex items-center justify-center py-3 text-white font-medium hover:bg-white/10 rounded-xl transition"
               >
-                Log out
-              </button>
+                {t("auth.login")}
+              </Link>
+              <Link
+                to="/register"
+                className="flex items-center justify-center py-3 bg-saffron text-forest font-semibold rounded-xl hover:bg-saffron-dark transition mt-1"
+              >
+                {t("auth.register")}
+              </Link>
             </>
           )}
-          <div className="flex gap-2 pt-2">
+          {/* Language switcher */}
+          <div className="flex gap-2 pt-3 border-t border-white/10 mt-2">
             {languages.map((l) => (
               <button
                 key={l.code}
-                onClick={() => {
-                  i18n.changeLanguage(l.code);
-                  setMenuOpen(false);
-                }}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold ${i18n.language === l.code ? "bg-saffron text-forest" : "bg-white/10 text-white"}`}
+                onClick={() => i18n.changeLanguage(l.code)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  i18n.language === l.code
+                    ? "bg-saffron text-forest"
+                    : "bg-white/10 text-white hover:bg-white/20"
+                }`}
               >
                 {l.label}
               </button>
