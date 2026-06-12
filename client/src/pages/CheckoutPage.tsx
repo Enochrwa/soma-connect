@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAppSelector, useAppDispatch } from "../app/hooks";
-import { useCreateOrderMutation } from "../app/api";
+import { useCreateOrderMutation, useValidateCouponMutation, useGetLoyaltyQuery } from "../app/api";
 import { clearCart } from "../features/cart/cartSlice";
 import { PaymentModal } from "../components/payment/PaymentModal";
 import type { RootState } from "../app/store";
 import { formatRWF } from "../utils/format";
-import { Loader2, MapPin, CreditCard, Truck, CheckCircle } from "lucide-react";
+import { Loader2, MapPin, CreditCard, Truck, CheckCircle, Tag, Gift, X } from "lucide-react";
 
 type PaymentMethod = "mtn_momo" | "airtel_money" | "cod";
 type DeliverySpeed = "standard" | "express" | "pickup";
@@ -56,6 +56,8 @@ export default function CheckoutPage() {
   const items = useAppSelector((s: RootState) => s.cart.items);
   const user = useAppSelector((s: RootState) => s.auth.user);
   const [createOrder, { isLoading }] = useCreateOrderMutation();
+  const [validateCoupon, { isLoading: validatingCoupon }] = useValidateCouponMutation();
+  const { data: loyaltyData } = useGetLoyaltyQuery();
 
   const [form, setForm] = useState({
     sector: "",
@@ -67,7 +69,17 @@ export default function CheckoutPage() {
   const [deliverySpeed, setDeliverySpeed] = useState<DeliverySpeed>("standard");
   const [error, setError] = useState("");
 
-  // After order creation, show payment modal
+  // Coupon state
+  const [couponInput, setCouponInput] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{
+    code: string;
+    discountAmount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState("");
+
+  // Loyalty points state
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+
   const [pendingOrder, setPendingOrder] = useState<{
     id: string;
     number: string;
@@ -76,11 +88,36 @@ export default function CheckoutPage() {
 
   const deliveryFee = DELIVERY_OPTIONS.find((d) => d.value === deliverySpeed)?.fee ?? 1500;
   const subtotal = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
-  const total = subtotal + deliveryFee;
+  const couponDiscount = couponApplied?.discountAmount ?? 0;
+  const loyaltyDiscount = pointsToRedeem; // 1 point = 1 RWF
+  const total = Math.max(0, subtotal + deliveryFee - couponDiscount - loyaltyDiscount);
+
+  const availablePoints = loyaltyData?.points ?? 0;
+  const maxRedeemable = Math.min(availablePoints, Math.floor(subtotal * 0.2));
 
   if (!items.length) {
     navigate("/cart");
     return null;
+  }
+
+  async function handleValidateCoupon() {
+    setCouponError("");
+    if (!couponInput.trim()) return;
+    try {
+      const result = await validateCoupon({ code: couponInput.trim(), subtotal }).unwrap();
+      setCouponApplied({ code: result.coupon.code, discountAmount: result.coupon.discountAmount });
+      setCouponError("");
+    } catch (err: unknown) {
+      const msg = (err as { data?: { error?: string } }).data?.error;
+      setCouponError(msg ?? "Invalid coupon.");
+      setCouponApplied(null);
+    }
+  }
+
+  function removeCoupon() {
+    setCouponApplied(null);
+    setCouponInput("");
+    setCouponError("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -94,7 +131,6 @@ export default function CheckoutPage() {
       setError("Please enter your phone number.");
       return;
     }
-
     try {
       const result = await createOrder({
         items: items.map((i) => ({
@@ -105,9 +141,9 @@ export default function CheckoutPage() {
         deliveryAddress: form,
         deliverySpeed,
         paymentMethod,
+        couponCode: couponApplied?.code,
+        pointsToRedeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       }).unwrap();
-
-      // Show payment modal — don't clear cart yet
       setPendingOrder({
         id: result.order._id,
         number: result.order.orderNumber,
@@ -123,9 +159,9 @@ export default function CheckoutPage() {
     <>
       <Helmet>
         <title>Checkout — SOMA Market</title>
+        <meta name="description" content="Complete your SOMA Market order securely." />
       </Helmet>
 
-      {/* Payment Modal */}
       {pendingOrder && (
         <PaymentModal
           orderId={pendingOrder.id}
@@ -133,13 +169,8 @@ export default function CheckoutPage() {
           total={pendingOrder.total}
           method={paymentMethod}
           defaultPhone={form.phone}
-          onClose={() => {
-            // If they cancel, go to order page anyway (order is placed)
-            navigate(`/orders/${pendingOrder.id}`);
-          }}
-          onSuccess={() => {
-            dispatch(clearCart());
-          }}
+          onClose={() => navigate(`/orders/${pendingOrder.id}`)}
+          onSuccess={() => dispatch(clearCart())}
         />
       )}
 
@@ -245,6 +276,92 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Coupon code */}
+              <div className="bg-white rounded-2xl shadow-card p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Tag size={18} className="text-forest" />
+                  <h2 className="font-display font-bold text-forest">Coupon code</h2>
+                </div>
+                {couponApplied ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                    <div>
+                      <p className="font-mono font-bold text-green-800 text-sm">
+                        {couponApplied.code}
+                      </p>
+                      <p className="text-xs text-green-600">
+                        Saves you {formatRWF(couponApplied.discountAmount)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeCoupon}
+                      className="p-1 hover:bg-green-100 rounded-lg"
+                    >
+                      <X size={16} className="text-green-700" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter coupon code"
+                      className="flex-1 rounded-xl border border-forest/15 px-4 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-saffron/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleValidateCoupon}
+                      disabled={validatingCoupon || !couponInput.trim()}
+                      className="px-4 py-2.5 bg-forest text-white rounded-xl text-sm font-medium hover:bg-forest/90 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {validatingCoupon ? <Loader2 size={14} className="animate-spin" /> : null}
+                      Apply
+                    </button>
+                  </div>
+                )}
+                {couponError && <p className="text-vermillion text-xs mt-2">{couponError}</p>}
+              </div>
+
+              {/* Loyalty points */}
+              {availablePoints > 0 && (
+                <div className="bg-white rounded-2xl shadow-card p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Gift size={18} className="text-forest" />
+                    <h2 className="font-display font-bold text-forest">Loyalty points</h2>
+                    <span className="text-xs bg-saffron/15 text-saffron-dark px-2 py-0.5 rounded-full ml-auto">
+                      {availablePoints} pts available
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate/60 mb-3">
+                    Redeem up to {maxRedeemable} points for {formatRWF(maxRedeemable)} off (max 20%
+                    of order).
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxRedeemable}
+                      value={pointsToRedeem}
+                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                      className="flex-1 accent-forest"
+                    />
+                    <span className="font-mono text-sm text-forest font-bold w-24 text-right">
+                      {pointsToRedeem} pts = {formatRWF(loyaltyDiscount)}
+                    </span>
+                  </div>
+                  {pointsToRedeem > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPointsToRedeem(0)}
+                      className="text-xs text-slate/50 hover:text-slate mt-2"
+                    >
+                      Remove points discount
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Payment method */}
               <div className="bg-white rounded-2xl shadow-card p-5">
                 <div className="flex items-center gap-2 mb-4">
@@ -314,6 +431,18 @@ export default function CheckoutPage() {
                       {deliveryFee === 0 ? "FREE" : formatRWF(deliveryFee)}
                     </span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Coupon ({couponApplied?.code})</span>
+                      <span className="font-mono">−{formatRWF(couponDiscount)}</span>
+                    </div>
+                  )}
+                  {loyaltyDiscount > 0 && (
+                    <div className="flex justify-between text-saffron">
+                      <span>Loyalty points ({pointsToRedeem} pts)</span>
+                      <span className="font-mono">−{formatRWF(loyaltyDiscount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-base pt-1 border-t border-forest/8">
                     <span className="text-forest">Total</span>
                     <span className="font-mono text-saffron">{formatRWF(total)}</span>

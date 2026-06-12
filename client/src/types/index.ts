@@ -148,13 +148,18 @@ export interface Order {
   deliverySpeed: DeliverySpeed;
   deliveryFee: number;
   subtotal: number;
+  discount: number;
+  loyaltyDiscount: number;
   total: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   paymentRef?: string;
   statusHistory: StatusHistoryEntry[];
   couponCode?: string;
+  pointsRedeemed: number;
   pointsEarned: number;
+  trackingNumber?: string;
+  trackingUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -202,3 +207,57 @@ export interface ApiError {
   error: string;
   details?: unknown;
 }
+
+// ─── Coupon ───────────────────────────────────────────────────────────────────
+
+export interface Coupon {
+  _id: string;
+  code: string;
+  sellerId?: string;
+  type: "percentage" | "fixed";
+  value: number;
+  minOrder: number;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ─── Payout ───────────────────────────────────────────────────────────────────
+
+export interface Payout {
+  _id: string;
+  sellerId: string | { _id: string; storeName: string };
+  amount: number;
+  grossAmount: number;
+  commission: number;
+  commissionRate: number;
+  status: "pending" | "processing" | "sent" | "failed";
+  momoPhone?: string;
+  momoRef?: string;
+  note?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  createdAt: string;
+}
+
+// ─── Dispute ─────────────────────────────────────────────────────────────────
+
+export interface Dispute {
+  _id: string;
+  orderId: string | { _id: string; orderNumber: string; total: number; status: string };
+  buyerId: string | { _id: string; profile?: { name?: string }; phone?: string; email?: string };
+  reason: "wrong_item" | "damaged" | "not_delivered" | "quality_issue" | "other";
+  description: string;
+  evidenceImages?: string[];
+  status: "open" | "under_review" | "resolved_refund" | "resolved_no_action" | "closed";
+  adminNote?: string;
+  resolvedAt?: string;
+  createdAt: string;
+}
+
+// ─── Order update (add discount/tracking fields) ─────────────────────────────
+
+// Extends Order with new fields
+declare module "./index" {}

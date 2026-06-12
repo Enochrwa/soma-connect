@@ -15,6 +15,7 @@ const LoyaltyEventSchema = new Schema(
         "mystery_box",
         "spin_wheel",
         "admin_adjustment",
+        "redeemed",
       ],
       required: true,
     },

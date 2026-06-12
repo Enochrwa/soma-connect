@@ -170,3 +170,57 @@ export async function sendSellerApprovalEmail(
     ),
   });
 }
+
+export async function sendPasswordResetEmail(to: string, code: string) {
+  return sendMail({
+    to,
+    subject: "Reset your SOMA Market password",
+    text: `Your password reset code is ${code}. It expires in 15 minutes.`,
+    html: emailWrapper(`
+      <h2 style="color:#0A2E1F;margin:0 0 12px">Reset your password</h2>
+      <p>Use the code below to reset your password. It expires in 15 minutes.</p>
+      <p style="font-family:monospace;font-size:36px;letter-spacing:8px;color:#0A2E1F;background:#fff;padding:20px;border-radius:8px;text-align:center;border:1px solid #ddd;margin:16px 0">${code}</p>
+      <p style="color:#888;font-size:12px">If you didn't request a password reset, you can ignore this email — your account is safe.</p>
+    `),
+  });
+}
+
+export async function sendPayoutNotificationEmail(
+  to: string,
+  storeName: string,
+  amount: number,
+  ref: string,
+) {
+  return sendMail({
+    to,
+    subject: `💰 Payout of RWF ${amount.toLocaleString()} sent — ${storeName}`,
+    text: `Your payout of RWF ${amount.toLocaleString()} has been sent to your MoMo account. Reference: ${ref}.`,
+    html: emailWrapper(`
+      <h2 style="color:#0A2E1F;margin:0 0 8px">Payout sent! 💰</h2>
+      <p>Hi ${storeName}, your payout has been processed.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:8px 0;color:#666">Amount</td><td style="padding:8px 0;font-weight:600;color:#F5A623">RWF ${amount.toLocaleString()}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Reference</td><td style="padding:8px 0;font-family:monospace">${ref}</td></tr>
+      </table>
+      <p style="color:#888;font-size:12px">Funds will appear in your MoMo account within minutes.</p>
+    `),
+  });
+}
+
+export async function sendDisputeNotificationEmail(
+  to: string,
+  orderNumber: string,
+  status: string,
+) {
+  return sendMail({
+    to,
+    subject: `Dispute update for order ${orderNumber} — SOMA Market`,
+    text: `Your dispute for order ${orderNumber} has been updated: ${status}.`,
+    html: emailWrapper(`
+      <h2 style="color:#0A2E1F;margin:0 0 8px">Dispute Update</h2>
+      <p>Your dispute for order <strong>${orderNumber}</strong> has been updated.</p>
+      <p style="background:#fff;padding:12px;border-radius:8px;border-left:3px solid #F5A623">Status: <strong>${status}</strong></p>
+      <a href="${process.env.CLIENT_URL ?? "https://somamarket.rw"}/orders" style="${btnStyle}">View Orders →</a>
+    `),
+  });
+}
