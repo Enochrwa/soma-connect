@@ -5,24 +5,25 @@ import { Transaction } from "../models/Transaction.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
-import { initiateMobileMoneyPush } from "../services/payment.mock.js";
 import { emitOrderUpdate } from "../socket/index.js";
+import { nanoid } from "nanoid";
 
 export const paymentRouter = Router();
 
-const mockSchema = z.object({
+const initiateSchema = z.object({
   orderId: z.string(),
   method: z.enum(["mtn_momo", "airtel_money", "cod"]),
   phone: z.string().default(""),
 });
 
+// ── Initiate payment ──────────────────────────────────────────────────────────
 paymentRouter.post(
   "/mock",
   requireAuth,
-  validate(mockSchema),
+  validate(initiateSchema),
   async (req: AuthedRequest, res, next) => {
     try {
-      const { orderId, method, phone } = req.body as z.infer<typeof mockSchema>;
+      const { orderId, method, phone } = req.body as z.infer<typeof initiateSchema>;
       const order = await Order.findById(orderId);
       if (!order) throw new HttpError(404, "Order not found.");
       if (String(order.buyerId) !== req.user!.id) throw new HttpError(403, "Not your order.");
@@ -40,26 +41,43 @@ paymentRouter.post(
         await order.save();
         emitOrderUpdate(String(order._id), { status: "payment_confirmed", at: new Date() });
         return res.json({
-          mockRef: null,
           status: "succeeded",
           message: "Order placed! You'll pay cash when the order arrives.",
         });
       }
 
-      const result = await initiateMobileMoneyPush({
-        orderId: String(order._id),
+      // Mobile money — manual transfer flow: set order to pending_payment
+      // Admin will confirm payment once they receive the transfer
+      const orderRef = `MOMO-${nanoid(10).toUpperCase()}`;
+      await Transaction.create({
+        orderId: order._id,
         userId: req.user!.id,
         amount: order.total,
-        method: method as "mtn_momo" | "airtel_money",
+        method,
         phone,
+        mockRef: orderRef,
+        status: "initiated",
       });
 
+      order.paymentMethod = method;
+      order.paymentStatus = "pending_payment";
+      order.paymentRef = orderRef;
+      order.status = "pending_payment";
+      order.statusHistory.push({
+        status: "pending_payment",
+        at: new Date(),
+        note: `Manual ${method === "mtn_momo" ? "MTN MoMo" : "Airtel Money"} transfer — awaiting admin confirmation`,
+      });
+      await order.save();
+      emitOrderUpdate(String(order._id), { status: "pending_payment", at: new Date() });
+
       res.json({
-        ...result,
+        orderRef,
+        status: "pending_payment",
         message:
           method === "mtn_momo"
-            ? "USSD push sent to your MTN number. Approve to complete payment."
-            : "USSD push sent to your Airtel number. Approve to complete payment.",
+            ? "Order placed. Send payment to our MTN MoMo number and we'll confirm within 1–2 hours."
+            : "Order placed. Send payment to our Airtel number and we'll confirm within 1–2 hours.",
       });
     } catch (e) {
       next(e);
@@ -67,14 +85,41 @@ paymentRouter.post(
   },
 );
 
-// Payment status polling endpoint — client polls every 3s
+// ── Payment status polling ────────────────────────────────────────────────────
 paymentRouter.get("/status/:ref", requireAuth, async (req: AuthedRequest, res, next) => {
   try {
     const tx = await Transaction.findOne({ mockRef: req.params.ref }).lean();
     if (!tx) throw new HttpError(404, "Transaction not found.");
-    // Verify it belongs to the requesting user
     if (String(tx.userId) !== req.user!.id) throw new HttpError(403, "Not your transaction.");
     res.json({ status: tx.status, method: tx.method });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Admin: confirm manual payment ─────────────────────────────────────────────
+// POST /api/payments/confirm/:orderId — admin only (checked in admin.routes)
+paymentRouter.post("/confirm/:orderId", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) throw new HttpError(404, "Order not found.");
+    if (order.paymentStatus === "paid") throw new HttpError(400, "Already confirmed.");
+
+    order.paymentStatus = "paid";
+    order.status = "payment_confirmed";
+    order.statusHistory.push({
+      status: "payment_confirmed",
+      at: new Date(),
+      note: `Payment manually confirmed by admin (${req.user!.id})`,
+    });
+    await order.save();
+
+    if (order.paymentRef) {
+      await Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
+    }
+
+    emitOrderUpdate(String(order._id), { status: "payment_confirmed", at: new Date() });
+    res.json({ message: "Payment confirmed.", order });
   } catch (e) {
     next(e);
   }

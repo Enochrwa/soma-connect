@@ -1,238 +1,302 @@
-# SOMA Connect — Production Deployment Guide
+# SOMA Connect — Deployment Guide
 
-## Architecture
-
-| Layer | Service | Notes |
-|---|---|---|
-| Frontend | Vercel (React + Vite) | Free hobby plan works |
-| Backend API | Render.com (Node.js + Express) | Free starter plan; spins down after 15 min inactivity |
-| Database | MongoDB Atlas M0 | Free 512 MB tier |
-| Email | Brevo SMTP | 300 free emails/day |
-| Media | Cloudinary | Free 25 GB |
-| Rate limiting | Upstash Redis | Free 10K req/day |
+This guide covers deploying the **server** on [Render](https://render.com) (free tier) and the **client** on [Vercel](https://vercel.com) (free tier).
 
 ---
 
-## Pre-flight checklist (read before you touch anything)
+## Table of Contents
 
-Before deploying, verify these are done in the code (already applied in `feature/pre-deploy-fixes`):
-
-- [x] `sameSite: "none"` on the refresh cookie for cross-origin Vercel → Render
-- [x] `domain: env.COOKIE_DOMAIN || undefined` (blank = omit, required for cross-origin)
-- [x] Helmet CSP allows `https://lh3.googleusercontent.com` (Google avatars)
-- [x] Helmet CSP `connectSrc` allows `wss:` and `ws:` (Socket.IO)
-- [x] `render.yaml` includes `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
-- [x] Notification bell has a working dropdown with mark-as-read
-- [x] `/seller/apply` page exists and is wired in the router
-- [x] Dead `SellerDashboardPage.tsx` stub deleted
-- [x] `robots.txt` disallows private routes
-- [x] `ErrorBoundary` wraps all routes in `App.tsx`
+1. [Prerequisites](#1-prerequisites)
+2. [Deploy the Server on Render](#2-deploy-the-server-on-render)
+3. [Deploy the Client on Vercel](#3-deploy-the-client-on-vercel)
+4. [Connect Server & Client](#4-connect-server--client)
+5. [Seed the Database](#5-seed-the-database)
+6. [Configure Google OAuth (optional)](#6-configure-google-oauth-optional)
+7. [Set Up UptimeRobot to Prevent Cold Starts](#7-set-up-uptimerobot-to-prevent-cold-starts)
+8. [Post-Deployment Checklist](#8-post-deployment-checklist)
+9. [Environment Variable Reference](#9-environment-variable-reference)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
-## Step 1 — MongoDB Atlas
+## 1. Prerequisites
 
-1. Create a free account at [cloud.mongodb.com](https://cloud.mongodb.com)
-2. Create a **free M0 cluster** (region: AWS / Frankfurt or nearest to Rwanda)
-3. **Database Access** → Add a user with a strong password
-4. **Network Access** → Add `0.0.0.0/0` (Render needs open access)
-5. **Connect** → **Connect your application** → copy the URI:
-   ```
-   mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/soma_market?retryWrites=true&w=majority
-   ```
-
----
-
-## Step 2 — Cloudinary (image uploads)
-
-1. Sign up at [cloudinary.com](https://cloudinary.com)
-2. Dashboard → copy **Cloud name**, **API Key**, **API Secret**
+- A [GitHub](https://github.com) account with this repo pushed.
+- A [Render](https://render.com) account (free).
+- A [Vercel](https://vercel.com) account (free).
+- A [MongoDB Atlas](https://cloud.mongodb.com) free cluster (M0) — already configured in the `.env`.
+- A [Cloudinary](https://cloudinary.com) free account — already configured.
+- A [Brevo](https://brevo.com) free SMTP account — already configured.
+- (Optional) A [Google Cloud](https://console.cloud.google.com) project for OAuth.
 
 ---
 
-## Step 3 — Brevo SMTP (transactional email)
+## 2. Deploy the Server on Render
 
-1. Sign up at [brevo.com](https://brevo.com)
-2. **Settings → SMTP & API** → generate SMTP key
-3. Note: `SMTP_HOST=smtp-relay.brevo.com`, `SMTP_PORT=587`
+### 2a. Create a new Web Service
 
----
+1. Log in to [Render Dashboard](https://dashboard.render.com).
+2. Click **New → Web Service**.
+3. Connect your GitHub account and select the `soma-connect` repository.
+4. Configure the service:
+   - **Name:** `soma-connect-api`
+   - **Root Directory:** `server`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `node dist/index.js`
+   - **Plan:** Free (or Starter for no cold starts)
+   - **Health Check Path:** `/api/health`
 
-## Step 4 — Upstash Redis (persistent rate limiting)
+### 2b. Set Environment Variables
 
-1. Sign up at [upstash.com](https://upstash.com)
-2. Create a **Redis** database (free tier, region: EU-West or US-East)
-3. **REST API** tab → copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+In the Render dashboard → your service → **Environment**, add the following variables.
+Use the values from your `.env` file:
 
-Without this the rate limiter falls back to in-memory (resets on every Render restart).
+| Variable | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | `10000` |
+| `MONGO_URI` | *(your Atlas connection string)* |
+| `JWT_ACCESS_SECRET` | *(generate: `openssl rand -hex 64`)* |
+| `JWT_REFRESH_SECRET` | *(generate: `openssl rand -hex 64`)* |
+| `CLIENT_URL` | *(your Vercel URL — set after step 3)* |
+| `CLOUDINARY_CLOUD_NAME` | `dmemlt9gp` |
+| `CLOUDINARY_API_KEY` | *(from Cloudinary dashboard)* |
+| `CLOUDINARY_API_SECRET` | *(from Cloudinary dashboard)* |
+| `SMTP_HOST` | `smtp-relay.brevo.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | *(your Brevo SMTP login)* |
+| `SMTP_PASS` | *(your Brevo SMTP password)* |
+| `SMTP_FROM` | `SOMA Connect <enockuwumukiza850@gmail.com>` |
+| `COOKIE_SECURE` | `true` |
+| `COOKIE_DOMAIN` | *(leave **blank/empty** for Vercel↔Render cross-origin)* |
+| `GOOGLE_CLIENT_ID` | *(from Google Cloud Console — optional)* |
+| `GOOGLE_CLIENT_SECRET` | *(from Google Cloud Console — optional)* |
+| `GOOGLE_CALLBACK_URL` | `https://<your-render-service>.onrender.com/api/auth/google/callback` |
+| `UPSTASH_REDIS_REST_URL` | *(from Upstash — optional)* |
+| `UPSTASH_REDIS_REST_TOKEN` | *(from Upstash — optional)* |
+| `HF_API_TOKEN` | *(from HuggingFace — optional)* |
 
----
+> **Important:** `COOKIE_DOMAIN` must be set to an **empty string** (not `localhost`) when the frontend and API are on different domains. Setting it to the Render subdomain will break authentication cookies.
 
-## Step 5 — Google OAuth (optional)
+### 2c. Deploy
 
-1. [Google Cloud Console](https://console.cloud.google.com) → create a project
-2. **APIs & Services → Credentials → Create OAuth 2.0 Client ID**
-3. Application type: **Web application**
-4. Authorised redirect URIs — add **both**:
-   - `http://localhost:4000/api/auth/google/callback` (development)
-   - `https://<your-render-service>.onrender.com/api/auth/google/callback` (production)
-5. Copy **Client ID** and **Client Secret**
-
-> ⚠️ The redirect URI must match `GOOGLE_CALLBACK_URL` exactly — including protocol and path.
-
----
-
-## Step 6 — Deploy the backend on Render
-
-1. Push the `feature/pre-deploy-fixes` branch (or merge to `main`)
-2. Go to [render.com](https://render.com) → **New → Web Service**
-3. Connect your GitHub repo; set **Branch** to `main` (or your branch)
-4. Render will detect `render.yaml` and pre-fill build/start commands
-5. Set the following environment variables in the Render dashboard
-   (**Environment** tab — these are marked `sync: false` in render.yaml):
-
-   | Variable | Value |
-   |---|---|
-   | `MONGO_URI` | Atlas connection string from Step 1 |
-   | `CLIENT_URL` | `https://soma-connect.vercel.app` (your Vercel URL — no trailing slash) |
-   | `CLOUDINARY_CLOUD_NAME` | from Step 2 |
-   | `CLOUDINARY_API_KEY` | from Step 2 |
-   | `CLOUDINARY_API_SECRET` | from Step 2 |
-   | `SMTP_USER` | Brevo SMTP user from Step 3 |
-   | `SMTP_PASS` | Brevo SMTP key from Step 3 |
-   | `COOKIE_DOMAIN` | **leave blank** (empty string) — required for cross-origin cookies |
-   | `GOOGLE_CLIENT_ID` | from Step 5 |
-   | `GOOGLE_CLIENT_SECRET` | from Step 5 |
-   | `GOOGLE_CALLBACK_URL` | `https://<your-render-service>.onrender.com/api/auth/google/callback` |
-   | `UPSTASH_REDIS_REST_URL` | from Step 4 |
-   | `UPSTASH_REDIS_REST_TOKEN` | from Step 4 |
-   | `HF_API_TOKEN` | HuggingFace token (optional, for AI search) |
-
-   `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` are auto-generated by Render (`generateValue: true`).
-
-6. Click **Create Web Service** → wait for first build (~3 min)
-7. Visit `https://<your-render-service>.onrender.com/api/health` — should return `{"ok":true}`
+Click **Create Web Service**. Render will build and deploy automatically. Note your service URL — it will look like `https://soma-connect-api.onrender.com`.
 
 ---
 
-## Step 7 — Seed the database
+## 3. Deploy the Client on Vercel
 
-SSH into the Render service or run locally with production env vars:
+### 3a. Import the project
+
+1. Log in to [Vercel Dashboard](https://vercel.com/dashboard).
+2. Click **Add New → Project**.
+3. Select your `soma-connect` GitHub repository.
+4. Configure:
+   - **Framework Preset:** Vite
+   - **Root Directory:** `client`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+
+### 3b. Set Environment Variables
+
+In Vercel → your project → **Settings → Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | `https://<your-render-service>.onrender.com/api` |
+| `VITE_SOCKET_URL` | `https://<your-render-service>.onrender.com` |
+
+Replace `<your-render-service>` with your actual Render service name.
+
+### 3c. Deploy
+
+Click **Deploy**. Vercel will build and publish. Note your Vercel URL — e.g. `https://soma-connect.vercel.app`.
+
+---
+
+## 4. Connect Server & Client
+
+After both are deployed:
+
+1. Go to your **Render** service → **Environment**.
+2. Set `CLIENT_URL` to your Vercel URL (e.g. `https://soma-connect.vercel.app`).
+3. Click **Save Changes** — Render will auto-redeploy.
+
+This ensures the CORS configuration and cookie `SameSite` settings allow the frontend to communicate with the API.
+
+---
+
+## 5. Seed the Database
+
+The seed script creates demo sellers, products, an admin user, and a buyer account. Passwords are **randomly generated** and printed to the console once.
+
+### Run the seed:
 
 ```bash
-# From the server/ directory
+# From the server directory
+cd server
 npm run seed
 ```
 
-> ⚠️ **Security**: The seed creates `admin@somamarket.rw` / `admin1234`.  
-> **Change the admin password immediately** after seeding via the admin dashboard or MongoDB Atlas.
-
----
-
-## Step 8 — Deploy the frontend on Vercel
-
-1. Go to [vercel.com](https://vercel.com) → **Add New Project**
-2. Import the GitHub repo; set **Root Directory** to `client`
-3. Framework: **Vite** (auto-detected)
-4. **Environment Variables** — add:
-
-   | Variable | Value |
-   |---|---|
-   | `VITE_API_URL` | `https://<your-render-service>.onrender.com/api` |
-   | `VITE_SOCKET_URL` | `https://<your-render-service>.onrender.com` (no `/api`) |
-
-   > ⚠️ `VITE_SOCKET_URL` is required for Socket.IO (order tracking, real-time chat).  
-   > Without it the socket falls back to `localhost:4000` and silently fails in production.
-
-5. Click **Deploy** → wait for build (~2 min)
-6. Visit your Vercel URL and verify the home page loads
-
----
-
-## Step 9 — Post-deploy verification
-
-Run through this checklist after deploy:
-
-- [ ] Home page loads with products (after seeding)
-- [ ] Register a new account → check email for OTP
-- [ ] Log in and log out — refresh the page while logged in (tests the cookie refresh flow)
-- [ ] Google OAuth sign-in completes and redirects back to the app
-- [ ] Google profile avatar shows (not blocked by CSP)
-- [ ] Upload a product image as a seller
-- [ ] Place a test order and verify the payment modal appears
-- [ ] Open two browser tabs and verify Socket.IO notifications work
-- [ ] Visit `https://<your-render-service>.onrender.com/api/health`
-- [ ] Admin dashboard accessible at `/admin` with admin credentials
-- [ ] **Change the seeded admin password**
-
----
-
-## Known limitations (soft launch)
-
-| Feature | Status | Notes |
-|---|---|---|
-| MTN MoMo / Airtel Money | Mocked | Simulated with 3s timeout. Swap in real [MTN MoMo Collection API](https://momodeveloper.mtn.com) or [DPO Pay](https://dpopay.com) for real money. |
-| Privacy Policy / Terms | Placeholder | Footer links go to `/`. Required for RDB compliance — add real pages before processing any payments. |
-| Render free tier | Spins down | After 15 min inactivity the server cold-starts (~30s). Upgrade to Render Starter ($7/mo) for always-on. |
-
----
-
-## Local development
+Or trigger it from a Render Shell (Dashboard → your service → **Shell**):
 
 ```bash
-# Clone
-git clone https://github.com/Enochrwa/soma-connect.git
-cd soma-connect
+node dist/scripts/seed.js
+```
 
-# Server
-cd server
-cp .env.example .env   # fill in values
-npm install
-npm run dev            # runs on :4000
+**Important:** Copy the printed credentials immediately — they are not stored anywhere in the code. Example output:
 
-# Client (new terminal)
-cd client
-cp .env.example .env   # VITE_API_URL=http://localhost:4000/api
-npm install
-npm run dev            # runs on :5173
+```
+========== SEED CREDENTIALS (save these now) ==========
+[seed] admin  → email admin@somamarket.rw  | pw: a1b2c3d4e5f6a7b8
+[seed] buyer  → email buyer@somamarket.rw  | pw: z9y8x7w6v5u4t3s2
+=======================================================
+```
+
+You can also pre-set passwords via environment variables before seeding:
+
+```bash
+SEED_ADMIN_PASSWORD=MySecureAdminPw123 SEED_BUYER_PASSWORD=MySecureBuyerPw456 node dist/scripts/seed.js
 ```
 
 ---
 
-## Environment variable reference
+## 6. Configure Google OAuth (optional)
 
-### Server (`server/.env`)
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Credentials**.
+2. Create an **OAuth 2.0 Client ID** (Web Application).
+3. Add Authorised redirect URIs:
+   - `https://<your-render-service>.onrender.com/api/auth/google/callback`
+4. Copy the **Client ID** and **Client Secret** into Render environment variables.
+5. Set `GOOGLE_CALLBACK_URL` to the same redirect URI.
+
+---
+
+## 7. Set Up UptimeRobot to Prevent Cold Starts
+
+Render's free tier spins down services after 15 minutes of inactivity, causing the next request to take 30–60 seconds. Prevent this with a free uptime monitor:
+
+1. Sign up at [UptimeRobot.com](https://uptimerobot.com) (free tier: up to 50 monitors).
+2. Click **Add New Monitor**.
+3. Configure:
+   - **Monitor Type:** HTTP(s)
+   - **Friendly Name:** `SOMA Connect API`
+   - **URL:** `https://<your-render-service>.onrender.com/api/health`
+   - **Monitoring Interval:** Every **5 minutes**
+4. Click **Create Monitor**.
+
+This keeps the server warm and ensures near-instant response times for visitors.
+
+---
+
+## 8. Post-Deployment Checklist
+
+After deploying, verify the following:
+
+- [ ] `https://<render-url>/api/health` returns `{"status":"ok"}`.
+- [ ] Client loads at Vercel URL without CORS errors in the browser console.
+- [ ] Register a new account and receive the OTP email.
+- [ ] Log in and place a test order with Cash on Delivery.
+- [ ] Place a test order with MTN MoMo — verify the manual payment instructions appear (no USSD auto-confirm).
+- [ ] Log in as admin and confirm the test MoMo order via `/admin/orders`.
+- [ ] Upload a product image and confirm it appears via Cloudinary.
+- [ ] Check `/privacy` and `/terms` pages load correctly.
+- [ ] Seed credentials are saved securely and the seed output is not publicly visible.
+
+---
+
+## 9. Environment Variable Reference
+
+### Server (.env)
 
 ```dotenv
-NODE_ENV=development
-PORT=4000
-MONGO_URI=mongodb+srv://...
-JWT_ACCESS_SECRET=<64 hex chars>
-JWT_REFRESH_SECRET=<64 hex chars>
+NODE_ENV=production
+PORT=10000
+
+# MongoDB
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?appName=<app>
+
+# JWT — use openssl rand -hex 64 to generate
+JWT_ACCESS_SECRET=<strong-random-secret>
+JWT_REFRESH_SECRET=<strong-random-secret>
 JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
-CLIENT_URL=http://localhost:5173
-COOKIE_SECURE=false
-COOKIE_DOMAIN=localhost         # leave blank in production!
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
+
+# Client URL — your Vercel deployment URL
+CLIENT_URL=https://soma-connect.vercel.app
+
+# Cookies
+COOKIE_SECURE=true
+COOKIE_DOMAIN=          # Leave BLANK for Vercel↔Render cross-origin
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=dmemlt9gp
+CLOUDINARY_API_KEY=<your-key>
+CLOUDINARY_API_SECRET=<your-secret>
+
+# Email (Brevo SMTP)
 SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASS=...
-SMTP_FROM=SOMA Connect <no-reply@somamarket.rw>
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_CALLBACK_URL=http://localhost:4000/api/auth/google/callback
-UPSTASH_REDIS_REST_URL=https://...
-UPSTASH_REDIS_REST_TOKEN=...
-HF_API_TOKEN=hf_...
+SMTP_USER=<your-brevo-smtp-user>
+SMTP_PASS=<your-brevo-smtp-password>
+SMTP_FROM=SOMA Connect <enockuwumukiza850@gmail.com>
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=<your-client-id>
+GOOGLE_CLIENT_SECRET=<your-client-secret>
+GOOGLE_CALLBACK_URL=https://<render-service>.onrender.com/api/auth/google/callback
+
+# Upstash Redis (optional — rate limiting)
+UPSTASH_REDIS_REST_URL=<your-upstash-url>
+UPSTASH_REDIS_REST_TOKEN=<your-upstash-token>
+
+# HuggingFace (optional — AI search)
+HF_API_TOKEN=<your-hf-token>
 ```
 
-### Client (`client/.env`)
+### Client (.env.production / Vercel env vars)
 
 ```dotenv
-VITE_API_URL=http://localhost:4000/api
-VITE_SOCKET_URL=http://localhost:4000
+VITE_API_URL=https://<your-render-service>.onrender.com/api
+VITE_SOCKET_URL=https://<your-render-service>.onrender.com
 ```
+
+---
+
+## 10. Troubleshooting
+
+### "Failed to fetch" / CORS errors in browser
+
+- Confirm `CLIENT_URL` in Render matches your exact Vercel URL (no trailing slash).
+- Confirm `COOKIE_DOMAIN` is set to an **empty string**, not `localhost`.
+- Check that your Vercel project's `VITE_API_URL` points to the correct Render URL.
+
+### Authentication cookies not persisting (login works but redirects back)
+
+- `COOKIE_DOMAIN` must be blank for cross-origin deployments.
+- `COOKIE_SECURE` must be `true` in production.
+- The API must be on HTTPS (Render provides this automatically).
+
+### Google OAuth redirect_uri_mismatch
+
+- The `GOOGLE_CALLBACK_URL` env var must exactly match the redirect URI registered in Google Cloud Console, including `https://` and no trailing slash.
+
+### Render cold starts (slow first response)
+
+- Set up UptimeRobot as described in [section 7](#7-set-up-uptimerobot-to-prevent-cold-starts).
+- Or upgrade to Render's paid Starter plan ($7/month) which eliminates cold starts.
+
+### Build fails on Render
+
+- Check the build logs in the Render dashboard.
+- Common cause: missing env vars. Ensure `MONGO_URI`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET` are set before the first deploy.
+
+### Seed script fails
+
+- Ensure `MONGO_URI` is set in your environment.
+- MongoDB Atlas: confirm your Atlas cluster's IP Access List includes `0.0.0.0/0` or the Render IP range.
+
+---
+
+*Last updated for deployment branch `feature/deployement-preparation`.*

@@ -426,3 +426,36 @@ adminRouter.get("/payouts", async (_req, res, next) => {
     next(e);
   }
 });
+
+// ── Payment Confirmation ──────────────────────────────────────────────────────
+// Admin confirms a manual mobile money payment, moving order from pending_payment → payment_confirmed
+adminRouter.post("/orders/:orderId/confirm-payment", async (req: AuthedRequest, res, next) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) throw new HttpError(404, "Order not found.");
+    if (order.paymentStatus === "paid") throw new HttpError(400, "Payment already confirmed.");
+
+    order.paymentStatus = "paid";
+    order.status = "payment_confirmed";
+    order.statusHistory.push({
+      status: "payment_confirmed",
+      at: new Date(),
+      note: `Manual payment confirmed by admin (${req.user!.id})`,
+    });
+    await order.save();
+
+    if (order.paymentRef) {
+      await (await import("../models/Transaction.js")).Transaction.updateOne(
+        { mockRef: order.paymentRef },
+        { status: "succeeded" },
+      );
+    }
+
+    const { emitOrderUpdate } = await import("../socket/index.js");
+    emitOrderUpdate(String(order._id), { status: "payment_confirmed", at: new Date() });
+
+    res.json({ message: "Payment confirmed.", order });
+  } catch (e) {
+    next(e);
+  }
+});

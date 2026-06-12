@@ -63,6 +63,9 @@ const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 const SellerApplyPage = lazy(() => import("./pages/seller/SellerApplyPage"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
+const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
 // ── Auth guard ─────────────────────────────────────────────────────────────
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -101,6 +104,8 @@ export default function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
 
               {/* Seller apply — public so buyers can apply */}
               <Route
@@ -126,6 +131,14 @@ export default function App() {
                 element={
                   <RequireAuth>
                     <OrdersPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/orders/:id/track"
+                element={
+                  <RequireAuth>
+                    <OrderTrackingPage />
                   </RequireAuth>
                 }
               />

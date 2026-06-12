@@ -35,6 +35,13 @@ export default function ProductCard({ p }: { p: Product }) {
           alt={p.title}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-[1.03] transition duration-300"
+          onError={(e) => {
+            const target = e.currentTarget;
+            target.onerror = null;
+            target.src = `https://placehold.co/400x400/0A2E1F/F5A623?text=${encodeURIComponent(
+              p.title.slice(0, 12),
+            )}`;
+          }}
         />
         {onSale && (
           <span className="absolute top-2 left-2 bg-vermillion text-white text-xs font-bold px-2 py-0.5 rounded-full">

@@ -212,6 +212,11 @@ export default function HomePage() {
         <SectionHeader icon={TrendingUp} title="Trending Now" href="/search?sort=rating" />
         {trendingLoading ? (
           <ProductRowSkeleton />
+        ) : (trendingData?.items?.length ?? 0) === 0 ? (
+          <div className="text-center py-12 text-slate/40">
+            <TrendingUp size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm">Products are on their way — check back soon!</p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {trendingData?.items.map((p) => (
@@ -226,6 +231,14 @@ export default function HomePage() {
         <SectionHeader icon={Sparkles} title="New Arrivals" href="/search?sort=newest" />
         {newLoading ? (
           <ProductRowSkeleton />
+        ) : (newData?.items?.length ?? 0) === 0 ? (
+          <div className="text-center py-12 text-slate/40">
+            <Sparkles size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm">New products coming soon — be the first to discover them.</p>
+            <Link to="/seller/apply" className="inline-block mt-3 text-forest text-sm font-semibold hover:underline">
+              Become a seller →
+            </Link>
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {newData?.items.map((p) => (

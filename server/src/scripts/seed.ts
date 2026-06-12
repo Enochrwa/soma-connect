@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
+import crypto from "crypto";
 import { connectDB } from "../db.js";
 import { User } from "../models/User.js";
 import { Seller } from "../models/Seller.js";
@@ -157,7 +158,11 @@ async function main() {
     Review.deleteMany({}),
   ]);
 
-  const adminHash = await bcrypt.hash("admin1234", 10);
+  // Generate secure random passwords — printed once and never stored in source
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? crypto.randomBytes(12).toString("hex");
+  const buyerPassword = process.env.SEED_BUYER_PASSWORD ?? crypto.randomBytes(12).toString("hex");
+
+  const adminHash = await bcrypt.hash(adminPassword, 10);
   await User.create({
     phone: "+250 788 000 001",
     email: "admin@somamarket.rw",
@@ -167,7 +172,7 @@ async function main() {
     referralCode: "ADMIN001",
   });
 
-  const buyerHash = await bcrypt.hash("buyer1234", 10);
+  const buyerHash = await bcrypt.hash(buyerPassword, 10);
   await User.create({
     phone: "+250 788 000 002",
     email: "buyer@somamarket.rw",
@@ -250,15 +255,11 @@ async function main() {
   }
 
   console.log(`[seed] done. ${total} products, ${SELLERS.length} sellers.`);
-  console.log(
-    `[seed] admin login  → phone +250 788 000 001 / email admin@somamarket.rw / pw admin1234`,
-  );
-  console.log(
-    `[seed] buyer login  → phone +250 788 000 002 / email buyer@somamarket.rw / pw buyer1234`,
-  );
-  console.log(
-    `[seed] seller login → phone +250 788 000 003 / email seller@somamarket.rw / pw seller1234`,
-  );
+  console.log(`\n========== SEED CREDENTIALS (save these now) ==========`);
+  console.log(`[seed] admin  → email admin@somamarket.rw  | pw: ${adminPassword}`);
+  console.log(`[seed] buyer  → email buyer@somamarket.rw  | pw: ${buyerPassword}`);
+  console.log(`[seed] seller → email kigali-tech-hub@somamarket.rw | pw: seller1234`);
+  console.log(`=======================================================\n`);
   await mongoose.disconnect();
 }
 
