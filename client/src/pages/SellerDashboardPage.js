@@ -1,4 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-export default function SellerDashboardPage() {
-    return (_jsxs("div", { className: "mx-auto max-w-7xl px-4 py-8", children: [_jsx("h1", { className: "font-display text-3xl text-forest", children: "Seller dashboard" }), _jsx("p", { className: "text-slate/60 mt-2", children: "Scaffold ready \u2014 extend with overview, products, orders, analytics, payouts, reviews, promotions, settings tabs." }), _jsx("div", { className: "grid md:grid-cols-3 gap-4 mt-6", children: ["Revenue today", "Pending orders", "Store rating"].map((s) => (_jsxs("div", { className: "card p-5", children: [_jsx("div", { className: "text-xs text-slate/60", children: s }), _jsx("div", { className: "font-display text-2xl text-forest mt-2", children: "\u2014" })] }, s))) })] }));
-}

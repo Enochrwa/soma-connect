@@ -1,5 +1,11 @@
 {
-  "nav": { "home": "Ahabanza", "shop": "Gura", "sellers": "Abacuruzi", "cart": "Igikoresho", "signIn": "Injira" },
+  "nav": {
+    "home": "Ahabanza",
+    "shop": "Gura",
+    "sellers": "Abacuruzi",
+    "cart": "Igikoresho",
+    "signIn": "Injira"
+  },
   "home": {
     "heroTitle": "Isoko ry'u Rwanda, ryongeye gutekerezwa.",
     "heroSubtitle": "Abacuruzi bemejwe, kwishyura kuri telefoni, no kugeza vuba i Kigali.",
