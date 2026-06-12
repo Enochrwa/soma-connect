@@ -308,4 +308,3 @@ authRouter.get(
     res.redirect(`${env.CLIENT_URL}/auth/google/callback?accessToken=${access}`);
   },
 );
-

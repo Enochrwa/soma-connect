@@ -161,7 +161,6 @@ export default function LoginPage() {
             <hr className="flex-1 border-forest/10" />
           </div>
 
-
           {mode === "phone" ? (
             <form onSubmit={handlePhoneLogin} className="space-y-4">
               <div>
