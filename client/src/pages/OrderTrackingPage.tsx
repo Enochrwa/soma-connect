@@ -2,13 +2,26 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { io } from "socket.io-client";
-import { useGetOrderQuery, useCancelOrderMutation, useOpenDisputeMutation, useGetLoyaltyQuery } from "../app/api";
+import {
+  useGetOrderQuery,
+  useCancelOrderMutation,
+  useOpenDisputeMutation,
+  useGetLoyaltyQuery,
+} from "../app/api";
 import { useAppSelector } from "../app/hooks";
 import type { RootState } from "../app/store";
 import { formatRWF } from "../utils/format";
 import { ExternalLink, AlertTriangle, XCircle, Loader2 } from "lucide-react";
 
-const STEPS = ["placed","payment_confirmed","preparing","packed","picked_up","out_for_delivery","delivered"];
+const STEPS = [
+  "placed",
+  "payment_confirmed",
+  "preparing",
+  "packed",
+  "picked_up",
+  "out_for_delivery",
+  "delivered",
+];
 const LABELS: Record<string, string> = {
   placed: "Order placed",
   payment_confirmed: "Payment confirmed",
@@ -47,16 +60,19 @@ export default function OrderTrackingPage() {
     const socket = io(import.meta.env.VITE_SOCKET_URL ?? "http://localhost:4000");
     socket.emit("subscribeOrder", id);
     socket.on("orderUpdate", () => refetch());
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+    };
   }, [id, refetch]);
 
   const order = data?.order;
-  if (!order) return (
-    <div className="mx-auto max-w-3xl px-4 py-12 text-center text-slate/50">
-      <Loader2 className="animate-spin text-forest mx-auto mb-4" size={28} />
-      Loading order…
-    </div>
-  );
+  if (!order)
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12 text-center text-slate/50">
+        <Loader2 className="animate-spin text-forest mx-auto mb-4" size={28} />
+        Loading order…
+      </div>
+    );
 
   const currentIdx = STEPS.indexOf(order.status);
   const isCancellable = ["placed", "payment_confirmed"].includes(order.status);
@@ -81,9 +97,16 @@ export default function OrderTrackingPage() {
     e.preventDefault();
     if (!order) return;
     setDisputeError("");
-    if (disputeDesc.length < 20) { setDisputeError("Please provide at least 20 characters of description."); return; }
+    if (disputeDesc.length < 20) {
+      setDisputeError("Please provide at least 20 characters of description.");
+      return;
+    }
     try {
-      await openDispute({ orderId: order._id, reason: disputeReason, description: disputeDesc }).unwrap();
+      await openDispute({
+        orderId: order._id,
+        reason: disputeReason,
+        description: disputeDesc,
+      }).unwrap();
       setDisputeSuccess(true);
       setShowDisputeForm(false);
     } catch (err: unknown) {
@@ -108,7 +131,9 @@ export default function OrderTrackingPage() {
             <div>
               <p className="font-semibold text-vermillion">Order Cancelled</p>
               {order.paymentStatus === "refunded" && (
-                <p className="text-sm text-slate/60 mt-0.5">Your payment has been marked for refund.</p>
+                <p className="text-sm text-slate/60 mt-0.5">
+                  Your payment has been marked for refund.
+                </p>
               )}
             </div>
           </div>
@@ -119,8 +144,10 @@ export default function OrderTrackingPage() {
           <ol className="mt-6 space-y-4">
             {STEPS.map((s, i) => (
               <li key={s} className="flex items-center gap-3">
-                <span className={`w-8 h-8 rounded-full grid place-items-center font-mono text-xs flex-shrink-0
-                  ${i < currentIdx ? "bg-forest text-ivory" : i === currentIdx ? "bg-saffron text-slate" : "bg-white border"}`}>
+                <span
+                  className={`w-8 h-8 rounded-full grid place-items-center font-mono text-xs flex-shrink-0
+                  ${i < currentIdx ? "bg-forest text-ivory" : i === currentIdx ? "bg-saffron text-slate" : "bg-white border"}`}
+                >
                   {i < currentIdx ? "✓" : i + 1}
                 </span>
                 <span className={i <= currentIdx ? "text-forest font-medium" : "text-slate/50"}>
@@ -161,7 +188,9 @@ export default function OrderTrackingPage() {
             </div>
             <div className="flex justify-between text-slate/60">
               <span>Delivery</span>
-              <span className="font-mono">{order.deliveryFee === 0 ? "FREE" : formatRWF(order.deliveryFee)}</span>
+              <span className="font-mono">
+                {order.deliveryFee === 0 ? "FREE" : formatRWF(order.deliveryFee)}
+              </span>
             </div>
             {(order.discount ?? 0) > 0 && (
               <div className="flex justify-between text-green-600">
@@ -180,7 +209,9 @@ export default function OrderTrackingPage() {
               <span className="font-mono text-saffron">{formatRWF(order.total)}</span>
             </div>
             {(order.pointsEarned ?? 0) > 0 && (
-              <p className="text-xs text-forest/60 text-right">+{order.pointsEarned} loyalty points earned</p>
+              <p className="text-xs text-forest/60 text-right">
+                +{order.pointsEarned} loyalty points earned
+              </p>
             )}
           </div>
         </div>
@@ -196,7 +227,11 @@ export default function OrderTrackingPage() {
                   disabled={cancelling}
                   className="flex items-center gap-2 text-sm text-vermillion border border-vermillion/30 rounded-xl px-4 py-2.5 hover:bg-vermillion/5 transition disabled:opacity-50"
                 >
-                  {cancelling ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                  {cancelling ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <XCircle size={14} />
+                  )}
                   Cancel order
                 </button>
                 {cancelError && <p className="text-vermillion text-xs mt-1">{cancelError}</p>}
@@ -216,7 +251,8 @@ export default function OrderTrackingPage() {
 
             {disputeSuccess && (
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-800">
-                ✅ Your dispute has been submitted. Our team will review it within 1–2 business days.
+                ✅ Your dispute has been submitted. Our team will review it within 1–2 business
+                days.
               </div>
             )}
 
@@ -232,12 +268,16 @@ export default function OrderTrackingPage() {
                       className="w-full border border-forest/20 rounded-lg px-3 py-2 text-sm bg-white"
                     >
                       {DISPUTE_REASONS.map((r) => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-forest block mb-1">Description *</label>
+                    <label className="text-sm font-medium text-forest block mb-1">
+                      Description *
+                    </label>
                     <textarea
                       value={disputeDesc}
                       onChange={(e) => setDisputeDesc(e.target.value)}
@@ -247,11 +287,21 @@ export default function OrderTrackingPage() {
                   </div>
                   {disputeError && <p className="text-vermillion text-xs">{disputeError}</p>}
                   <div className="flex gap-2">
-                    <button type="submit" disabled={disputeLoading} className="btn-primary flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={disputeLoading}
+                      className="btn-primary flex items-center gap-2"
+                    >
                       {disputeLoading && <Loader2 size={14} className="animate-spin" />}
                       Submit dispute
                     </button>
-                    <button type="button" onClick={() => setShowDisputeForm(false)} className="btn-ghost">Cancel</button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDisputeForm(false)}
+                      className="btn-ghost"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </form>
               </div>

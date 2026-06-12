@@ -52,7 +52,7 @@ const OrderSchema = new Schema(
     deliverySpeed: { type: String, enum: ["standard", "express", "pickup"], default: "standard" },
     deliveryFee: { type: Number, default: 0 },
     subtotal: { type: Number, required: true },
-    discount: { type: Number, default: 0 },        // coupon or loyalty discount
+    discount: { type: Number, default: 0 }, // coupon or loyalty discount
     loyaltyDiscount: { type: Number, default: 0 }, // portion from loyalty points
     total: { type: Number, required: true },
     paymentMethod: {

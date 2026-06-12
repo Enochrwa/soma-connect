@@ -185,7 +185,12 @@ export async function sendPasswordResetEmail(to: string, code: string) {
   });
 }
 
-export async function sendPayoutNotificationEmail(to: string, storeName: string, amount: number, ref: string) {
+export async function sendPayoutNotificationEmail(
+  to: string,
+  storeName: string,
+  amount: number,
+  ref: string,
+) {
   return sendMail({
     to,
     subject: `💰 Payout of RWF ${amount.toLocaleString()} sent — ${storeName}`,
@@ -202,7 +207,11 @@ export async function sendPayoutNotificationEmail(to: string, storeName: string,
   });
 }
 
-export async function sendDisputeNotificationEmail(to: string, orderNumber: string, status: string) {
+export async function sendDisputeNotificationEmail(
+  to: string,
+  orderNumber: string,
+  status: string,
+) {
   return sendMail({
     to,
     subject: `Dispute update for order ${orderNumber} — SOMA Market`,

@@ -14,7 +14,7 @@ const PayoutSchema = new Schema(
       index: true,
     },
     momoPhone: { type: String }, // MoMo number to disburse to
-    momoRef: { type: String },   // reference from MoMo API
+    momoRef: { type: String }, // reference from MoMo API
     note: { type: String },
     initiatedBy: { type: Schema.Types.ObjectId, ref: "User" }, // admin who triggered it
     periodStart: { type: Date },

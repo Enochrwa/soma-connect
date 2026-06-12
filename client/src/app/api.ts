@@ -313,7 +313,10 @@ export const api = createApi({
 
     // ── Coupons ──────────────────────────────────────────────────────────────
     validateCoupon: b.mutation<
-      { valid: boolean; coupon: { code: string; type: string; value: number; discountAmount: number } },
+      {
+        valid: boolean;
+        coupon: { code: string; type: string; value: number; discountAmount: number };
+      },
       { code: string; subtotal: number }
     >({
       query: (body) => ({ url: "/coupons/validate", method: "POST", body }),
@@ -348,7 +351,10 @@ export const api = createApi({
       query: () => "/admin/payouts",
       providesTags: ["AdminStats"],
     }),
-    adminDisbursePayout: b.mutation<{ payout: Payout }, { id: string; momoRef: string; note?: string }>({
+    adminDisbursePayout: b.mutation<
+      { payout: Payout },
+      { id: string; momoRef: string; note?: string }
+    >({
       query: ({ id, ...body }) => ({ url: `/payouts/admin/${id}/disburse`, method: "PATCH", body }),
       invalidatesTags: ["AdminStats"],
     }),
@@ -392,7 +398,10 @@ export const api = createApi({
     }),
 
     // ── Password Reset ────────────────────────────────────────────────────────
-    forgotPassword: b.mutation<{ ok: boolean; message: string }, { phone?: string; email?: string }>({
+    forgotPassword: b.mutation<
+      { ok: boolean; message: string },
+      { phone?: string; email?: string }
+    >({
       query: (body) => ({ url: "/auth/password/forgot", method: "POST", body }),
     }),
     resetPassword: b.mutation<
@@ -421,7 +430,10 @@ export const api = createApi({
       invalidatesTags: ["Seller"],
     }),
     getSellerLowStock: b.query<{ products: Product[]; threshold: number }, number | void>({
-      query: (threshold) => ({ url: "/sellers/me/low-stock", params: threshold ? { threshold } : {} }),
+      query: (threshold) => ({
+        url: "/sellers/me/low-stock",
+        params: threshold ? { threshold } : {},
+      }),
       providesTags: ["Products"],
     }),
 

@@ -59,27 +59,22 @@ disputeRouter.get("/me", requireAuth, async (req: AuthedRequest, res, next) => {
 });
 
 // Admin: list all disputes
-disputeRouter.get(
-  "/admin",
-  requireAuth,
-  requireRole("admin"),
-  async (req, res, next) => {
-    try {
-      const { status } = req.query as { status?: string };
-      const filter: Record<string, unknown> = {};
-      if (status) filter.status = status;
-      const disputes = await Dispute.find(filter)
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .populate("buyerId", "profile phone email")
-        .populate("orderId", "orderNumber total status")
-        .lean();
-      res.json({ disputes, total: disputes.length });
-    } catch (e) {
-      next(e);
-    }
-  },
-);
+disputeRouter.get("/admin", requireAuth, requireRole("admin"), async (req, res, next) => {
+  try {
+    const { status } = req.query as { status?: string };
+    const filter: Record<string, unknown> = {};
+    if (status) filter.status = status;
+    const disputes = await Dispute.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .populate("buyerId", "profile phone email")
+      .populate("orderId", "orderNumber total status")
+      .lean();
+    res.json({ disputes, total: disputes.length });
+  } catch (e) {
+    next(e);
+  }
+});
 
 const resolveSchema = z.object({
   status: z.enum(["resolved_refund", "resolved_no_action", "closed", "under_review"]),

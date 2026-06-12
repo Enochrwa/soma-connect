@@ -12,7 +12,7 @@ import mongoose from "mongoose";
 
 export const payoutRouter = Router();
 
-const COMMISSION_RATE = 0.10; // 10% platform commission
+const COMMISSION_RATE = 0.1; // 10% platform commission
 
 // ── Seller: view payout history ───────────────────────────────────────────────
 payoutRouter.get(
@@ -96,7 +96,10 @@ payoutRouter.post(
         periodEnd: new Date(),
       });
 
-      res.status(201).json({ payout, message: "Payout request submitted. Admin will process within 1 business day." });
+      res.status(201).json({
+        payout,
+        message: "Payout request submitted. Admin will process within 1 business day.",
+      });
     } catch (e) {
       next(e);
     }
@@ -104,23 +107,18 @@ payoutRouter.post(
 );
 
 // ── Admin: list all payouts ───────────────────────────────────────────────────
-payoutRouter.get(
-  "/admin",
-  requireAuth,
-  requireRole("admin"),
-  async (_req, res, next) => {
-    try {
-      const payouts = await Payout.find()
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .populate("sellerId", "storeName")
-        .lean();
-      res.json({ payouts });
-    } catch (e) {
-      next(e);
-    }
-  },
-);
+payoutRouter.get("/admin", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    const payouts = await Payout.find()
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .populate("sellerId", "storeName")
+      .lean();
+    res.json({ payouts });
+  } catch (e) {
+    next(e);
+  }
+});
 
 // ── Admin: trigger payout disbursement ───────────────────────────────────────
 const disburseSchema = z.object({
@@ -145,11 +143,12 @@ payoutRouter.patch(
       payout.status = "sent";
       payout.momoRef = momoRef;
       payout.note = note;
-      payout.initiatedBy = new mongoose.Types.ObjectId(req.user!.id) as unknown as typeof payout.initiatedBy;
+      payout.initiatedBy = new mongoose.Types.ObjectId(
+        req.user!.id,
+      ) as unknown as typeof payout.initiatedBy;
       await payout.save();
 
       // Notify seller via email
-      const sellerPopulated = payout.sellerId as unknown as { storeName: string; userId: string };
       const sellerDoc = await Seller.findById(String((payout.sellerId as { _id: string })._id));
       if (sellerDoc) {
         const sellerUser = await User.findById(sellerDoc.userId).lean();
@@ -163,7 +162,9 @@ payoutRouter.patch(
         }
       }
 
-      res.json({ payout: await Payout.findById(payout._id).populate("sellerId", "storeName").lean() });
+      res.json({
+        payout: await Payout.findById(payout._id).populate("sellerId", "storeName").lean(),
+      });
     } catch (e) {
       next(e);
     }

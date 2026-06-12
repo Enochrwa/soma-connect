@@ -73,7 +73,10 @@ orderRouter.post(
         // Check seller holiday mode
         const seller = await Seller.findById(p.sellerId).session(session).lean();
         if (seller?.holidayMode) {
-          throw new HttpError(400, `The store for "${p.title}" is temporarily closed (holiday mode).`);
+          throw new HttpError(
+            400,
+            `The store for "${p.title}" is temporarily closed (holiday mode).`,
+          );
         }
         // Stock check
         if (p.stock < it.quantity) {
@@ -118,9 +121,13 @@ orderRouter.post(
         }).session(session);
         if (!coupon) throw new HttpError(400, "Invalid or expired coupon code.");
         if (new Date() > coupon.expiresAt) throw new HttpError(400, "This coupon has expired.");
-        if (coupon.usedCount >= coupon.maxUses) throw new HttpError(400, "Coupon usage limit reached.");
+        if (coupon.usedCount >= coupon.maxUses)
+          throw new HttpError(400, "Coupon usage limit reached.");
         if (subtotal < coupon.minOrder) {
-          throw new HttpError(400, `Minimum order of RWF ${coupon.minOrder.toLocaleString()} required.`);
+          throw new HttpError(
+            400,
+            `Minimum order of RWF ${coupon.minOrder.toLocaleString()} required.`,
+          );
         }
         if (coupon.usedBy.map(String).includes(req.user!.id)) {
           throw new HttpError(400, "You have already used this coupon.");
@@ -281,94 +288,93 @@ orderRouter.post(
 );
 
 // ── Buyer cancel order ────────────────────────────────────────────────────────
-orderRouter.patch(
-  "/:id/cancel",
-  requireAuth,
-  async (req: AuthedRequest, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      const order = await Order.findById(req.params.id).session(session);
-      if (!order) throw new HttpError(404, "Order not found.");
-      if (String(order.buyerId) !== req.user!.id) throw new HttpError(403, "Not your order.");
-      const cancellableStatuses = ["placed", "payment_confirmed"];
-      if (!cancellableStatuses.includes(order.status)) {
-        throw new HttpError(400, "Order cannot be cancelled — it is already being prepared.");
-      }
-
-      // Restore stock
-      for (const item of order.items) {
-        if (item.variant) {
-          await Product.findOneAndUpdate(
-            { _id: item.productId, "variants.name": item.variant },
-            { $inc: { "variants.$.stock": item.quantity } },
-            { session },
-          );
-        }
-        await Product.findByIdAndUpdate(
-          item.productId,
-          { $inc: { stock: item.quantity, salesCount: -item.quantity } },
-          { session },
-        );
-      }
-
-      // Restore loyalty points if redeemed
-      if (order.pointsRedeemed && order.pointsRedeemed > 0) {
-        await User.findByIdAndUpdate(
-          order.buyerId,
-          { $inc: { loyaltyPoints: order.pointsRedeemed } },
-          { session },
-        );
-        await LoyaltyEvent.create(
-          [
-            {
-              userId: order.buyerId,
-              points: order.pointsRedeemed,
-              type: "admin_adjustment",
-              description: `Points restored from cancelled order ${order.orderNumber}`,
-              relatedId: order._id,
-            },
-          ],
-          { session },
-        );
-      }
-
-      // Deduct points earned from this order if still has them
-      if (order.pointsEarned && order.pointsEarned > 0) {
-        await User.findByIdAndUpdate(
-          order.buyerId,
-          { $inc: { loyaltyPoints: -order.pointsEarned } },
-          { session },
-        );
-      }
-
-      order.status = "cancelled" as unknown as typeof order.status;
-      order.statusHistory.push({ status: "cancelled", at: new Date(), note: "Cancelled by buyer" });
-      if (order.paymentStatus === "paid") {
-        order.paymentStatus = "refunded" as unknown as typeof order.paymentStatus;
-      }
-      await order.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
-
-      emitOrderUpdate(String(order._id), { status: "cancelled", at: new Date() });
-
-      const buyer = await User.findById(order.buyerId).lean();
-      if (buyer?.email) {
-        sendOrderStatusUpdate(buyer.email, order.orderNumber, "cancelled", "Cancelled by buyer").catch(
-          (e) => console.error("[email] cancel email failed", e),
-        );
-      }
-
-      res.json({ order, message: "Order cancelled successfully." });
-    } catch (e) {
-      await session.abortTransaction();
-      session.endSession();
-      next(e);
+orderRouter.patch("/:id/cancel", requireAuth, async (req: AuthedRequest, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const order = await Order.findById(req.params.id).session(session);
+    if (!order) throw new HttpError(404, "Order not found.");
+    if (String(order.buyerId) !== req.user!.id) throw new HttpError(403, "Not your order.");
+    const cancellableStatuses = ["placed", "payment_confirmed"];
+    if (!cancellableStatuses.includes(order.status)) {
+      throw new HttpError(400, "Order cannot be cancelled — it is already being prepared.");
     }
-  },
-);
+
+    // Restore stock
+    for (const item of order.items) {
+      if (item.variant) {
+        await Product.findOneAndUpdate(
+          { _id: item.productId, "variants.name": item.variant },
+          { $inc: { "variants.$.stock": item.quantity } },
+          { session },
+        );
+      }
+      await Product.findByIdAndUpdate(
+        item.productId,
+        { $inc: { stock: item.quantity, salesCount: -item.quantity } },
+        { session },
+      );
+    }
+
+    // Restore loyalty points if redeemed
+    if (order.pointsRedeemed && order.pointsRedeemed > 0) {
+      await User.findByIdAndUpdate(
+        order.buyerId,
+        { $inc: { loyaltyPoints: order.pointsRedeemed } },
+        { session },
+      );
+      await LoyaltyEvent.create(
+        [
+          {
+            userId: order.buyerId,
+            points: order.pointsRedeemed,
+            type: "admin_adjustment",
+            description: `Points restored from cancelled order ${order.orderNumber}`,
+            relatedId: order._id,
+          },
+        ],
+        { session },
+      );
+    }
+
+    // Deduct points earned from this order if still has them
+    if (order.pointsEarned && order.pointsEarned > 0) {
+      await User.findByIdAndUpdate(
+        order.buyerId,
+        { $inc: { loyaltyPoints: -order.pointsEarned } },
+        { session },
+      );
+    }
+
+    order.status = "cancelled" as unknown as typeof order.status;
+    order.statusHistory.push({ status: "cancelled", at: new Date(), note: "Cancelled by buyer" });
+    if (order.paymentStatus === "paid") {
+      order.paymentStatus = "refunded" as unknown as typeof order.paymentStatus;
+    }
+    await order.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    emitOrderUpdate(String(order._id), { status: "cancelled", at: new Date() });
+
+    const buyer = await User.findById(order.buyerId).lean();
+    if (buyer?.email) {
+      sendOrderStatusUpdate(
+        buyer.email,
+        order.orderNumber,
+        "cancelled",
+        "Cancelled by buyer",
+      ).catch((e) => console.error("[email] cancel email failed", e));
+    }
+
+    res.json({ order, message: "Order cancelled successfully." });
+  } catch (e) {
+    await session.abortTransaction();
+    session.endSession();
+    next(e);
+  }
+});
 
 // ── Seller: add tracking number ───────────────────────────────────────────────
 const trackingSchema = z.object({
@@ -425,7 +431,8 @@ orderRouter.get("/:id", requireAuth, async (req: AuthedRequest, res, next) => {
       const seller = await Seller.findOne({ userId: req.user!.id }).lean();
       isSeller = seller ? order.sellerIds.map(String).includes(String(seller._id)) : false;
     }
-    if (!isBuyer && !isAdmin && !isSeller) throw new HttpError(403, "Not authorized to view this order.");
+    if (!isBuyer && !isAdmin && !isSeller)
+      throw new HttpError(403, "Not authorized to view this order.");
     res.json({ order });
   } catch (e) {
     next(e);

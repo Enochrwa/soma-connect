@@ -23,9 +23,13 @@ couponRouter.post(
       const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
       if (!coupon) throw new HttpError(404, "Coupon code not found or expired.");
       if (new Date() > coupon.expiresAt) throw new HttpError(400, "This coupon has expired.");
-      if (coupon.usedCount >= coupon.maxUses) throw new HttpError(400, "This coupon has reached its usage limit.");
+      if (coupon.usedCount >= coupon.maxUses)
+        throw new HttpError(400, "This coupon has reached its usage limit.");
       if (subtotal < coupon.minOrder) {
-        throw new HttpError(400, `Minimum order of RWF ${coupon.minOrder.toLocaleString()} required for this coupon.`);
+        throw new HttpError(
+          400,
+          `Minimum order of RWF ${coupon.minOrder.toLocaleString()} required for this coupon.`,
+        );
       }
       const alreadyUsed = coupon.usedBy.map(String).includes(req.user!.id);
       if (alreadyUsed) throw new HttpError(400, "You have already used this coupon.");

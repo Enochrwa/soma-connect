@@ -69,7 +69,14 @@ export default function SearchPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Helmet>
         <title>{q ? `"${q}" — Search — SOMA Market` : "Search — SOMA Market"}</title>
-        <meta name="description" content={q ? `Find ${q} on SOMA Market — Rwanda's online marketplace.` : "Search products on SOMA Market."} />
+        <meta
+          name="description"
+          content={
+            q
+              ? `Find ${q} on SOMA Market — Rwanda's online marketplace.`
+              : "Search products on SOMA Market."
+          }
+        />
         <meta property="og:title" content={q ? `Search: ${q} — SOMA Market` : "SOMA Market"} />
       </Helmet>
       {/* Top bar */}
