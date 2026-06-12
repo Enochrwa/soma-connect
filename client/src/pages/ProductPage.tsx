@@ -95,10 +95,7 @@ export default function ProductPage() {
       {/* Breadcrumb */}
       <Breadcrumb
         className="mb-6"
-        items={[
-          { label: p.category, to: `/search?category=${p.category}` },
-          { label: p.title },
-        ]}
+        items={[{ label: p.category, to: `/search?category=${p.category}` }, { label: p.title }]}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">

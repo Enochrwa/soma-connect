@@ -13,7 +13,10 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ items, className = "" }: BreadcrumbProps) {
   return (
-    <nav aria-label="breadcrumb" className={`flex items-center gap-1.5 text-sm text-slate/50 flex-wrap ${className}`}>
+    <nav
+      aria-label="breadcrumb"
+      className={`flex items-center gap-1.5 text-sm text-slate/50 flex-wrap ${className}`}
+    >
       <Link to="/" className="hover:text-forest transition flex items-center gap-1">
         <Home size={13} />
       </Link>

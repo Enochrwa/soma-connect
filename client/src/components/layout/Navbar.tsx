@@ -2,14 +2,34 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
-import { ShoppingCart, Heart, Bell, User, Search, Menu, X, Globe, Package, Star, LogOut, LayoutDashboard, Shield } from "lucide-react";
+import {
+  ShoppingCart,
+  Heart,
+  Bell,
+  User,
+  Search,
+  Menu,
+  X,
+  Globe,
+  Package,
+  Star,
+  LogOut,
+  LayoutDashboard,
+  Shield,
+} from "lucide-react";
 import type { RootState } from "../../app/store";
 import { useLogoutMutation, useGetNotificationsQuery } from "../../app/api";
 import { clearAuth } from "../../features/auth/authSlice";
 
 function UserAvatar({ name, avatar }: { name?: string; avatar?: string }) {
   const [err, setErr] = useState(false);
-  const initials = name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
+  const initials =
+    name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) ?? "?";
   if (avatar && !err) {
     return (
       <img
@@ -88,7 +108,10 @@ export function Navbar() {
       {/* ── Desktop navbar ─────────────────────────────────────────────────── */}
       <nav className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
         {/* Logo */}
-        <Link to="/" className="font-display text-xl font-bold text-saffron shrink-0 hover:opacity-90 transition">
+        <Link
+          to="/"
+          className="font-display text-xl font-bold text-saffron shrink-0 hover:opacity-90 transition"
+        >
           SOMA
         </Link>
 
@@ -188,7 +211,9 @@ export function Navbar() {
                 <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-card-hover py-2 min-w-[200px] z-50 animate-slide-up border border-forest/5">
                   {/* User info header */}
                   <div className="px-4 py-2 border-b border-gray-50 mb-1">
-                    <p className="text-sm font-semibold text-forest truncate">{user.profile?.name ?? "SOMA User"}</p>
+                    <p className="text-sm font-semibold text-forest truncate">
+                      {user.profile?.name ?? "SOMA User"}
+                    </p>
                     <p className="text-xs text-slate/50 truncate">{user.email ?? user.phone}</p>
                   </div>
 
@@ -294,34 +319,65 @@ export function Navbar() {
               <div className="flex items-center gap-3 px-2 py-3 mb-2 border-b border-white/10">
                 <UserAvatar name={user.profile?.name} avatar={user.profile?.avatar} />
                 <div className="min-w-0">
-                  <p className="text-white font-semibold text-sm truncate">{user.profile?.name ?? "SOMA User"}</p>
+                  <p className="text-white font-semibold text-sm truncate">
+                    {user.profile?.name ?? "SOMA User"}
+                  </p>
                   <p className="text-white/50 text-xs truncate">{user.email ?? user.phone}</p>
                 </div>
               </div>
-              <Link to="/account" className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition">
+              <Link
+                to="/account"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
                 <User size={17} className="text-white/60" /> {t("nav.account")}
               </Link>
-              <Link to="/orders" className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition">
+              <Link
+                to="/orders"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
                 <Package size={17} className="text-white/60" /> {t("nav.orders")}
               </Link>
-              <Link to="/wishlist" className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition">
+              <Link
+                to="/wishlist"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
                 <Heart size={17} className="text-white/60" /> Wishlist
-                {wishlistCount > 0 && <span className="ml-auto bg-vermillion text-white text-xs font-bold px-2 py-0.5 rounded-full">{wishlistCount}</span>}
+                {wishlistCount > 0 && (
+                  <span className="ml-auto bg-vermillion text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
-              <Link to="/cart" className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition">
+              <Link
+                to="/cart"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
                 <ShoppingCart size={17} className="text-white/60" /> Cart
-                {cartCount > 0 && <span className="ml-auto bg-saffron text-forest text-xs font-bold px-2 py-0.5 rounded-full">{cartCount}</span>}
+                {cartCount > 0 && (
+                  <span className="ml-auto bg-saffron text-forest text-xs font-bold px-2 py-0.5 rounded-full">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
-              <Link to="/rewards" className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition">
+              <Link
+                to="/rewards"
+                className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+              >
                 <Star size={17} className="text-white/60" /> Rewards
               </Link>
               {user.role === "seller" && (
-                <Link to="/seller" className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition">
+                <Link
+                  to="/seller"
+                  className="flex items-center gap-3 px-2 py-3 text-white hover:bg-white/10 rounded-xl transition"
+                >
                   <LayoutDashboard size={17} className="text-white/60" /> Seller Dashboard
                 </Link>
               )}
               {user.role === "admin" && (
-                <Link to="/admin" className="flex items-center gap-3 px-2 py-3 text-saffron font-semibold hover:bg-white/10 rounded-xl transition">
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-3 px-2 py-3 text-saffron font-semibold hover:bg-white/10 rounded-xl transition"
+                >
                   <Shield size={17} className="text-saffron/80" /> {t("nav.admin")}
                 </Link>
               )}
@@ -336,10 +392,16 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/login" className="flex items-center justify-center py-3 text-white font-medium hover:bg-white/10 rounded-xl transition">
+              <Link
+                to="/login"
+                className="flex items-center justify-center py-3 text-white font-medium hover:bg-white/10 rounded-xl transition"
+              >
                 {t("auth.login")}
               </Link>
-              <Link to="/register" className="flex items-center justify-center py-3 bg-saffron text-forest font-semibold rounded-xl hover:bg-saffron-dark transition mt-1">
+              <Link
+                to="/register"
+                className="flex items-center justify-center py-3 bg-saffron text-forest font-semibold rounded-xl hover:bg-saffron-dark transition mt-1"
+              >
                 {t("auth.register")}
               </Link>
             </>
@@ -351,7 +413,9 @@ export function Navbar() {
                 key={l.code}
                 onClick={() => i18n.changeLanguage(l.code)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  i18n.language === l.code ? "bg-saffron text-forest" : "bg-white/10 text-white hover:bg-white/20"
+                  i18n.language === l.code
+                    ? "bg-saffron text-forest"
+                    : "bg-white/10 text-white hover:bg-white/20"
                 }`}
               >
                 {l.label}

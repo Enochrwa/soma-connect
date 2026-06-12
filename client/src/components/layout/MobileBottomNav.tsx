@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Home, Search, ShoppingCart, Heart, User } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -16,7 +16,13 @@ export function MobileBottomNav() {
   const [imgErr, setImgErr] = useState(false);
 
   const avatar = user?.profile?.avatar;
-  const initials = user?.profile?.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
+  const initials =
+    user?.profile?.name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) ?? "?";
 
   function handleProtectedLink(path: string) {
     if (!user) {
@@ -41,7 +47,7 @@ export function MobileBottomNav() {
           return (
             <button
               key={to}
-              onClick={() => isProtected ? handleProtectedLink(to) : navigate(to)}
+              onClick={() => (isProtected ? handleProtectedLink(to) : navigate(to))}
               className={cn(
                 "relative flex flex-col items-center justify-center flex-1 h-full text-xs gap-0.5 transition",
                 isActive ? "text-forest" : "text-gray-400",
@@ -55,8 +61,12 @@ export function MobileBottomNav() {
                   </span>
                 )}
               </div>
-              <span className={cn("font-medium text-[11px]", isActive && "font-semibold")}>{label}</span>
-              {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-forest rounded-full" />}
+              <span className={cn("font-medium text-[11px]", isActive && "font-semibold")}>
+                {label}
+              </span>
+              {isActive && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-forest rounded-full" />
+              )}
             </button>
           );
         })}
@@ -86,7 +96,12 @@ export function MobileBottomNav() {
               <User size={21} strokeWidth={pathname.startsWith("/account") ? 2.5 : 1.5} />
             )}
           </div>
-          <span className={cn("font-medium text-[11px]", pathname.startsWith("/account") && "font-semibold")}>
+          <span
+            className={cn(
+              "font-medium text-[11px]",
+              pathname.startsWith("/account") && "font-semibold",
+            )}
+          >
             {user ? "Me" : "Account"}
           </span>
           {pathname.startsWith("/account") && (

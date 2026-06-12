@@ -10,9 +10,7 @@ export default function ProductCard({ p }: { p: Product }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((s: RootState) => s.auth.user);
-  const isWishlisted = useSelector((s: RootState) =>
-    s.wishlist.items.some((w) => w._id === p._id),
-  );
+  const isWishlisted = useSelector((s: RootState) => s.wishlist.items.some((w) => w._id === p._id));
 
   const onSale = p.comparePrice && p.comparePrice > p.price;
   const discountPct = onSale
@@ -45,7 +43,9 @@ export default function ProductCard({ p }: { p: Product }) {
         )}
         {p.stock === 0 && (
           <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
-            <span className="bg-white text-slate/60 text-xs font-semibold px-3 py-1 rounded-full shadow">Sold out</span>
+            <span className="bg-white text-slate/60 text-xs font-semibold px-3 py-1 rounded-full shadow">
+              Sold out
+            </span>
           </div>
         )}
         <button
@@ -61,7 +61,9 @@ export default function ProductCard({ p }: { p: Product }) {
       <div className="p-3 space-y-1">
         <div className="text-sm font-medium line-clamp-2 text-slate">{p.title}</div>
         <div className="flex items-baseline gap-2">
-          <span className="price text-base font-bold text-forest font-mono">{formatRWF(p.price)}</span>
+          <span className="price text-base font-bold text-forest font-mono">
+            {formatRWF(p.price)}
+          </span>
           {onSale && (
             <span className="text-xs text-slate/40 line-through font-mono">
               {formatRWF(p.comparePrice!)}

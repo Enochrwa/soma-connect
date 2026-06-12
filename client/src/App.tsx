@@ -32,7 +32,11 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useSelector((s: RootState) => s.auth.accessToken);
   const location = useLocation();
-  return token ? <>{children}</> : <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  return token ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/login" state={{ from: location.pathname }} replace />
+  );
 }
 
 function RequireRole({ role, children }: { role: string; children: React.ReactNode }) {

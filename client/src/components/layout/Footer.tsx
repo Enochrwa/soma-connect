@@ -30,7 +30,10 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 pt-12 pb-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
         {/* Brand */}
         <div className="col-span-2 md:col-span-1">
-          <Link to="/" className="font-display text-2xl font-bold text-saffron block mb-3 hover:opacity-90 transition">
+          <Link
+            to="/"
+            className="font-display text-2xl font-bold text-saffron block mb-3 hover:opacity-90 transition"
+          >
             SOMA
           </Link>
           <p className="text-ivory/60 leading-relaxed mb-4">
@@ -43,11 +46,15 @@ export function Footer() {
             </div>
             <div className="flex items-center gap-2">
               <Mail size={13} className="shrink-0" />
-              <a href="mailto:hello@soma.rw" className="hover:text-saffron transition">hello@soma.rw</a>
+              <a href="mailto:hello@soma.rw" className="hover:text-saffron transition">
+                hello@soma.rw
+              </a>
             </div>
             <div className="flex items-center gap-2">
               <Phone size={13} className="shrink-0" />
-              <a href="tel:+250780000000" className="hover:text-saffron transition">+250 780 000 000</a>
+              <a href="tel:+250780000000" className="hover:text-saffron transition">
+                +250 780 000 000
+              </a>
             </div>
           </div>
         </div>
@@ -82,7 +89,9 @@ export function Footer() {
 
         {/* Sellers */}
         <div>
-          <div className="font-semibold text-ivory mb-3 text-sm uppercase tracking-wide">Sellers</div>
+          <div className="font-semibold text-ivory mb-3 text-sm uppercase tracking-wide">
+            Sellers
+          </div>
           <ul className="space-y-2">
             {SELLER_LINKS.map((l) => (
               <li key={l.label}>
@@ -99,8 +108,12 @@ export function Footer() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ivory/40">
           <span>© {new Date().getFullYear()} SOMA Market. Murakoze!</span>
           <div className="flex items-center gap-4">
-            <Link to="/" className="hover:text-ivory/70 transition">Privacy Policy</Link>
-            <Link to="/" className="hover:text-ivory/70 transition">Terms of Service</Link>
+            <Link to="/" className="hover:text-ivory/70 transition">
+              Privacy Policy
+            </Link>
+            <Link to="/" className="hover:text-ivory/70 transition">
+              Terms of Service
+            </Link>
           </div>
         </div>
       </div>
