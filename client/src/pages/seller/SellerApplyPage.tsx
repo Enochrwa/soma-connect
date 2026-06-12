@@ -29,10 +29,10 @@ export default function SellerApplyPage() {
     description: "",
     accountType: "individual",
     sector: "",
-    logo: "",
-    banner: "",
-    nidUrl: "",
-    licenseUrl: "",
+    logo: [] as string[],
+    banner: [] as string[],
+    nidUrl: [] as string[],
+    licenseUrl: [] as string[],
   });
   const [submitted, setSubmitted] = useState(false);
 
@@ -42,7 +42,13 @@ export default function SellerApplyPage() {
     return null;
   }
 
-  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const setText =
+    (k: "storeName" | "description" | "accountType" | "sector") =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const setImages = (k: "logo" | "banner" | "nidUrl" | "licenseUrl") => (urls: string[]) =>
+    setForm((f) => ({ ...f, [k]: urls }));
 
   const handleSubmit = async () => {
     if (!form.storeName.trim() || !form.sector) return;
@@ -52,10 +58,10 @@ export default function SellerApplyPage() {
         description: form.description.trim() || undefined,
         accountType: form.accountType,
         sector: form.sector,
-        logo: form.logo || undefined,
-        banner: form.banner || undefined,
-        nidUrl: form.nidUrl || undefined,
-        licenseUrl: form.licenseUrl || undefined,
+        logo: form.logo[0] || undefined,
+        banner: form.banner[0] || undefined,
+        nidUrl: form.nidUrl[0] || undefined,
+        licenseUrl: form.licenseUrl[0] || undefined,
       }).unwrap();
       setSubmitted(true);
     } catch {
@@ -84,7 +90,7 @@ export default function SellerApplyPage() {
 
   const errMsg =
     error && "data" in error
-      ? (error.data as { message?: string })?.message ?? "Something went wrong. Please try again."
+      ? ((error.data as { message?: string })?.message ?? "Something went wrong. Please try again.")
       : null;
 
   return (
@@ -108,7 +114,7 @@ export default function SellerApplyPage() {
             className="input w-full"
             placeholder="e.g. Kigali Crafts"
             value={form.storeName}
-            onChange={(e) => set("storeName")(e.target.value)}
+            onChange={setText("storeName")}
           />
         </div>
 
@@ -119,18 +125,14 @@ export default function SellerApplyPage() {
             className="input w-full h-24 resize-none"
             placeholder="Tell buyers what you sell…"
             value={form.description}
-            onChange={(e) => set("description")(e.target.value)}
+            onChange={setText("description")}
           />
         </div>
 
         {/* Sector */}
         <div>
           <label className="label">Business sector *</label>
-          <select
-            className="input w-full"
-            value={form.sector}
-            onChange={(e) => set("sector")(e.target.value)}
-          >
+          <select className="input w-full" value={form.sector} onChange={setText("sector")}>
             <option value="">Select a sector…</option>
             {SECTORS.map((s) => (
               <option key={s} value={s}>
@@ -147,11 +149,13 @@ export default function SellerApplyPage() {
             {["individual", "business"].map((t) => (
               <button
                 key={t}
-                onClick={() => set("accountType")(t)}
+                onClick={() => setForm((f) => ({ ...f, accountType: t }))}
                 className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition capitalize
-                  ${form.accountType === t
-                    ? "bg-forest text-saffron border-forest"
-                    : "border-slate/20 text-slate/60 hover:border-forest/40"}`}
+                  ${
+                    form.accountType === t
+                      ? "bg-forest text-saffron border-forest"
+                      : "border-slate/20 text-slate/60 hover:border-forest/40"
+                  }`}
               >
                 {t}
               </button>
@@ -162,7 +166,7 @@ export default function SellerApplyPage() {
         {/* Logo */}
         <div>
           <label className="label">Store logo</label>
-          <ImageUploader value={form.logo} onChange={set("logo")} />
+          <ImageUploader value={form.logo} onChange={setImages("logo")} maxFiles={1} label="Logo" />
         </div>
 
         {/* NID / License */}
@@ -175,12 +179,22 @@ export default function SellerApplyPage() {
         </div>
         <div>
           <label className="label">National ID (optional)</label>
-          <ImageUploader value={form.nidUrl} onChange={set("nidUrl")} />
+          <ImageUploader
+            value={form.nidUrl}
+            onChange={setImages("nidUrl")}
+            maxFiles={1}
+            label="National ID"
+          />
         </div>
         {form.accountType === "business" && (
           <div>
             <label className="label">Business license (optional)</label>
-            <ImageUploader value={form.licenseUrl} onChange={set("licenseUrl")} />
+            <ImageUploader
+              value={form.licenseUrl}
+              onChange={setImages("licenseUrl")}
+              maxFiles={1}
+              label="Business license"
+            />
           </div>
         )}
 

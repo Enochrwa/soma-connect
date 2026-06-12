@@ -19,7 +19,12 @@ import {
   Shield,
 } from "lucide-react";
 import type { RootState } from "../../app/store";
-import { useLogoutMutation, useGetNotificationsQuery, useMarkNotificationReadMutation } from "../../app/api";
+import type { AppNotification } from "../../types";
+import {
+  useLogoutMutation,
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+} from "../../app/api";
 import { clearAuth } from "../../features/auth/authSlice";
 
 function UserAvatar({ name, avatar }: { name?: string; avatar?: string }) {
@@ -194,9 +199,9 @@ export function Navbar() {
                     {unreadCount > 0 && (
                       <button
                         onClick={() =>
-                          notifData?.notifications
-                            ?.filter((n: { _id: string; read: boolean }) => !n.read)
-                            .forEach((n: { _id: string; read: boolean }) => markRead(n._id))
+                          (notifData?.notifications as AppNotification[])
+                            ?.filter((n) => !n.read)
+                            .forEach((n) => markRead(n._id))
                         }
                         className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
                       >
@@ -209,24 +214,24 @@ export function Navbar() {
                   {/* List */}
                   <ul className="max-h-72 overflow-y-auto divide-y divide-slate/5">
                     {notifData?.notifications?.length ? (
-                      notifData.notifications.slice(0, 20).map(
-                        (n: { _id: string; message: string; read: boolean; createdAt: string }) => (
-                          <li
-                            key={n._id}
-                            onClick={() => !n.read && markRead(n._id)}
-                            className={`px-4 py-3 cursor-pointer hover:bg-slate/5 transition ${
-                              !n.read ? "bg-saffron/5" : ""
-                            }`}
+                      (notifData.notifications as AppNotification[]).slice(0, 20).map((n) => (
+                        <li
+                          key={n._id}
+                          onClick={() => !n.read && markRead(n._id)}
+                          className={`px-4 py-3 cursor-pointer hover:bg-slate/5 transition ${
+                            !n.read ? "bg-saffron/5" : ""
+                          }`}
+                        >
+                          <p
+                            className={`text-sm ${!n.read ? "font-medium text-forest" : "text-slate/70"}`}
                           >
-                            <p className={`text-sm ${!n.read ? "font-medium text-forest" : "text-slate/70"}`}>
-                              {n.message}
-                            </p>
-                            <p className="text-[11px] text-slate/40 mt-0.5">
-                              {new Date(n.createdAt).toLocaleString()}
-                            </p>
-                          </li>
-                        ),
-                      )
+                            {n.message}
+                          </p>
+                          <p className="text-[11px] text-slate/40 mt-0.5">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </p>
+                        </li>
+                      ))
                     ) : (
                       <li className="px-4 py-8 text-center text-sm text-slate/40">
                         No notifications yet
