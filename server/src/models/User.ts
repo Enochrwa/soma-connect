@@ -41,6 +41,14 @@ const UserSchema = new Schema(
       sms: { type: Boolean, default: false },
       push: { type: Boolean, default: true },
     },
+    wishedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+    // password reset
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+    // push notification subscription
+    pushSubscription: { type: Schema.Types.Mixed },
+    // soft-delete
+    deletedAt: Date,
   },
   { timestamps: true },
 );

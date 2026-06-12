@@ -19,6 +19,9 @@ import { loyaltyRouter } from "./routes/loyalty.routes.js";
 import { notificationRouter } from "./routes/notification.routes.js";
 import { userRouter } from "./routes/user.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
+import couponRouter from "./routes/coupon.routes.js";
+import { payoutRouter } from "./routes/payout.routes.js";
+import { disputeRouter } from "./routes/dispute.routes.js";
 
 export const app = express();
 
@@ -75,6 +78,9 @@ app.use("/api/loyalty", loyaltyRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/users", userRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/coupons", couponRouter);
+app.use("/api/payouts", payoutRouter);
+app.use("/api/disputes", disputeRouter);
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => {

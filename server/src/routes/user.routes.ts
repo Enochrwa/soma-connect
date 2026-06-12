@@ -133,3 +133,115 @@ userRouter.get("/me/orders", requireAuth, async (req: AuthedRequest, res, next) 
 userRouter.get("/me/wishlist", requireAuth, (_req, res) => {
   res.json({ items: [] }); // Client manages wishlist in localStorage
 });
+
+// ── Wishlist (server-side persistence) ────────────────────────────────────────
+
+userRouter.get("/me/wishlist", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const user = await User.findById(req.user!.id)
+      .populate("wishedProducts", "_id title images price comparePrice avgRating slug isActive")
+      .lean();
+    res.json({ items: user?.wishedProducts ?? [] });
+  } catch (e) {
+    next(e);
+  }
+});
+
+userRouter.post("/me/wishlist/:productId", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user!.id,
+      { $addToSet: { wishedProducts: req.params.productId } },
+      { new: true },
+    )
+      .populate("wishedProducts", "_id title images price comparePrice avgRating slug isActive")
+      .lean();
+    res.json({ items: user?.wishedProducts ?? [] });
+  } catch (e) {
+    next(e);
+  }
+});
+
+userRouter.delete("/me/wishlist/:productId", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user!.id,
+      { $pull: { wishedProducts: req.params.productId } },
+      { new: true },
+    )
+      .populate("wishedProducts", "_id title images price comparePrice avgRating slug isActive")
+      .lean();
+    res.json({ items: user?.wishedProducts ?? [] });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Data Export (Rwanda Data Protection Law No. 058/2021) ─────────────────────
+
+userRouter.get("/me/export", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const { Order } = await import("../models/Order.js");
+    const { Review } = await import("../models/Review.js");
+    const { LoyaltyEvent } = await import("../models/LoyaltyEvent.js");
+
+    const [user, orders, reviews, loyaltyEvents] = await Promise.all([
+      User.findById(req.user!.id).select("-passwordHash -failedLogins -googleId").lean(),
+      Order.find({ buyerId: req.user!.id }).lean(),
+      Review.find({ buyerId: req.user!.id }).lean(),
+      LoyaltyEvent.find({ userId: req.user!.id }).lean(),
+    ]);
+
+    res.setHeader("Content-Disposition", "attachment; filename=soma-my-data.json");
+    res.setHeader("Content-Type", "application/json");
+    res.json({
+      exportedAt: new Date().toISOString(),
+      notice: "Exported under Rwanda Data Protection Law No. 058/2021",
+      profile: user,
+      orders,
+      reviews,
+      loyaltyEvents,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Account Deletion (soft-delete, anonymises personal data) ─────────────────
+
+userRouter.delete("/me", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const { Seller } = await import("../models/Seller.js");
+    const seller = await Seller.findOne({ userId: req.user!.id });
+    if (seller?.isActive) {
+      throw new HttpError(400, "Please deactivate your store before deleting your account.");
+    }
+    // Anonymise PII, keep orders for financial records
+    await User.findByIdAndUpdate(req.user!.id, {
+      phone: `deleted_${req.user!.id}`,
+      email: null,
+      passwordHash: null,
+      googleId: null,
+      "profile.name": "Deleted User",
+      "profile.avatar": null,
+      addresses: [],
+      wishedProducts: [],
+      deletedAt: new Date(),
+    });
+    res.json({ ok: true, message: "Your account has been deleted and personal data anonymised." });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Push Subscription (Web Push) ─────────────────────────────────────────────
+
+userRouter.post("/me/push-subscription", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const { subscription } = req.body as { subscription: unknown };
+    await User.findByIdAndUpdate(req.user!.id, { pushSubscription: subscription });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});

@@ -167,6 +167,11 @@ export default function LoginPage() {
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 Sign in
               </button>
+              <div className="text-center">
+                <Link to="/forgot-password" className="text-xs text-forest/50 hover:text-forest">
+                  Forgot your password?
+                </Link>
+              </div>
             </form>
           ) : (
             <form onSubmit={otpSent ? handleOtpVerify : handleOtpRequest} className="space-y-4">

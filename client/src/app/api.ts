@@ -8,6 +8,9 @@ import type {
   Review,
   LoyaltyEvent,
   PaginatedResponse,
+  Coupon,
+  Payout,
+  Dispute,
 } from "../types";
 
 export const api = createApi({
@@ -25,6 +28,8 @@ export const api = createApi({
     "Notifications",
     "Loyalty",
     "AdminStats",
+    "Wishlist",
+    "Disputes",
   ],
   endpoints: (b) => ({
     // ── Products ─────────────────────────────────────────────────────────────
@@ -126,6 +131,7 @@ export const api = createApi({
         deliverySpeed: "standard" | "express" | "pickup";
         paymentMethod: "mtn_momo" | "airtel_money" | "cod";
         couponCode?: string;
+        pointsToRedeem?: number;
       }
     >({
       query: (body) => ({ url: "/orders", method: "POST", body }),
@@ -175,6 +181,8 @@ export const api = createApi({
         sector: string;
         logo?: string;
         banner?: string;
+        nidUrl?: string;
+        licenseUrl?: string;
       }
     >({
       query: (body) => ({ url: "/sellers/apply", method: "POST", body }),
@@ -302,6 +310,137 @@ export const api = createApi({
     >({
       query: (params) => ({ url: "/admin/analytics/revenue", params }),
     }),
+
+    // ── Coupons ──────────────────────────────────────────────────────────────
+    validateCoupon: b.mutation<
+      { valid: boolean; coupon: { code: string; type: string; value: number; discountAmount: number } },
+      { code: string; subtotal: number }
+    >({
+      query: (body) => ({ url: "/coupons/validate", method: "POST", body }),
+    }),
+    adminGetCoupons: b.query<{ coupons: Coupon[]; total: number }, void>({
+      query: () => "/admin/coupons",
+      providesTags: ["AdminStats"],
+    }),
+    adminCreateCoupon: b.mutation<{ coupon: Coupon }, Partial<Coupon> & { expiresAt: string }>({
+      query: (body) => ({ url: "/admin/coupons", method: "POST", body }),
+      invalidatesTags: ["AdminStats"],
+    }),
+    adminToggleCoupon: b.mutation<{ coupon: Coupon }, string>({
+      query: (id) => ({ url: `/admin/coupons/${id}/toggle`, method: "PATCH" }),
+      invalidatesTags: ["AdminStats"],
+    }),
+    adminDeleteCoupon: b.mutation<{ ok: boolean }, string>({
+      query: (id) => ({ url: `/admin/coupons/${id}`, method: "DELETE" }),
+      invalidatesTags: ["AdminStats"],
+    }),
+
+    // ── Payouts ──────────────────────────────────────────────────────────────
+    getMyPayouts: b.query<{ payouts: Payout[] }, void>({
+      query: () => "/payouts/me",
+      providesTags: ["Seller"],
+    }),
+    requestPayout: b.mutation<{ payout: Payout; message: string }, { momoPhone: string }>({
+      query: (body) => ({ url: "/payouts/me/request", method: "POST", body }),
+      invalidatesTags: ["Seller"],
+    }),
+    adminGetPayouts: b.query<{ payouts: Payout[]; total: number }, void>({
+      query: () => "/admin/payouts",
+      providesTags: ["AdminStats"],
+    }),
+    adminDisbursePayout: b.mutation<{ payout: Payout }, { id: string; momoRef: string; note?: string }>({
+      query: ({ id, ...body }) => ({ url: `/payouts/admin/${id}/disburse`, method: "PATCH", body }),
+      invalidatesTags: ["AdminStats"],
+    }),
+
+    // ── Disputes ─────────────────────────────────────────────────────────────
+    openDispute: b.mutation<
+      { dispute: Dispute },
+      { orderId: string; reason: string; description: string; evidenceImages?: string[] }
+    >({
+      query: (body) => ({ url: "/disputes", method: "POST", body }),
+      invalidatesTags: ["Orders"],
+    }),
+    getMyDisputes: b.query<{ disputes: Dispute[] }, void>({
+      query: () => "/disputes/me",
+      providesTags: ["Orders"],
+    }),
+    adminGetDisputes: b.query<{ disputes: Dispute[]; total: number }, { status?: string }>({
+      query: (params) => ({ url: "/admin/disputes", params }),
+      providesTags: ["AdminStats"],
+    }),
+    adminResolveDispute: b.mutation<
+      { dispute: Dispute },
+      { id: string; status: string; adminNote?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/disputes/admin/${id}/resolve`, method: "PATCH", body }),
+      invalidatesTags: ["AdminStats"],
+    }),
+
+    // ── Wishlist (server) ─────────────────────────────────────────────────────
+    getWishlist: b.query<{ items: Product[] }, void>({
+      query: () => "/users/me/wishlist",
+      providesTags: ["Me"],
+    }),
+    addToWishlist: b.mutation<{ items: Product[] }, string>({
+      query: (productId) => ({ url: `/users/me/wishlist/${productId}`, method: "POST" }),
+      invalidatesTags: ["Me"],
+    }),
+    removeFromWishlist: b.mutation<{ items: Product[] }, string>({
+      query: (productId) => ({ url: `/users/me/wishlist/${productId}`, method: "DELETE" }),
+      invalidatesTags: ["Me"],
+    }),
+
+    // ── Password Reset ────────────────────────────────────────────────────────
+    forgotPassword: b.mutation<{ ok: boolean; message: string }, { phone?: string; email?: string }>({
+      query: (body) => ({ url: "/auth/password/forgot", method: "POST", body }),
+    }),
+    resetPassword: b.mutation<
+      { ok: boolean; message: string },
+      { phone?: string; email?: string; code: string; newPassword: string }
+    >({
+      query: (body) => ({ url: "/auth/password/reset", method: "POST", body }),
+    }),
+
+    // ── Order cancel + tracking ───────────────────────────────────────────────
+    cancelOrder: b.mutation<{ order: Order; message: string }, string>({
+      query: (id) => ({ url: `/orders/${id}/cancel`, method: "PATCH" }),
+      invalidatesTags: (_r, _e, id) => [{ type: "Order", id }, "Orders"],
+    }),
+    setOrderTracking: b.mutation<
+      { order: Order },
+      { id: string; trackingNumber?: string; trackingUrl?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/orders/${id}/tracking`, method: "PATCH", body }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: "Order", id }],
+    }),
+
+    // ── Seller holiday mode ───────────────────────────────────────────────────
+    toggleHolidayMode: b.mutation<{ holidayMode: boolean; message: string }, void>({
+      query: () => ({ url: "/sellers/me/holiday", method: "PATCH" }),
+      invalidatesTags: ["Seller"],
+    }),
+    getSellerLowStock: b.query<{ products: Product[]; threshold: number }, number | void>({
+      query: (threshold) => ({ url: "/sellers/me/low-stock", params: threshold ? { threshold } : {} }),
+      providesTags: ["Products"],
+    }),
+
+    // ── Review seller reply ───────────────────────────────────────────────────
+    replyToReview: b.mutation<{ review: Review }, { id: string; text: string }>({
+      query: ({ id, ...body }) => ({ url: `/reviews/${id}/reply`, method: "PATCH", body }),
+      invalidatesTags: ["Reviews"],
+    }),
+
+    // ── Data export / account deletion ───────────────────────────────────────
+    deleteMyAccount: b.mutation<{ ok: boolean; message: string }, void>({
+      query: () => ({ url: "/users/me", method: "DELETE" }),
+      invalidatesTags: ["Me"],
+    }),
+
+    // ── Push subscription ─────────────────────────────────────────────────────
+    savePushSubscription: b.mutation<{ ok: boolean }, { subscription: PushSubscriptionJSON }>({
+      query: (body) => ({ url: "/users/me/push-subscription", method: "POST", body }),
+    }),
   }),
 });
 
@@ -322,24 +461,33 @@ export const {
   useVerifyOtpMutation,
   useRefreshTokenMutation,
   useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
   // User
   useGetMeQuery,
   useUpdateProfileMutation,
   useAddAddressMutation,
   useDeleteAddressMutation,
   useGetMyOrdersQuery,
+  useDeleteMyAccountMutation,
+  useSavePushSubscriptionMutation,
   // Orders
   useCreateOrderMutation,
   useGetOrderQuery,
+  useCancelOrderMutation,
+  useSetOrderTrackingMutation,
   // Payments
   usePayMockMutation,
   // Reviews
   useGetReviewsQuery,
   useCreateReviewMutation,
+  useReplyToReviewMutation,
   // Sellers
   useGetSellerQuery,
   useApplyAsSellerMutation,
   useGetMyStoreQuery,
+  useToggleHolidayModeMutation,
+  useGetSellerLowStockQuery,
   // Uploads
   useUploadFilesMutation,
   // AI
@@ -359,12 +507,30 @@ export const {
   useAdminApproveSellerMutation,
   useAdminPendingSellersQuery,
   useAdminRevenueAnalyticsQuery,
+  useAdminGetCouponsQuery,
+  useAdminCreateCouponMutation,
+  useAdminToggleCouponMutation,
+  useAdminDeleteCouponMutation,
+  useAdminGetPayoutsQuery,
+  useAdminDisbursePayoutMutation,
+  useAdminGetDisputesQuery,
+  useAdminResolveDisputeMutation,
   // Seller
   useGetSellerOrdersQuery,
   useGetSellerAnalyticsQuery,
   useUpdateOrderStatusMutation,
+  useGetMyPayoutsQuery,
+  useRequestPayoutMutation,
+  // Coupons
+  useValidateCouponMutation,
+  // Disputes
+  useOpenDisputeMutation,
+  useGetMyDisputesQuery,
+  // Wishlist
+  useGetWishlistQuery,
+  useAddToWishlistMutation,
+  useRemoveFromWishlistMutation,
   // Payment
   useInitiatePaymentMutation,
   useGetPaymentStatusQuery,
-  // Upload
 } = api;

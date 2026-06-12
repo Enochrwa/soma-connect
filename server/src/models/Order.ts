@@ -52,6 +52,8 @@ const OrderSchema = new Schema(
     deliverySpeed: { type: String, enum: ["standard", "express", "pickup"], default: "standard" },
     deliveryFee: { type: Number, default: 0 },
     subtotal: { type: Number, required: true },
+    discount: { type: Number, default: 0 },        // coupon or loyalty discount
+    loyaltyDiscount: { type: Number, default: 0 }, // portion from loyalty points
     total: { type: Number, required: true },
     paymentMethod: {
       type: String,
@@ -66,7 +68,10 @@ const OrderSchema = new Schema(
     paymentRef: String,
     statusHistory: [StatusHistorySchema],
     couponCode: String,
+    pointsRedeemed: { type: Number, default: 0 },
     pointsEarned: { type: Number, default: 0 },
+    trackingNumber: { type: String },
+    trackingUrl: { type: String },
   },
   { timestamps: true },
 );

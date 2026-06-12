@@ -29,6 +29,8 @@ const applySchema = z.object({
   district: z.string().min(2).optional(),
   logo: z.string().url().optional(),
   banner: z.string().url().optional(),
+  nidUrl: z.string().url().optional(),
+  licenseUrl: z.string().url().optional(),
 });
 
 sellerRouter.post(
@@ -50,6 +52,10 @@ sellerRouter.post(
         location: { sector: body.sector, district: body.district },
         logo: body.logo,
         banner: body.banner,
+        documents: {
+          nidUrl: body.nidUrl,
+          licenseUrl: body.licenseUrl,
+        },
         // New sellers start pending — admin must approve
         approvalStatus: "pending",
         isActive: false,
@@ -166,6 +172,55 @@ sellerRouter.get(
         rating: seller.rating,
         ratingCount: seller.ratingCount,
       });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Holiday Mode Toggle ───────────────────────────────────────────────────────
+
+sellerRouter.patch(
+  "/me/holiday",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const seller = await Seller.findOne({ userId: req.user!.id });
+      if (!seller) throw new HttpError(404, "No store found.");
+      seller.holidayMode = !seller.holidayMode;
+      await seller.save();
+      res.json({
+        holidayMode: seller.holidayMode,
+        message: seller.holidayMode
+          ? "Holiday mode enabled. Your store is now temporarily closed."
+          : "Holiday mode disabled. Your store is open again.",
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Low-stock alerts for seller analytics ────────────────────────────────────
+
+sellerRouter.get(
+  "/me/low-stock",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const seller = await Seller.findOne({ userId: req.user!.id });
+      if (!seller) throw new HttpError(404, "No store found.");
+      const threshold = Number((req.query as Record<string, string>).threshold ?? "5");
+      const products = await Product.find({
+        sellerId: seller._id,
+        isActive: true,
+        stock: { $lte: threshold },
+      })
+        .select("_id title stock images price")
+        .lean();
+      res.json({ products, threshold });
     } catch (e) {
       next(e);
     }

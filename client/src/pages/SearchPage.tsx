@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useListProductsQuery } from "../app/api";
 import ProductCard from "../components/product/ProductCard";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -66,6 +67,11 @@ export default function SearchPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      <Helmet>
+        <title>{q ? `"${q}" — Search — SOMA Market` : "Search — SOMA Market"}</title>
+        <meta name="description" content={q ? `Find ${q} on SOMA Market — Rwanda's online marketplace.` : "Search products on SOMA Market."} />
+        <meta property="og:title" content={q ? `Search: ${q} — SOMA Market` : "SOMA Market"} />
+      </Helmet>
       {/* Top bar */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <div className="flex-1 min-w-0">

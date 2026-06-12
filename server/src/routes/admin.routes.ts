@@ -326,3 +326,96 @@ adminRouter.get("/sellers/pending", async (_req, res, next) => {
     next(e);
   }
 });
+
+// ── Coupon Management ────────────────────────────────────────────────────────
+import { Coupon } from "../models/Coupon.js";
+
+const couponCreateSchema = z.object({
+  code: z.string().min(3).max(30).toUpperCase(),
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number().positive(),
+  minOrder: z.number().nonnegative().default(0),
+  maxUses: z.number().int().positive().default(100),
+  expiresAt: z.string().datetime(),
+  sellerId: z.string().optional(),
+});
+
+adminRouter.get("/coupons", async (_req, res, next) => {
+  try {
+    const coupons = await Coupon.find().sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ coupons, total: coupons.length });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/coupons", validate(couponCreateSchema), async (req, res, next) => {
+  try {
+    const body = req.body as z.infer<typeof couponCreateSchema>;
+    const coupon = await Coupon.create({
+      ...body,
+      code: body.code.toUpperCase(),
+      expiresAt: new Date(body.expiresAt),
+    });
+    res.status(201).json({ coupon });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/coupons/:id/toggle", async (req, res, next) => {
+  try {
+    const coupon = await Coupon.findById(req.params.id);
+    if (!coupon) throw new HttpError(404, "Coupon not found.");
+    coupon.isActive = !coupon.isActive;
+    await coupon.save();
+    res.json({ coupon });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.delete("/coupons/:id", async (req, res, next) => {
+  try {
+    await Coupon.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Dispute Management ───────────────────────────────────────────────────────
+import { Dispute } from "../models/Dispute.js";
+
+adminRouter.get("/disputes", async (req, res, next) => {
+  try {
+    const { status } = req.query as { status?: string };
+    const filter: Record<string, unknown> = {};
+    if (status) filter.status = status;
+    const disputes = await Dispute.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .populate("buyerId", "profile phone email")
+      .populate("orderId", "orderNumber total status")
+      .lean();
+    res.json({ disputes, total: disputes.length });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Payouts Management ────────────────────────────────────────────────────────
+import { Payout } from "../models/Payout.js";
+
+adminRouter.get("/payouts", async (_req, res, next) => {
+  try {
+    const payouts = await Payout.find()
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .populate("sellerId", "storeName")
+      .lean();
+    res.json({ payouts, total: payouts.length });
+  } catch (e) {
+    next(e);
+  }
+});

@@ -13,7 +13,7 @@ import {
   setRefreshCookie,
   clearRefreshCookie,
 } from "../services/token.service.js";
-import { sendOtpEmail } from "../services/email.service.js";
+import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service.js";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 
@@ -188,3 +188,75 @@ function sanitize(u: UserLike) {
     referralCode: u.referralCode,
   };
 }
+
+// ── Password Reset ────────────────────────────────────────────────────────────
+
+const forgotSchema = z.object({
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+}).refine((d) => d.phone || d.email, { message: "Provide phone or email." });
+
+authRouter.post(
+  "/password/forgot",
+  strictLimiter,
+  validate(forgotSchema),
+  async (req, res, next) => {
+    try {
+      const { phone, email } = req.body as { phone?: string; email?: string };
+      const user = await User.findOne(phone ? { phone } : { email });
+      // Always respond OK to prevent user enumeration
+      if (!user) {
+        return res.json({ ok: true, message: "If that account exists, a reset code has been sent." });
+      }
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const codeHash = await bcrypt.hash(code, 8);
+      await Otp.create({ email: user.email ?? user.phone, codeHash, expiresAt: new Date(Date.now() + 15 * 60_000) });
+      if (user.email) {
+        await sendPasswordResetEmail(user.email, code).catch((e) =>
+          console.error("[email] password reset failed", e),
+        );
+      }
+      res.json({ ok: true, message: "If that account exists, a reset code has been sent." });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+const resetSchema = z.object({
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  code: z.string().length(6),
+  newPassword: z.string().min(8).max(128),
+}).refine((d) => d.phone || d.email, { message: "Provide phone or email." });
+
+authRouter.post(
+  "/password/reset",
+  strictLimiter,
+  validate(resetSchema),
+  async (req, res, next) => {
+    try {
+      const { phone, email, code, newPassword } = req.body as {
+        phone?: string; email?: string; code: string; newPassword: string;
+      };
+      const user = await User.findOne(phone ? { phone } : { email });
+      if (!user) throw new HttpError(400, "Invalid reset request.");
+      const identifier = user.email ?? user.phone;
+      const record = await Otp.findOne({ email: identifier }).sort({ createdAt: -1 });
+      if (!record) throw new HttpError(400, "No reset code found — request a new one.");
+      if (record.attempts >= 5) throw new HttpError(429, "Too many attempts. Request a new code.");
+      const ok = await bcrypt.compare(code, record.codeHash);
+      record.attempts += 1;
+      await record.save();
+      if (!ok) throw new HttpError(400, "That code didn't match.");
+      await Otp.deleteMany({ email: identifier });
+      user.passwordHash = await bcrypt.hash(newPassword, 10);
+      user.failedLogins = 0;
+      user.lockedUntil = undefined;
+      await user.save();
+      res.json({ ok: true, message: "Password updated. Please sign in." });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
