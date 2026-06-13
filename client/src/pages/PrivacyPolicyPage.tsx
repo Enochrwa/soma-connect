@@ -128,7 +128,7 @@ export default function PrivacyPolicyPage() {
           privacy@soma.rw
         </a>
         <br />
-        Phone: +250 780 000 000
+        Phone: +250 792 696 038
       </p>
     </div>
   );
