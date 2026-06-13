@@ -1,35 +1,80 @@
-import nodemailer from "nodemailer";
+/**
+ * email.service.ts
+ *
+ * In development (no BREVO_API_KEY set): emails are logged to console.
+ * In production (BREVO_API_KEY set): emails are sent via Brevo HTTP API
+ * over HTTPS port 443 — works on Render free plan which blocks SMTP ports.
+ *
+ * Setup:
+ *   Dev  → no config needed, emails print to terminal
+ *   Prod → set BREVO_API_KEY in Render env vars (see guide below)
+ */
+
 import { env } from "../config/env.js";
 
-/**
- * Transport setup.
- * Supports: Brevo (recommended, free tier), SendGrid, or any SMTP.
- *
- * For Brevo: set SMTP_HOST=smtp-relay.brevo.com SMTP_PORT=587
- *            SMTP_USER=<your-brevo-login-email>  SMTP_PASS=<brevo-smtp-key>
- *
- * For SendGrid: set SMTP_HOST=smtp.sendgrid.net  SMTP_PORT=587
- *               SMTP_USER=apikey  SMTP_PASS=<sendgrid-api-key>
- *
- * Without credentials the emails are logged to console (dev mode).
- */
-const transporter =
-  env.SMTP_USER && env.SMTP_PASS
-    ? nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: env.SMTP_PORT === 465,
-        auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-      })
-    : null;
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-export async function sendMail(opts: { to: string; subject: string; html: string; text?: string }) {
-  if (!transporter) {
-    console.log("[email:dev]", opts.to, opts.subject, "\n", opts.text ?? "(html)");
+interface MailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+interface BrevoSender {
+  name: string;
+  email: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Parse "SOMA Market <no-reply@somamarket.rw>" → { name, email } */
+function parseSender(from: string): BrevoSender {
+  const match = from.match(/^(.+?)\s*<(.+?)>$/);
+  if (match) return { name: match[1].trim(), email: match[2].trim() };
+  return { name: "SOMA Market", email: from.trim() };
+}
+
+// ── Core send ─────────────────────────────────────────────────────────────────
+
+export async function sendMail(opts: MailOptions): Promise<{ mocked?: boolean }> {
+  // ── Development: no API key → print to console ────────────────────────────
+  if (!env.BREVO_API_KEY) {
+    console.log("\n[email:dev] ─────────────────────────────────────");
+    console.log(`  To      : ${opts.to}`);
+    console.log(`  Subject : ${opts.subject}`);
+    console.log(`  Body    : ${opts.text ?? "(html only)"}`);
+    console.log("[email:dev] ─────────────────────────────────────\n");
     return { mocked: true };
   }
-  return transporter.sendMail({ from: env.SMTP_FROM, ...opts });
+
+  // ── Production: send via Brevo HTTP API ───────────────────────────────────
+  const sender = parseSender(env.SMTP_FROM);
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: opts.to }],
+      subject: opts.subject,
+      htmlContent: opts.html,
+      textContent: opts.text,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`[email] Brevo API error ${res.status}: ${body}`);
+  }
+
+  return res.json() as Promise<object>;
 }
+
+// ── Templates ─────────────────────────────────────────────────────────────────
 
 const baseStyle = `font-family:DM Sans,Arial,sans-serif;max-width:600px;margin:0 auto;background:#FAF7F2;color:#1C1C1E;border-radius:12px;overflow:hidden`;
 const headerStyle = `background:#0A2E1F;padding:20px 24px`;
@@ -104,7 +149,7 @@ export async function sendNewOrderAlertToSeller(
         <thead><tr style="border-bottom:1px solid #ddd"><th style="text-align:left;padding:8px 0">Item</th><th style="text-align:left;padding:8px 0">Qty</th><th style="text-align:left;padding:8px 0">Total</th></tr></thead>
         <tbody>${itemRows}</tbody>
       </table>
-      <a href="${process.env.CLIENT_URL ?? "https://somamarket.rw"}/seller/orders" style="${btnStyle}">View Order →</a>
+      <a href="${env.CLIENT_URL}/seller/orders" style="${btnStyle}">View Order →</a>
     `),
   });
 }
@@ -133,7 +178,7 @@ export async function sendOrderStatusUpdate(
       <h2 style="color:#0A2E1F;margin:0 0 8px">${label}</h2>
       <p>Your order <strong>${orderNumber}</strong> status has been updated.</p>
       ${note ? `<p style="background:#fff;padding:12px;border-radius:8px;border-left:3px solid #F5A623;color:#444">${note}</p>` : ""}
-      <a href="${process.env.CLIENT_URL ?? "https://somamarket.rw"}/orders" style="${btnStyle}">Track Order →</a>
+      <a href="${env.CLIENT_URL}/orders" style="${btnStyle}">Track Order →</a>
     `),
   });
 }
@@ -159,7 +204,7 @@ export async function sendSellerApprovalEmail(
           <p>Your store <strong>"${storeName}"</strong> has been approved on SOMA Market.</p>
           <p>You can now:</p>
           <ul style="color:#444"><li>List your first products</li><li>Set up your store profile</li><li>Share your store link with customers</li></ul>
-          <a href="${process.env.CLIENT_URL ?? "https://somamarket.rw"}/seller" style="${btnStyle}">Go to Seller Dashboard →</a>
+          <a href="${env.CLIENT_URL}/seller" style="${btnStyle}">Go to Seller Dashboard →</a>
         `
         : `
           <h2 style="color:#0A2E1F">Store Application Update</h2>
@@ -220,7 +265,7 @@ export async function sendDisputeNotificationEmail(
       <h2 style="color:#0A2E1F;margin:0 0 8px">Dispute Update</h2>
       <p>Your dispute for order <strong>${orderNumber}</strong> has been updated.</p>
       <p style="background:#fff;padding:12px;border-radius:8px;border-left:3px solid #F5A623">Status: <strong>${status}</strong></p>
-      <a href="${process.env.CLIENT_URL ?? "https://somamarket.rw"}/orders" style="${btnStyle}">View Orders →</a>
+      <a href="${env.CLIENT_URL}/orders" style="${btnStyle}">View Orders →</a>
     `),
   });
 }
