@@ -13,7 +13,7 @@ const SHOP_LINKS = [
 const HELP_LINKS = [
   { label: "Track your order", to: "/orders" },
   { label: "Returns & refunds", to: "/terms#returns" },
-  { label: "Contact support", to: "mailto:support@soma.rw", external: true },
+  { label: "Contact support", to: "/contact" },
   { label: "Privacy Policy", to: "/privacy" },
 ];
 

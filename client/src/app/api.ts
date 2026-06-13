@@ -110,6 +110,27 @@ export const api = createApi({
       }),
     }),
 
+    // ── Contact ───────────────────────────────────────────────────────────────
+    submitContact: b.mutation<
+      { ok: boolean; message: string },
+      {
+        name: string;
+        email: string;
+        subject: string;
+        category:
+          | "general"
+          | "order_support"
+          | "seller_support"
+          | "technical"
+          | "partnership"
+          | "press";
+        message: string;
+        orderId?: string;
+      }
+    >({
+      query: (body) => ({ url: "/contact", method: "POST", body }),
+    }),
+
     // ── Auth ─────────────────────────────────────────────────────────────────
     login: b.mutation<{ user: User; accessToken: string }, { phone: string; password: string }>({
       query: (body) => ({ url: "/auth/login", method: "POST", body }),
@@ -659,4 +680,6 @@ export const {
   // Bulk import
   useBulkImportProductsMutation,
   useValidateBulkImportMutation,
+  // Contact
+  useSubmitContactMutation,
 } = api;

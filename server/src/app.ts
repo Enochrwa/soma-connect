@@ -24,6 +24,7 @@ import couponRouter from "./routes/coupon.routes.js";
 import { payoutRouter } from "./routes/payout.routes.js";
 import { disputeRouter } from "./routes/dispute.routes.js";
 import { bulkImportRouter } from "./routes/bulk-import.routes.js";
+import { contactRouter } from "./routes/contact.routes.js";
 
 export const app = express();
 
@@ -99,6 +100,7 @@ app.use("/api/coupons", couponRouter);
 app.use("/api/payouts", payoutRouter);
 app.use("/api/disputes", disputeRouter);
 app.use("/api/products/bulk", bulkImportRouter);
+app.use("/api/contact", contactRouter);
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => {

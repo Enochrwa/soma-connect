@@ -65,6 +65,7 @@ const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
 // ── Auth guard ─────────────────────────────────────────────────────────────
@@ -106,6 +107,7 @@ export default function App() {
               <Route path="/cart" element={<CartPage />} />
               <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsOfServicePage />} />
+              <Route path="/contact" element={<ContactPage />} />
 
               {/* Seller apply — public so buyers can apply */}
               <Route
