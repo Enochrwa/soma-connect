@@ -29,4 +29,5 @@ export const env = {
   HF_API_TOKEN: process.env.HF_API_TOKEN ?? "",
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? "",
   COOKIE_SECURE: process.env.COOKIE_SECURE === "true",
+  SUPPORT_EMAIL: process.env.SUPPORT_EMAIL ?? "support@soma.rw",
 };
