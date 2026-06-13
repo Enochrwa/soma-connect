@@ -37,6 +37,7 @@ const ProductSchema = new Schema(
       discountPct: Number,
     },
     isActive: { type: Boolean, default: true },
+    embedding: { type: [Number], default: undefined }, // semantic search vector
   },
   { timestamps: true },
 );

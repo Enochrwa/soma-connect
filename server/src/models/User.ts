@@ -47,6 +47,8 @@ const UserSchema = new Schema(
     passwordResetExpires: Date,
     // push notification subscription
     pushSubscription: { type: Schema.Types.Mixed },
+    // fraud detection
+    flaggedForReview: { type: Boolean, default: false, index: true },
     // soft-delete
     deletedAt: Date,
   },

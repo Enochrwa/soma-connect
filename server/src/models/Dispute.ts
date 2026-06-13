@@ -20,6 +20,8 @@ const DisputeSchema = new Schema(
     adminNote: { type: String, maxlength: 1000 },
     resolvedAt: { type: Date },
     resolvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    severity: { type: String, enum: ["high", "medium", "low"], default: "medium", index: true },
+    aiClassified: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

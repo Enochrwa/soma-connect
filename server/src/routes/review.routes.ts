@@ -7,6 +7,11 @@ import { Seller } from "../models/Seller.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { HttpError } from "../middleware/errorHandler.js";
+import {
+  analyzeReviewSentiment,
+  draftSellerReply,
+  summarizeReviews,
+} from "../services/ai.service.js";
 
 export const reviewRouter = Router();
 
@@ -17,6 +22,23 @@ reviewRouter.get("/product/:productId", async (req, res, next) => {
       .limit(50)
       .lean();
     res.json({ reviews });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Summarise reviews for a product ──────────────────────────────────────────
+reviewRouter.get("/product/:productId/summary", async (req, res, next) => {
+  try {
+    const reviews = await Review.find({ productId: req.params.productId })
+      .select("text rating")
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean();
+    if (reviews.length === 0) return res.json({ summary: "" });
+    const combined = reviews.map((r) => `[${r.rating}/5] ${r.text}`).join("\n\n");
+    const summary = await summarizeReviews(combined);
+    res.json({ summary });
   } catch (e) {
     next(e);
   }
@@ -48,6 +70,20 @@ reviewRouter.post(
         orderId: verifiedOrder?._id,
         isVerifiedPurchase: !!verifiedOrder,
       });
+
+      // ── 4. Post-save: sentiment analysis + toxicity flagging ───────────────
+      analyzeReviewSentiment(body.text)
+        .then(async (result) => {
+          await Review.findByIdAndUpdate(review._id, {
+            sentiment: result.sentiment,
+            sentimentScore: result.score,
+            needsModeration: result.needsModeration,
+          });
+        })
+        .catch(() => {
+          /* non-blocking */
+        });
+
       // Recompute product rating aggregate
       const productAgg = await Review.aggregate([
         { $match: { productId: review.productId } },
@@ -83,6 +119,23 @@ reviewRouter.post(
   },
 );
 
+// ── 6. Draft seller reply via AI ──────────────────────────────────────────────
+reviewRouter.get(
+  "/:id/draft-reply",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const review = await Review.findById(req.params.id).lean();
+      if (!review) throw new HttpError(404, "Review not found.");
+      const draft = await draftSellerReply(review.text);
+      res.json({ draft });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
 // ── Seller reply to review ────────────────────────────────────────────────────
 
 const replySchema = z.object({
@@ -112,6 +165,49 @@ reviewRouter.patch(
 
       review.sellerReply = { text, at: new Date() };
       await review.save();
+      res.json({ review });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Admin: reviews needing moderation ────────────────────────────────────────
+reviewRouter.get(
+  "/admin/moderation-queue",
+  requireAuth,
+  requireRole("admin"),
+  async (_req, res, next) => {
+    try {
+      const reviews = await Review.find({ needsModeration: true })
+        .sort({ createdAt: -1 })
+        .populate("productId", "title")
+        .populate("buyerId", "profile.name email")
+        .lean();
+      res.json({ reviews });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Admin: approve / dismiss moderation flag ──────────────────────────────────
+reviewRouter.patch(
+  "/:id/moderate",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const { action } = req.body as { action: "approve" | "remove" };
+      if (action === "remove") {
+        await Review.findByIdAndDelete(req.params.id);
+        return res.json({ removed: true });
+      }
+      const review = await Review.findByIdAndUpdate(
+        req.params.id,
+        { needsModeration: false },
+        { new: true },
+      );
       res.json({ review });
     } catch (e) {
       next(e);

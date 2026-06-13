@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useListProductsQuery } from "../app/api";
+import { useListProductsQuery, useSemanticSearchQuery } from "../app/api";
 import ProductCard from "../components/product/ProductCard";
 import { Skeleton } from "../components/ui/Skeleton";
-import { Filter, X, ChevronDown, Search } from "lucide-react";
+import { Filter, X, ChevronDown, Search, Sparkles } from "lucide-react";
 
 const CATEGORIES = [
   "electronics",
@@ -27,6 +27,7 @@ const SORT_OPTIONS = [
 export default function SearchPage() {
   const [params, setParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
+  const [semanticMode, setSemanticMode] = useState(false);
   const [minPrice, setMinPrice] = useState(params.get("minPrice") ?? "");
   const [maxPrice, setMaxPrice] = useState(params.get("maxPrice") ?? "");
 
@@ -36,6 +37,10 @@ export default function SearchPage() {
   const inStock = params.get("inStock") ?? "";
   const condition = params.get("condition") ?? "";
   const page = Number(params.get("page") ?? "1");
+
+  const { data: semanticData, isLoading: semanticLoading } = useSemanticSearchQuery(q, {
+    skip: !semanticMode || !q,
+  });
 
   const { data, isLoading, isFetching } = useListProductsQuery({
     q: q || undefined,
@@ -65,6 +70,9 @@ export default function SearchPage() {
 
   const hasFilters = !!(category || inStock || condition || minPrice || maxPrice);
 
+  const products = semanticMode && q ? (semanticData?.products ?? []) : (data?.items ?? []);
+  const isSemantic = semanticMode && !!semanticData?.semantic;
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Helmet>
@@ -81,6 +89,20 @@ export default function SearchPage() {
       </Helmet>
       {/* Top bar */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
+        {q && (
+          <button
+            onClick={() => setSemanticMode(!semanticMode)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              semanticMode
+                ? "bg-forest text-white border-forest"
+                : "bg-white text-forest/60 border-forest/20 hover:border-forest/40"
+            }`}
+            title="Use AI-powered semantic search to find products by meaning, not just keywords"
+          >
+            <Sparkles size={11} />
+            AI Search {semanticMode && isSemantic ? "✓" : ""}
+          </button>
+        )}
         <div className="flex-1 min-w-0">
           <h1 className="font-display text-2xl font-bold text-forest">
             {q ? (
@@ -228,7 +250,7 @@ export default function SearchPage() {
       )}
 
       {/* Grid */}
-      {isLoading || isFetching ? (
+      {isLoading || isFetching || (semanticMode && semanticLoading) ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 20 }).map((_, i) => (
             <div key={i} className="rounded-2xl overflow-hidden">
@@ -240,7 +262,7 @@ export default function SearchPage() {
             </div>
           ))}
         </div>
-      ) : !data?.items?.length ? (
+      ) : !products.length ? (
         <div className="text-center py-20">
           <Search className="text-forest/20 mx-auto mb-4" size={48} />
           <h3 className="font-display text-xl font-bold text-forest/40">No products found</h3>
@@ -256,14 +278,19 @@ export default function SearchPage() {
         </div>
       ) : (
         <>
+          {isSemantic && (
+            <p className="text-xs text-forest/50 flex items-center gap-1 -mt-2 mb-2">
+              <Sparkles size={11} /> AI semantic search — results ranked by meaning
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {data.items.map((p) => (
+            {products.map((p) => (
               <ProductCard key={p._id} p={p} />
             ))}
           </div>
 
           {/* Pagination */}
-          {data.pages > 1 && (
+          {!semanticMode && data && data.pages > 1 && (
             <div className="flex justify-center gap-2 mt-10">
               {page > 1 && (
                 <button
@@ -273,7 +300,7 @@ export default function SearchPage() {
                   Previous
                 </button>
               )}
-              {Array.from({ length: Math.min(data.pages, 7) }, (_, i) => {
+              {Array.from({ length: Math.min(data!.pages, 7) }, (_, i) => {
                 const pg = i + 1;
                 return (
                   <button
@@ -285,7 +312,7 @@ export default function SearchPage() {
                   </button>
                 );
               })}
-              {page < data.pages && (
+              {page < data!.pages && (
                 <button
                   onClick={() => setParam("page", String(page + 1))}
                   className="px-4 py-2 rounded-xl border border-forest/15 text-sm font-medium hover:bg-forest/5 transition"

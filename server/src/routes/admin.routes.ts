@@ -458,3 +458,71 @@ adminRouter.post("/orders/:orderId/confirm-payment", async (req: AuthedRequest, 
     next(e);
   }
 });
+
+// ── Automation manual triggers (admin) ────────────────────────────────────────
+import {
+  runLowStockAlerts,
+  runPayoutDisbursement,
+  runOrderAutoCancelTimeout,
+  runLoyaltyTierUpgrade,
+  runStaleProductDeactivation,
+  runFraudSignalDetection,
+  runWeeklyAnalyticsDigest,
+} from "../services/automation.service.js";
+
+adminRouter.post(
+  "/automations/trigger/:job",
+  requireAuth,
+  requireRole("admin"),
+  async (req, res, next) => {
+    try {
+      const jobMap: Record<string, () => Promise<void>> = {
+        "low-stock": runLowStockAlerts,
+        "payout-disburse": runPayoutDisbursement,
+        "order-cancel": runOrderAutoCancelTimeout,
+        "loyalty-tier": runLoyaltyTierUpgrade,
+        "stale-products": runStaleProductDeactivation,
+        "fraud-detection": runFraudSignalDetection,
+        "analytics-digest": runWeeklyAnalyticsDigest,
+      };
+      const fn = jobMap[req.params.job];
+      if (!fn) {
+        return res
+          .status(404)
+          .json({ error: "Unknown automation job.", available: Object.keys(jobMap) });
+      }
+      await fn();
+      res.json({ ok: true, job: req.params.job, ranAt: new Date().toISOString() });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Flagged users (fraud signals) ─────────────────────────────────────────────
+adminRouter.get("/users/flagged", requireAuth, requireRole("admin"), async (_req, res, next) => {
+  try {
+    const users = await User.find({ flaggedForReview: true })
+      .select("profile phone email loyaltyPoints tier createdAt flaggedForReview")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+    res.json({ users, total: users.length });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch(
+  "/users/:id/unflag",
+  requireAuth,
+  requireRole("admin"),
+  async (req, res, next) => {
+    try {
+      await User.findByIdAndUpdate(req.params.id, { flaggedForReview: false });
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
