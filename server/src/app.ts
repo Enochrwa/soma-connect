@@ -23,6 +23,7 @@ import { adminRouter } from "./routes/admin.routes.js";
 import couponRouter from "./routes/coupon.routes.js";
 import { payoutRouter } from "./routes/payout.routes.js";
 import { disputeRouter } from "./routes/dispute.routes.js";
+import { bulkImportRouter } from "./routes/bulk-import.routes.js";
 
 export const app = express();
 
@@ -97,6 +98,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/coupons", couponRouter);
 app.use("/api/payouts", payoutRouter);
 app.use("/api/disputes", disputeRouter);
+app.use("/api/products/bulk", bulkImportRouter);
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => {

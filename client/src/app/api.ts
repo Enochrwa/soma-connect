@@ -64,6 +64,52 @@ export const api = createApi({
       invalidatesTags: ["Products"],
     }),
 
+    // ── Bulk product import ───────────────────────────────────────────────────
+    bulkImportProducts: b.mutation<
+      {
+        ok: boolean;
+        summary: {
+          total: number;
+          inserted: number;
+          validationFailed: number;
+          insertFailed: number;
+        };
+        validationErrors: Array<{ row: number; errors: string[] }>;
+        insertErrors: Array<{ row: number; error: string }>;
+      },
+      FormData
+    >({
+      query: (formData) => ({
+        url: "/products/bulk/import",
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: ["Products"],
+    }),
+    validateBulkImport: b.mutation<
+      {
+        ok: boolean;
+        total: number;
+        validCount: number;
+        invalidCount: number;
+        rows: Array<{
+          row: number;
+          valid: boolean;
+          errors: string[];
+          preview: { title: string; price: number; category: string } | null;
+        }>;
+      },
+      FormData
+    >({
+      query: (formData) => ({
+        url: "/products/bulk/validate",
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+    }),
+
     // ── Auth ─────────────────────────────────────────────────────────────────
     login: b.mutation<{ user: User; accessToken: string }, { phone: string; password: string }>({
       query: (body) => ({ url: "/auth/login", method: "POST", body }),
@@ -546,4 +592,7 @@ export const {
   // Payment
   useInitiatePaymentMutation,
   useGetPaymentStatusQuery,
+  // Bulk import
+  useBulkImportProductsMutation,
+  useValidateBulkImportMutation,
 } = api;

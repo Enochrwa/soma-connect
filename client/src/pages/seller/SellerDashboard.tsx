@@ -20,6 +20,7 @@ import type { RootState } from "../../app/store";
 import { setAuth } from "../../features/auth/authSlice";
 import { formatRWF } from "../../utils/format";
 import { ImageUploader } from "../../components/ui/ImageUploader";
+import { BulkImportUploader } from "../../components/seller/BulkImportUploader";
 import {
   LayoutDashboard,
   Package,
@@ -39,6 +40,7 @@ import {
   CreditCard,
   ExternalLink,
   AlertTriangle,
+  UploadCloud,
 } from "lucide-react";
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
@@ -274,6 +276,7 @@ function ProductsTab() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [formError, setFormError] = useState("");
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   function openCreate() {
     setForm(emptyForm());
@@ -353,12 +356,32 @@ function ProductsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-display text-lg text-forest">My Products ({products.length})</h2>
-        <button onClick={openCreate} className="btn-primary flex items-center gap-2">
-          <Plus size={16} /> Add Product
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setShowBulkImport((v) => !v);
+              setShowForm(false);
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-forest/20 text-forest text-sm hover:bg-forest/5 transition-colors"
+          >
+            <UploadCloud size={16} /> Bulk Import
+          </button>
+          <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+            <Plus size={16} /> Add Product
+          </button>
+        </div>
       </div>
+
+      {showBulkImport && (
+        <BulkImportUploader
+          onDone={() => {
+            setShowBulkImport(false);
+            refetch();
+          }}
+        />
+      )}
 
       {showForm && (
         <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
