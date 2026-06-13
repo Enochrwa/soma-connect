@@ -53,7 +53,7 @@ export function Footer() {
             <div className="flex items-center gap-2">
               <Phone size={13} className="shrink-0" />
               <a href="tel:+250780000000" className="hover:text-saffron transition">
-                +250 780 000 000
+                +250 792 696 038
               </a>
             </div>
           </div>

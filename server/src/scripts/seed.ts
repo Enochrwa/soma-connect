@@ -165,7 +165,7 @@ async function main() {
   const adminHash = await bcrypt.hash(adminPassword, 10);
   await User.create({
     phone: "+250 788 000 001",
-    email: "enockuwumukiza850@gmail.com",
+    email: "admin@somamarket.rw",
     passwordHash: adminHash,
     role: "admin",
     profile: { name: "SOMA Admin" },
@@ -256,7 +256,7 @@ async function main() {
 
   console.log(`[seed] done. ${total} products, ${SELLERS.length} sellers.`);
   console.log(`\n========== SEED CREDENTIALS (save these now) ==========`);
-  console.log(`[seed] admin  → enockuwumukiza850@gmail.com  | pw: ${adminPassword}`);
+  console.log(`[seed] admin  → email admin@somamarket.rw  | pw: ${adminPassword}`);
   console.log(`[seed] buyer  → email buyer@somamarket.rw  | pw: ${buyerPassword}`);
   console.log(`[seed] seller → email kigali-tech-hub@somamarket.rw | pw: seller1234`);
   console.log(`=======================================================\n`);
