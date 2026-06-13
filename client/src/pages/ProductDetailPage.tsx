@@ -9,6 +9,8 @@ import {
   useRemoveFromWishlistMutation,
   useGetWishlistQuery,
   useReplyToReviewMutation,
+  useGetDraftReplyQuery,
+  useGetReviewSummaryQuery,
 } from "../app/api";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { addItem } from "../features/cart/cartSlice";
@@ -26,6 +28,10 @@ import {
   ChevronRight,
   X,
   MessageSquare,
+  Sparkles,
+  Bot,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import type { RootState } from "../app/store";
 
@@ -60,6 +66,76 @@ function StarRating({
           />
         </button>
       ))}
+    </div>
+  );
+}
+
+// ── AI draft reply button ─────────────────────────────────────────────────────
+function AIDraftButton({
+  reviewId,
+  onDraft,
+}: {
+  reviewId: string;
+  onDraft: (draft: string) => void;
+}) {
+  const [fetch, setFetch] = useState(false);
+  const { data, isFetching } = useGetDraftReplyQuery(reviewId, { skip: !fetch });
+
+  function handleClick() {
+    if (data?.draft) {
+      onDraft(data.draft);
+    } else {
+      setFetch(true);
+    }
+  }
+
+  // Once data arrives, pass it up
+  if (data?.draft && fetch) {
+    onDraft(data.draft);
+    setFetch(false);
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isFetching}
+      className="text-xs text-saffron/70 hover:text-saffron flex items-center gap-1"
+      title="Draft reply with AI"
+    >
+      {isFetching ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+      AI draft
+    </button>
+  );
+}
+
+// ── AI review summary banner ──────────────────────────────────────────────────
+function ReviewSummaryBanner({ productId }: { productId: string }) {
+  const [show, setShow] = useState(false);
+  const { data, isFetching } = useGetReviewSummaryQuery(productId, { skip: !show });
+
+  return (
+    <div>
+      {!show ? (
+        <button
+          onClick={() => setShow(true)}
+          className="flex items-center gap-2 text-sm text-forest/60 hover:text-forest border border-forest/20 rounded-xl px-4 py-2 transition-colors"
+        >
+          <Bot size={15} />
+          Summarise reviews with AI
+        </button>
+      ) : isFetching ? (
+        <div className="flex items-center gap-2 text-sm text-slate/50 bg-white rounded-xl p-4 shadow-card">
+          <Loader2 size={14} className="animate-spin text-saffron" />
+          Generating AI summary…
+        </div>
+      ) : data?.summary ? (
+        <div className="bg-gradient-to-r from-forest/5 to-saffron/5 border border-forest/10 rounded-xl p-4 shadow-card">
+          <p className="text-xs font-semibold text-forest/60 flex items-center gap-1 mb-1">
+            <Sparkles size={11} className="text-saffron" /> AI Review Summary
+          </p>
+          <p className="text-sm text-slate/80 leading-relaxed">{data.summary}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -120,6 +196,25 @@ function ReviewItem({ review, isSeller, onReplySuccess, replyToReview }: ReviewI
               ))}
             </div>
           )}
+          {Boolean(r.sentiment) && (
+            <div className="mt-2 flex items-center gap-1">
+              {(r.sentiment as string) === "positive" && (
+                <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <ThumbsUp size={9} /> Positive
+                </span>
+              )}
+              {(r.sentiment as string) === "negative" && (
+                <span className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <ThumbsDown size={9} /> Negative
+                </span>
+              )}
+              {Boolean(r.needsModeration) && (
+                <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
+                  ⚠ Flagged for review
+                </span>
+              )}
+            </div>
+          )}
           {sellerReply && (
             <div className="mt-3 bg-forest/5 border-l-2 border-forest/20 pl-3 rounded-r-lg p-2">
               <p className="text-xs font-semibold text-forest flex items-center gap-1 mb-1">
@@ -156,12 +251,21 @@ function ReviewItem({ review, isSeller, onReplySuccess, replyToReview }: ReviewI
                   </div>
                 </form>
               ) : (
-                <button
-                  onClick={() => setShowReplyForm(true)}
-                  className="text-xs text-forest/50 hover:text-forest flex items-center gap-1 mt-1"
-                >
-                  <MessageSquare size={11} /> Reply as seller
-                </button>
+                <div className="flex items-center gap-3 mt-1">
+                  <button
+                    onClick={() => setShowReplyForm(true)}
+                    className="text-xs text-forest/50 hover:text-forest flex items-center gap-1"
+                  >
+                    <MessageSquare size={11} /> Reply as seller
+                  </button>
+                  <AIDraftButton
+                    reviewId={String(r._id)}
+                    onDraft={(d) => {
+                      setReplyText(d);
+                      setShowReplyForm(true);
+                    }}
+                  />
+                </div>
               )}
             </div>
           )}
@@ -211,7 +315,10 @@ function ReviewsSection({ productId }: { productId: string }) {
 
   return (
     <div className="mt-10 space-y-6">
-      <h2 className="font-display text-xl text-forest">Customer Reviews ({reviews.length})</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="font-display text-xl text-forest">Customer Reviews ({reviews.length})</h2>
+        {reviews.length >= 3 && <ReviewSummaryBanner productId={productId} />}
+      </div>
 
       {/* Write a review */}
       {user ? (

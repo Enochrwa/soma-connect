@@ -27,6 +27,11 @@ import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { slugify } from "../utils/slug.js";
 import { sanitizeDescription } from "../middleware/sanitize.js";
+import {
+  generateProductDescription,
+  generateProductTags,
+  getEmbedding,
+} from "../services/ai.service.js";
 
 export const bulkImportRouter = Router();
 
@@ -181,6 +186,9 @@ bulkImportRouter.post(
         }
       }
 
+      // ── 9. AI-enhance: fill blank descriptions + tags ──────────────────────
+      const aiEnhance = req.body.aiEnhance === "true" || req.body.aiEnhance === true;
+
       // Bulk-insert the valid rows
       let inserted = 0;
       const insertErrors: Array<{ row: number; error: string }> = [];
@@ -188,11 +196,51 @@ bulkImportRouter.post(
       for (let i = 0; i < successes.length; i++) {
         const row = successes[i];
         try {
+          let description = row.description || "";
+          let tags: string[] = row.tags ?? [];
+
+          if (aiEnhance) {
+            // ── 5. Image URL validator ──────────────────────────────────────
+            for (const imgUrl of row.images ?? []) {
+              try {
+                const imgRes = await fetch(imgUrl, {
+                  method: "HEAD",
+                  signal: AbortSignal.timeout(3000),
+                });
+                if (!imgRes.ok) {
+                  insertErrors.push({
+                    row: i + 2,
+                    error: `Image URL ${imgUrl} returned ${imgRes.status}`,
+                  });
+                }
+              } catch {
+                /* timeout or DNS fail */
+              }
+            }
+
+            if (!description) {
+              description = await generateProductDescription(row.title, row.category).catch(
+                () => "",
+              );
+            }
+            if (tags.length === 0 && description) {
+              tags = await generateProductTags(description, row.category).catch(() => []);
+            }
+          }
+
+          const finalDescription = sanitizeDescription(description);
+          const embedding =
+            aiEnhance && finalDescription
+              ? await getEmbedding(`${row.title} ${finalDescription}`).catch(() => null)
+              : null;
+
           await Product.create({
             ...row,
-            description: sanitizeDescription(row.description),
+            description: finalDescription,
+            tags,
             sellerId: seller._id,
             slug: `${slugify(row.title)}-${Date.now().toString(36)}-${i}`,
+            ...(embedding ? { embedding } : {}),
           });
           inserted++;
         } catch (err: unknown) {

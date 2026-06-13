@@ -6,6 +6,12 @@ import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { slugify } from "../utils/slug.js";
+import {
+  getEmbedding,
+  generateProductDescription,
+  generateProductTags,
+  cosineSimilarity,
+} from "../services/ai.service.js";
 import { sanitizeDescription } from "../middleware/sanitize.js";
 
 export const productRouter = Router();
@@ -251,6 +257,95 @@ productRouter.delete(
       const product = await Product.findByIdAndDelete(req.params.id);
       if (!product) throw new HttpError(404, "Product not found.");
       res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── 7. Semantic product search ────────────────────────────────────────────────
+productRouter.get("/search/semantic", async (req, res, next) => {
+  try {
+    const { q, limit = "12" } = req.query as Record<string, string>;
+    if (!q) return res.json({ products: [], semantic: false });
+
+    const queryEmbedding = await getEmbedding(q);
+    if (!queryEmbedding) {
+      const products = await Product.find({
+        isActive: true,
+        $or: [
+          { title: new RegExp(q, "i") },
+          { description: new RegExp(q, "i") },
+          { tags: new RegExp(q, "i") },
+        ],
+      })
+        .limit(Number(limit))
+        .lean();
+      return res.json({ products, semantic: false });
+    }
+
+    const candidates = await Product.find({
+      isActive: true,
+      embedding: { $exists: true, $ne: null },
+    })
+      .select("title slug description price images category avgRating stock embedding")
+      .lean();
+
+    type CandidateWithScore = (typeof candidates)[0] & { _score: number; embedding?: unknown };
+
+    const scored: CandidateWithScore[] = candidates
+      .map((p) => ({
+        ...p,
+        _score: cosineSimilarity(queryEmbedding, (p as { embedding?: number[] }).embedding ?? []),
+      }))
+      .filter((p) => p._score > 0.2)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, Number(limit));
+
+    const results = scored.map(({ embedding: _emb, ...rest }) => rest);
+    res.json({ products: results, semantic: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── AI enhance single product (description + tags + embedding) ────────────────
+productRouter.post(
+  "/:id/ai-enhance",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const product = await Product.findById(req.params.id);
+      if (!product) throw new HttpError(404, "Product not found.");
+
+      if (req.user!.role !== "admin") {
+        const seller = await Seller.findOne({ userId: req.user!.id });
+        if (!seller || String(product.sellerId) !== String(seller._id))
+          throw new HttpError(403, "Not your product.");
+      }
+
+      const currentDesc = product.description ?? "";
+      const currentTags = product.tags ?? [];
+
+      const description = !currentDesc
+        ? await generateProductDescription(product.title, product.category)
+        : currentDesc;
+
+      const tags =
+        currentTags.length === 0 && description
+          ? await generateProductTags(description, product.category)
+          : currentTags;
+
+      const embedding = await getEmbedding(`${product.title} ${description}`);
+
+      await Product.findByIdAndUpdate(product._id, {
+        ...(!currentDesc && description ? { description } : {}),
+        ...(currentTags.length === 0 && tags.length > 0 ? { tags } : {}),
+        ...(embedding ? { embedding } : {}),
+      });
+
+      res.json({ ok: true, description, tags });
     } catch (e) {
       next(e);
     }

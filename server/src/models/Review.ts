@@ -11,6 +11,9 @@ const ReviewSchema = new Schema(
     tags: [String],
     isVerifiedPurchase: { type: Boolean, default: false },
     helpfulVotes: { type: Number, default: 0 },
+    needsModeration: { type: Boolean, default: false, index: true },
+    sentimentScore: { type: Number },
+    sentiment: { type: String, enum: ["positive", "neutral", "negative"] },
     sellerReply: {
       text: String,
       at: Date,

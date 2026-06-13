@@ -178,6 +178,9 @@ export interface Review {
   isVerifiedPurchase: boolean;
   helpfulVotes: number;
   sellerReply?: { text: string; at: string };
+  needsModeration?: boolean;
+  sentiment?: "positive" | "neutral" | "negative";
+  sentimentScore?: number;
   createdAt: string;
 }
 
@@ -254,6 +257,8 @@ export interface Dispute {
   status: "open" | "under_review" | "resolved_refund" | "resolved_no_action" | "closed";
   adminNote?: string;
   resolvedAt?: string;
+  severity?: "high" | "medium" | "low";
+  aiClassified?: boolean;
   createdAt: string;
 }
 

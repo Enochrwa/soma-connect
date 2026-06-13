@@ -12,11 +12,39 @@ import {
   useAdminDisbursePayoutMutation,
   useAdminGetDisputesQuery,
   useAdminResolveDisputeMutation,
+  useGetAdminModerationQueueQuery,
+  useModerateReviewMutation,
+  useGetAdminFlaggedUsersQuery,
+  useUnflagUserMutation,
+  useTriggerAutomationMutation,
 } from "../app/api";
 import { formatRWF } from "../utils/format";
-import { Loader2, CheckCircle, XCircle, Tag, CreditCard, AlertTriangle, Users } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Tag,
+  CreditCard,
+  AlertTriangle,
+  Users,
+  AlertCircle,
+  Shield,
+  Zap,
+  ThumbsUp,
+  ThumbsDown,
+  Play,
+  RefreshCw,
+} from "lucide-react";
 
-type AdminTab = "overview" | "sellers" | "coupons" | "payouts" | "disputes";
+type AdminTab =
+  | "overview"
+  | "sellers"
+  | "coupons"
+  | "payouts"
+  | "disputes"
+  | "moderation"
+  | "fraud"
+  | "automations";
 
 const TAB_LABELS: Record<AdminTab, string> = {
   overview: "Overview",
@@ -24,6 +52,9 @@ const TAB_LABELS: Record<AdminTab, string> = {
   coupons: "Coupons",
   payouts: "Payouts",
   disputes: "Disputes",
+  moderation: "Moderation Queue",
+  fraud: "Fraud Signals",
+  automations: "Automations",
 };
 
 // ── Overview ─────────────────────────────────────────────────────────────────
@@ -682,13 +713,25 @@ function DisputesTab() {
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
-  const tabs: AdminTab[] = ["overview", "sellers", "coupons", "payouts", "disputes"];
+  const tabs: AdminTab[] = [
+    "overview",
+    "sellers",
+    "coupons",
+    "payouts",
+    "disputes",
+    "moderation",
+    "fraud",
+    "automations",
+  ];
   const TAB_ICONS: Record<AdminTab, React.ElementType> = {
     overview: Users,
     sellers: CheckCircle,
     coupons: Tag,
     payouts: CreditCard,
     disputes: AlertTriangle,
+    moderation: AlertCircle,
+    fraud: Shield,
+    automations: Zap,
   };
 
   return (
@@ -718,7 +761,336 @@ export default function AdminDashboardPage() {
         {activeTab === "coupons" && <CouponsTab />}
         {activeTab === "payouts" && <PayoutsTab />}
         {activeTab === "disputes" && <DisputesTab />}
+        {activeTab === "moderation" && <ModerationQueueTab />}
+        {activeTab === "fraud" && <FraudSignalsTab />}
+        {activeTab === "automations" && <AutomationsTab />}
       </div>
     </>
+  );
+}
+
+// ── Moderation Queue Tab ──────────────────────────────────────────────────────
+function ModerationQueueTab() {
+  const { data, isLoading, refetch } = useGetAdminModerationQueueQuery();
+  const [moderate] = useModerateReviewMutation();
+  const reviews = data?.reviews ?? [];
+
+  async function handleModerate(id: string, action: "approve" | "remove") {
+    await moderate({ id, action }).unwrap();
+    refetch();
+  }
+
+  if (isLoading)
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="animate-spin text-forest" size={24} />
+      </div>
+    );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-lg text-forest">Moderation Queue ({reviews.length})</h2>
+        <p className="text-xs text-slate/50">
+          Reviews flagged by AI sentiment analysis as potentially harmful or negative
+        </p>
+      </div>
+
+      {reviews.length === 0 ? (
+        <div className="flex flex-col items-center py-16 text-slate/40 gap-2">
+          <CheckCircle size={32} />
+          <p className="text-sm">All clear — no reviews need moderation</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reviews.map((review) => {
+            const r = review as unknown as Record<string, unknown>;
+            const product = r.productId as { title?: string } | undefined;
+            const buyer = r.buyerId as { email?: string; profile?: { name?: string } } | undefined;
+            return (
+              <div
+                key={String(r._id)}
+                className="bg-white rounded-2xl shadow-card p-5 border-l-4 border-amber-400"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                        ⚠ Flagged
+                      </span>
+                      {r.sentiment === "negative" && (
+                        <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <ThumbsDown size={9} /> Negative
+                        </span>
+                      )}
+                      <span className="text-xs text-slate/40">
+                        {new Date(String(r.createdAt ?? "")).toLocaleDateString("en-RW")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate/80 leading-relaxed">{String(r.text ?? "")}</p>
+                    <div className="flex gap-3 mt-1 text-xs text-slate/40">
+                      {product?.title && <span>Product: {product.title}</span>}
+                      {buyer?.email && <span>Buyer: {buyer.profile?.name ?? buyer.email}</span>}
+                      <span>Rating: {String(r.rating ?? "")}/5</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <button
+                      onClick={() => handleModerate(String(r._id), "approve")}
+                      className="flex items-center gap-1.5 text-xs bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-100"
+                    >
+                      <ThumbsUp size={11} /> Approve
+                    </button>
+                    <button
+                      onClick={() => handleModerate(String(r._id), "remove")}
+                      className="flex items-center gap-1.5 text-xs bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-100"
+                    >
+                      <XCircle size={11} /> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Fraud Signals Tab ─────────────────────────────────────────────────────────
+function FraudSignalsTab() {
+  const { data, isLoading, refetch } = useGetAdminFlaggedUsersQuery();
+  const [unflag] = useUnflagUserMutation();
+  const users = data?.users ?? [];
+
+  async function handleUnflag(id: string) {
+    await unflag(id).unwrap();
+    refetch();
+  }
+
+  if (isLoading)
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="animate-spin text-forest" size={24} />
+      </div>
+    );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-lg text-forest">Fraud Signals ({users.length})</h2>
+        <p className="text-xs text-slate/50">Accounts flagged by automated rule-based detection</p>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+        <p className="font-semibold">Fraud detection rules:</p>
+        <ul className="list-disc pl-4 space-y-0.5 text-amber-700">
+          <li>3+ orders in 1 hour from the same buyer</li>
+          <li>5+ disputes opened in the last 30 days</li>
+          <li>Loyalty points jumped by more than 10,000 in a single day</li>
+        </ul>
+      </div>
+
+      {users.length === 0 ? (
+        <div className="flex flex-col items-center py-16 text-slate/40 gap-2">
+          <Shield size={32} />
+          <p className="text-sm">No accounts flagged</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {users.map((user) => (
+            <div
+              key={user.id}
+              className="bg-white rounded-2xl shadow-card p-5 border-l-4 border-red-400 flex items-center justify-between gap-4"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-semibold">
+                    🚩 Flagged
+                  </span>
+                  <span className="text-sm font-medium text-forest truncate">
+                    {(user as { profile?: { name?: string } }).profile?.name ?? user.email ?? "—"}
+                  </span>
+                </div>
+                <div className="flex gap-3 mt-1 text-xs text-slate/50 flex-wrap">
+                  <span>{user.email}</span>
+                  <span>Tier: {(user as { tier?: string }).tier ?? "starter"}</span>
+                  <span>
+                    Points:{" "}
+                    {(user as { loyaltyPoints?: number }).loyaltyPoints?.toLocaleString() ?? 0}
+                  </span>
+                  <span>
+                    Joined:{" "}
+                    {new Date(
+                      String((user as { createdAt?: string }).createdAt ?? ""),
+                    ).toLocaleDateString("en-RW")}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => handleUnflag(user.id)}
+                className="shrink-0 flex items-center gap-1.5 text-xs bg-forest/5 text-forest border border-forest/20 px-3 py-1.5 rounded-lg hover:bg-forest/10"
+              >
+                <CheckCircle size={11} /> Clear flag
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Automations Tab ───────────────────────────────────────────────────────────
+const AUTOMATION_JOBS: Array<{
+  id: string;
+  label: string;
+  description: string;
+  schedule: string;
+  icon: React.ElementType;
+  color: string;
+}> = [
+  {
+    id: "low-stock",
+    label: "Low-stock email alerts",
+    description: "Send digest emails to sellers whose products are running low.",
+    schedule: "Daily at 08:00",
+    icon: AlertCircle,
+    color: "amber",
+  },
+  {
+    id: "payout-disburse",
+    label: "Payout auto-disbursement",
+    description: "Auto-process pending payouts older than 7 days via MoMo.",
+    schedule: "Weekly (Monday 06:00)",
+    icon: CreditCard,
+    color: "green",
+  },
+  {
+    id: "order-cancel",
+    label: "Order auto-cancel",
+    description: "Cancel orders stuck in 'placed' with pending payment > 2 hrs and restore stock.",
+    schedule: "Every 15 minutes",
+    icon: XCircle,
+    color: "red",
+  },
+  {
+    id: "loyalty-tier",
+    label: "Loyalty tier upgrades",
+    description: "Promote users to regular / trusted / VIP based on point thresholds.",
+    schedule: "Nightly at 02:00",
+    icon: Zap,
+    color: "saffron",
+  },
+  {
+    id: "stale-products",
+    label: "Stale product deactivation",
+    description: "Pause products that have been out of stock for 30+ days.",
+    schedule: "Nightly at 03:00",
+    icon: RefreshCw,
+    color: "slate",
+  },
+  {
+    id: "fraud-detection",
+    label: "Fraud signal detection",
+    description: "Flag accounts matching suspicious order / dispute / loyalty patterns.",
+    schedule: "Nightly at 04:00",
+    icon: Shield,
+    color: "red",
+  },
+  {
+    id: "analytics-digest",
+    label: "Weekly analytics digest",
+    description: "Email every active seller their revenue, orders, and top product for the week.",
+    schedule: "Weekly (Monday 07:00)",
+    icon: Users,
+    color: "forest",
+  },
+];
+
+function AutomationsTab() {
+  const [trigger, { isLoading }] = useTriggerAutomationMutation();
+  const [results, setResults] = useState<Record<string, { ok: boolean; ranAt: string }>>({});
+  const [running, setRunning] = useState<string | null>(null);
+
+  async function handleTrigger(jobId: string) {
+    setRunning(jobId);
+    try {
+      const res = await trigger(jobId).unwrap();
+      setResults((prev) => ({ ...prev, [jobId]: { ok: res.ok, ranAt: res.ranAt } }));
+    } catch {
+      setResults((prev) => ({ ...prev, [jobId]: { ok: false, ranAt: new Date().toISOString() } }));
+    } finally {
+      setRunning(null);
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="font-display text-lg text-forest">Automation Jobs</h2>
+        <p className="text-xs text-slate/50">
+          All jobs run automatically on schedule. Use "Run now" to trigger manually.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {AUTOMATION_JOBS.map((job) => {
+          const Icon = job.icon;
+          const result = results[job.id];
+          const isJobRunning = running === job.id && isLoading;
+
+          return (
+            <div key={job.id} className="bg-white rounded-2xl shadow-card p-5 flex flex-col gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-forest/8 flex items-center justify-center shrink-0">
+                  <Icon size={16} className="text-forest" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-forest">{job.label}</p>
+                  <p className="text-xs text-slate/50 mt-0.5 leading-relaxed">{job.description}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-forest/5">
+                <span className="text-xs text-slate/40 flex items-center gap-1">
+                  <Zap size={10} /> {job.schedule}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  {result && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        result.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {result.ok ? "✓ Done" : "✗ Failed"}{" "}
+                      {new Date(result.ranAt).toLocaleTimeString("en-RW", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+
+                  <button
+                    onClick={() => handleTrigger(job.id)}
+                    disabled={isJobRunning}
+                    className="flex items-center gap-1.5 text-xs bg-forest text-saffron px-3 py-1.5 rounded-lg hover:bg-forest/90 disabled:opacity-50 transition-colors"
+                  >
+                    {isJobRunning ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <Play size={11} />
+                    )}
+                    Run now
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

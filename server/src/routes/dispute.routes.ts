@@ -7,6 +7,7 @@ import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { sendDisputeNotificationEmail } from "../services/email.service.js";
+import { classifyDispute } from "../services/ai.service.js";
 
 export const disputeRouter = Router();
 
@@ -34,11 +35,29 @@ disputeRouter.post(
       const existing = await Dispute.findOne({ orderId: body.orderId, buyerId: req.user!.id });
       if (existing) throw new HttpError(409, "A dispute already exists for this order.");
 
+      // ── 8. AI: auto-classify dispute reason + severity ───────────────────
+      let aiReason = body.reason;
+      let aiSeverity: "high" | "medium" | "low" = "medium";
+      let aiClassified = false;
+      if (body.reason === "other" || !body.reason) {
+        try {
+          const classification = await classifyDispute(body.description);
+          aiReason = classification.reason;
+          aiSeverity = classification.severity;
+          aiClassified = true;
+        } catch {
+          /* fallback to user-provided */
+        }
+      }
+
       const dispute = await Dispute.create({
         ...body,
+        reason: aiReason,
+        severity: aiSeverity,
+        aiClassified,
         buyerId: req.user!.id,
       });
-      res.status(201).json({ dispute });
+      res.status(201).json({ dispute, aiClassified, aiReason });
     } catch (e) {
       next(e);
     }
@@ -49,7 +68,7 @@ disputeRouter.post(
 disputeRouter.get("/me", requireAuth, async (req: AuthedRequest, res, next) => {
   try {
     const disputes = await Dispute.find({ buyerId: req.user!.id })
-      .sort({ createdAt: -1 })
+      .sort({ severity: -1, createdAt: -1 })
       .populate("orderId", "orderNumber status")
       .lean();
     res.json({ disputes });

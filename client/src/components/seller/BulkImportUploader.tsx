@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { useBulkImportProductsMutation, useValidateBulkImportMutation } from "../../app/api";
 
@@ -60,6 +61,7 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
     insertErrors: Array<{ row: number; error: string }>;
   } | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [aiEnhance, setAiEnhance] = useState(false);
   const [globalError, setGlobalError] = useState("");
 
   const [validateBulk] = useValidateBulkImportMutation();
@@ -103,6 +105,7 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
     try {
       const fd = new FormData();
       fd.append("file", file);
+      fd.append("aiEnhance", String(aiEnhance));
       const result = await importBulk(fd).unwrap();
       setImportResult(result);
       setStep("done");
@@ -295,16 +298,41 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
               No valid rows found. Fix the errors and re-upload.
             </p>
           ) : (
-            <button
-              onClick={handleImport}
-              className="btn-primary flex items-center gap-2 w-full justify-center"
-            >
-              <Upload size={15} />
-              Import {validationResult.validCount} product
-              {validationResult.validCount !== 1 ? "s" : ""}
-              {validationResult.invalidCount > 0 &&
-                ` (skip ${validationResult.invalidCount} with errors)`}
-            </button>
+            <>
+              {/* AI-enhance toggle */}
+              <label className="flex items-start gap-3 bg-gradient-to-r from-forest/5 to-saffron/5 border border-forest/10 rounded-xl p-4 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={aiEnhance}
+                  onChange={(e) => setAiEnhance(e.target.checked)}
+                  className="mt-0.5 accent-forest"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={13} className="text-saffron" />
+                    <span className="text-sm font-medium text-forest">AI-enhance products</span>
+                    <span className="text-xs bg-saffron/20 text-saffron px-2 py-0.5 rounded-full">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate/50 mt-1">
+                    Auto-generate missing descriptions and tags using AI. Validates image URLs.
+                    Takes a bit longer but saves you hours of writing.
+                  </p>
+                </div>
+              </label>
+
+              <button
+                onClick={handleImport}
+                className="btn-primary flex items-center gap-2 w-full justify-center"
+              >
+                {aiEnhance ? <Sparkles size={15} /> : <Upload size={15} />}
+                {aiEnhance ? "AI-Import" : "Import"} {validationResult.validCount} product
+                {validationResult.validCount !== 1 ? "s" : ""}
+                {validationResult.invalidCount > 0 &&
+                  ` (skip ${validationResult.invalidCount} with errors)`}
+              </button>
+            </>
           )}
 
           <button

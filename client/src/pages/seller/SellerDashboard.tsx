@@ -8,6 +8,7 @@ import {
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
+  useAiEnhanceProductMutation,
   useUpdateOrderStatusMutation,
   useToggleHolidayModeMutation,
   useGetSellerLowStockQuery,
@@ -41,6 +42,7 @@ import {
   ExternalLink,
   AlertTriangle,
   UploadCloud,
+  Sparkles,
 } from "lucide-react";
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
@@ -271,6 +273,8 @@ function ProductsTab() {
   const [createProduct, { isLoading: creating }] = useCreateProductMutation();
   const [updateProduct, { isLoading: updating }] = useUpdateProductMutation();
   const [deleteProduct] = useDeleteProductMutation();
+  const [aiEnhance, { isLoading: enhancing }] = useAiEnhanceProductMutation();
+  const [enhancingId, setEnhancingId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -540,6 +544,25 @@ function ProductsTab() {
                   </button>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setEnhancingId(String(prod._id));
+                      await aiEnhance(String(prod._id))
+                        .unwrap()
+                        .catch(() => null);
+                      setEnhancingId(null);
+                      refetch();
+                    }}
+                    disabled={enhancing && enhancingId === String(prod._id)}
+                    className="p-2 hover:bg-saffron/10 rounded-lg transition-colors"
+                    title="AI enhance (auto-fill description & tags)"
+                  >
+                    {enhancing && enhancingId === String(prod._id) ? (
+                      <Loader2 size={15} className="animate-spin text-saffron/60" />
+                    ) : (
+                      <Sparkles size={15} className="text-saffron/60" />
+                    )}
+                  </button>
                   <button
                     onClick={() => openEdit(prod)}
                     className="p-2 hover:bg-forest/5 rounded-lg transition-colors"
