@@ -360,7 +360,10 @@ function ProductsTab() {
         <h2 className="font-display text-lg text-forest">My Products ({products.length})</h2>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setShowBulkImport((v) => !v); setShowForm(false); }}
+            onClick={() => {
+              setShowBulkImport((v) => !v);
+              setShowForm(false);
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-forest/20 text-forest text-sm hover:bg-forest/5 transition-colors"
           >
             <UploadCloud size={16} /> Bulk Import
@@ -372,7 +375,12 @@ function ProductsTab() {
       </div>
 
       {showBulkImport && (
-        <BulkImportUploader onDone={() => { setShowBulkImport(false); refetch(); }} />
+        <BulkImportUploader
+          onDone={() => {
+            setShowBulkImport(false);
+            refetch();
+          }}
+        />
       )}
 
       {showForm && (

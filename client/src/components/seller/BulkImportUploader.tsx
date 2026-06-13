@@ -108,8 +108,7 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
       setStep("done");
     } catch (err: unknown) {
       const msg =
-        (err as { data?: { error?: string } })?.data?.error ??
-        "Import failed. Please try again.";
+        (err as { data?: { error?: string } })?.data?.error ?? "Import failed. Please try again.";
       setGlobalError(msg);
       setStep("preview");
     }
@@ -154,9 +153,9 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
         <div className="flex-1">
           <p className="text-sm font-medium text-forest">Download the CSV template</p>
           <p className="text-xs text-slate/50 mt-0.5 mb-2">
-            Fill in your products in Excel, LibreOffice or Google Sheets. Put comma-separated
-            public image URLs in the <code className="font-mono">images</code> column (Cloudinary
-            free tier, ImgBB, Imgur, etc.).
+            Fill in your products in Excel, LibreOffice or Google Sheets. Put comma-separated public
+            image URLs in the <code className="font-mono">images</code> column (Cloudinary free
+            tier, ImgBB, Imgur, etc.).
           </p>
           <a
             href={TEMPLATE_URL}
@@ -347,15 +346,12 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
             <Pill label="Imported" value={importResult.summary.inserted} color="green" />
             <Pill
               label="Skipped"
-              value={
-                importResult.summary.validationFailed + importResult.summary.insertFailed
-              }
+              value={importResult.summary.validationFailed + importResult.summary.insertFailed}
               color="red"
             />
           </div>
 
-          {(importResult.validationErrors.length > 0 ||
-            importResult.insertErrors.length > 0) && (
+          {(importResult.validationErrors.length > 0 || importResult.insertErrors.length > 0) && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               <p className="font-semibold mb-1">Rows that were skipped:</p>
               <ul className="space-y-0.5">
