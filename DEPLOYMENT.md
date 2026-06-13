@@ -52,30 +52,30 @@ This guide covers deploying the **server** on [Render](https://render.com) (free
 In the Render dashboard → your service → **Environment**, add the following variables.
 Use the values from your `.env` file:
 
-| Variable | Value |
-|---|---|
-| `NODE_ENV` | `production` |
-| `PORT` | `10000` |
-| `MONGO_URI` | *(your Atlas connection string)* |
-| `JWT_ACCESS_SECRET` | *(generate: `openssl rand -hex 64`)* |
-| `JWT_REFRESH_SECRET` | *(generate: `openssl rand -hex 64`)* |
-| `CLIENT_URL` | *(your Vercel URL — set after step 3)* |
-| `CLOUDINARY_CLOUD_NAME` | `dmemlt9gp` |
-| `CLOUDINARY_API_KEY` | *(from Cloudinary dashboard)* |
-| `CLOUDINARY_API_SECRET` | *(from Cloudinary dashboard)* |
-| `SMTP_HOST` | `smtp-relay.brevo.com` |
-| `SMTP_PORT` | `587` |
-| `SMTP_USER` | *(your Brevo SMTP login)* |
-| `SMTP_PASS` | *(your Brevo SMTP password)* |
-| `SMTP_FROM` | `SOMA Connect <enockuwumukiza850@gmail.com>` |
-| `COOKIE_SECURE` | `true` |
-| `COOKIE_DOMAIN` | *(leave **blank/empty** for Vercel↔Render cross-origin)* |
-| `GOOGLE_CLIENT_ID` | *(from Google Cloud Console — optional)* |
-| `GOOGLE_CLIENT_SECRET` | *(from Google Cloud Console — optional)* |
-| `GOOGLE_CALLBACK_URL` | `https://<your-render-service>.onrender.com/api/auth/google/callback` |
-| `UPSTASH_REDIS_REST_URL` | *(from Upstash — optional)* |
-| `UPSTASH_REDIS_REST_TOKEN` | *(from Upstash — optional)* |
-| `HF_API_TOKEN` | *(from HuggingFace — optional)* |
+| Variable                   | Value                                                                 |
+| -------------------------- | --------------------------------------------------------------------- |
+| `NODE_ENV`                 | `production`                                                          |
+| `PORT`                     | `10000`                                                               |
+| `MONGO_URI`                | _(your Atlas connection string)_                                      |
+| `JWT_ACCESS_SECRET`        | _(generate: `openssl rand -hex 64`)_                                  |
+| `JWT_REFRESH_SECRET`       | _(generate: `openssl rand -hex 64`)_                                  |
+| `CLIENT_URL`               | _(your Vercel URL — set after step 3)_                                |
+| `CLOUDINARY_CLOUD_NAME`    | `dmemlt9gp`                                                           |
+| `CLOUDINARY_API_KEY`       | _(from Cloudinary dashboard)_                                         |
+| `CLOUDINARY_API_SECRET`    | _(from Cloudinary dashboard)_                                         |
+| `SMTP_HOST`                | `smtp-relay.brevo.com`                                                |
+| `SMTP_PORT`                | `587`                                                                 |
+| `SMTP_USER`                | _(your Brevo SMTP login)_                                             |
+| `SMTP_PASS`                | _(your Brevo SMTP password)_                                          |
+| `SMTP_FROM`                | `SOMA Connect <enockuwumukiza850@gmail.com>`                          |
+| `COOKIE_SECURE`            | `true`                                                                |
+| `COOKIE_DOMAIN`            | _(leave **blank/empty** for Vercel↔Render cross-origin)_              |
+| `GOOGLE_CLIENT_ID`         | _(from Google Cloud Console — optional)_                              |
+| `GOOGLE_CLIENT_SECRET`     | _(from Google Cloud Console — optional)_                              |
+| `GOOGLE_CALLBACK_URL`      | `https://<your-render-service>.onrender.com/api/auth/google/callback` |
+| `UPSTASH_REDIS_REST_URL`   | _(from Upstash — optional)_                                           |
+| `UPSTASH_REDIS_REST_TOKEN` | _(from Upstash — optional)_                                           |
+| `HF_API_TOKEN`             | _(from HuggingFace — optional)_                                       |
 
 > **Important:** `COOKIE_DOMAIN` must be set to an **empty string** (not `localhost`) when the frontend and API are on different domains. Setting it to the Render subdomain will break authentication cookies.
 
@@ -102,10 +102,10 @@ Click **Create Web Service**. Render will build and deploy automatically. Note y
 
 In Vercel → your project → **Settings → Environment Variables**:
 
-| Variable | Value |
-|---|---|
-| `VITE_API_URL` | `https://<your-render-service>.onrender.com/api` |
-| `VITE_SOCKET_URL` | `https://<your-render-service>.onrender.com` |
+| Variable          | Value                                            |
+| ----------------- | ------------------------------------------------ |
+| `VITE_API_URL`    | `https://<your-render-service>.onrender.com/api` |
+| `VITE_SOCKET_URL` | `https://<your-render-service>.onrender.com`     |
 
 Replace `<your-render-service>` with your actual Render service name.
 
@@ -299,4 +299,4 @@ VITE_SOCKET_URL=https://<your-render-service>.onrender.com
 
 ---
 
-*Last updated for deployment branch `feature/deployement-preparation`.*
+_Last updated for deployment branch `feature/deployement-preparation`._
