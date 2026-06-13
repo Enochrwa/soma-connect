@@ -34,8 +34,11 @@ export function ImageUploader({
       try {
         const result = await uploadFiles(formData).unwrap();
         onChange([...value, ...result.urls]);
-      } catch {
-        setError("Upload failed. Check your connection and try again.");
+      } catch (err: unknown) {
+        const e = err as { data?: { error?: string }; error?: string };
+        const msg =
+          e?.data?.error ?? e?.error ?? "Upload failed. Check your connection and try again.";
+        setError(msg);
       }
     },
     [value, onChange, maxFiles, uploadFiles],

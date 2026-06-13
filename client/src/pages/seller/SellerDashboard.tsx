@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route, NavLink, useNavigate, Link } from "react-router-dom";
 import {
   useGetMyStoreQuery,
@@ -15,8 +15,9 @@ import {
   useRequestPayoutMutation,
   useSetOrderTrackingMutation,
 } from "../../app/api";
-import { useAppSelector } from "../../app/hooks";
+import { useAppSelector, useAppDispatch } from "../../app/hooks";
 import type { RootState } from "../../app/store";
+import { setAuth } from "../../features/auth/authSlice";
 import { formatRWF } from "../../utils/format";
 import { ImageUploader } from "../../components/ui/ImageUploader";
 import {
@@ -934,11 +935,66 @@ function AnalyticsTab() {
 
 export default function SellerDashboard() {
   const user = useAppSelector((s: RootState) => s.auth.user);
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // If the user's JWT still says "buyer" but they navigated to /seller,
+  // they were likely just approved. Force a token refresh so the new
+  // "seller" role is picked up from the DB without requiring a logout.
+  useEffect(() => {
+    if (user && user.role === "buyer") {
+      setRefreshing(true);
+      fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.accessToken && data.user) {
+            dispatch(setAuth({ user: data.user, accessToken: data.accessToken }));
+          }
+        })
+        .catch(() => {
+          /* silently ignore — user may just need to re-login */
+        })
+        .finally(() => setRefreshing(false));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!user) {
     navigate("/login");
     return null;
   }
+
+  if (refreshing) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center gap-3 text-slate/50">
+        <Loader2 className="animate-spin" size={22} />
+        <span className="text-sm">Loading your store…</span>
+      </div>
+    );
+  }
+
+  if (user.role === "buyer") {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center px-4 gap-4">
+        <AlertTriangle size={40} className="text-saffron" />
+        <h2 className="font-display text-xl text-forest">Your seller account isn't active yet</h2>
+        <p className="text-sm text-slate/60 max-w-sm">
+          Your application may still be under review, or you need to sign out and back in to
+          activate your seller role.
+        </p>
+        <button
+          onClick={() => navigate("/login")}
+          className="btn-primary px-6 py-2.5 rounded-xl font-semibold text-sm"
+        >
+          Sign in again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <h1 className="font-display text-3xl text-forest mb-6">Seller Dashboard</h1>
