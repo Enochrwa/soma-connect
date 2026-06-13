@@ -10,17 +10,6 @@ import { slugify } from "../utils/slug.js";
 
 export const sellerRouter = Router();
 
-sellerRouter.get("/:slug", async (req, res, next) => {
-  try {
-    const seller = await Seller.findOne({ storeSlug: req.params.slug }).lean();
-    if (!seller) throw new HttpError(404, "Store not found.");
-    const products = await Product.find({ sellerId: seller._id, isActive: true }).limit(20).lean();
-    res.json({ seller, products });
-  } catch (e) {
-    next(e);
-  }
-});
-
 const applySchema = z.object({
   storeName: z.string().min(2).max(80),
   description: z.string().max(800).optional(),
@@ -226,3 +215,15 @@ sellerRouter.get(
     }
   },
 );
+
+// ── Public store page — MUST be last to avoid swallowing /apply, /me/* etc. ──
+sellerRouter.get("/:slug", async (req, res, next) => {
+  try {
+    const seller = await Seller.findOne({ storeSlug: req.params.slug }).lean();
+    if (!seller) throw new HttpError(404, "Store not found.");
+    const products = await Product.find({ sellerId: seller._id, isActive: true }).limit(20).lean();
+    res.json({ seller, products });
+  } catch (e) {
+    next(e);
+  }
+});
