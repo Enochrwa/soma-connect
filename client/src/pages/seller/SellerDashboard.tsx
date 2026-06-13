@@ -94,7 +94,7 @@ function OverviewTab() {
         <Store size={48} className="text-forest/20 mx-auto mb-4" />
         <h2 className="font-display text-xl text-forest mb-2">No store yet</h2>
         <p className="text-slate/60 mb-4">You haven't applied to sell on SOMA Market yet.</p>
-        <NavLink to="/account" className="btn-primary">
+        <NavLink to="/seller/apply" className="btn-primary">
           Apply as Seller
         </NavLink>
       </div>
