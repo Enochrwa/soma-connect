@@ -67,7 +67,7 @@ Use the values from your `.env` file:
 | `SMTP_PORT`                | `587`                                                                 |
 | `SMTP_USER`                | _(your Brevo SMTP login)_                                             |
 | `SMTP_PASS`                | _(your Brevo SMTP password)_                                          |
-| `SMTP_FROM`                | `SOMA Connect <enockuwumukiza850@gmail.com>`                          |
+| `SMTP_FROM`                | `SOMA Market <enockuwumukiza850@gmail.com>`                           |
 | `COOKIE_SECURE`            | `true`                                                                |
 | `COOKIE_DOMAIN`            | _(leave **blank/empty** for Vercel↔Render cross-origin)_              |
 | `GOOGLE_CLIENT_ID`         | _(from Google Cloud Console — optional)_                              |
