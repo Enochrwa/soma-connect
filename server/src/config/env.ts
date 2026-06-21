@@ -6,10 +6,28 @@ function req(name: string, fallback?: string): string {
   return v;
 }
 
+// Parse CLIENT_URL to get canonical base URL for OAuth and redirects
+const parseClientUrls = (raw: string = ""): { urls: string[]; base: string } => {
+  const urls = raw
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+
+  return {
+    urls: urls.length > 0 ? urls : ["http://localhost:5173"],
+    base: urls.length > 0 ? urls[0] : "http://localhost:5173",
+  };
+};
+
+const clientUrlConfig = parseClientUrls(process.env.CLIENT_URL);
+
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? "development",
   PORT: Number(process.env.PORT ?? 4000),
+  // Comma-separated list of allowed client URLs
   CLIENT_URL: process.env.CLIENT_URL ?? "http://localhost:5173",
+  // Canonical base URL for OAuth redirects and server-to-client navigation
+  BASE_URL: clientUrlConfig.base,
   MONGO_URI: req("MONGO_URI", "mongodb://localhost:27017/soma_market"),
   JWT_ACCESS_SECRET: req("JWT_ACCESS_SECRET", "dev-access-secret-change-me"),
   JWT_REFRESH_SECRET: req("JWT_REFRESH_SECRET", "dev-refresh-secret-change-me"),

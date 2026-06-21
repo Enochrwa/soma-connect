@@ -5,9 +5,19 @@ import { env } from "../config/env.js";
 let io: Server | null = null;
 let activeShoppers = 0;
 
+// Parse CLIENT_URL into array for CORS
+const parseClientOrigins = (): string[] => {
+  return (env.CLIENT_URL ?? "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
+};
+
 export function initSocket(httpServer: HttpServer) {
+  const clientOrigins = parseClientOrigins();
+
   io = new Server(httpServer, {
-    cors: { origin: env.CLIENT_URL, credentials: true },
+    cors: { origin: clientOrigins, credentials: true },
   });
 
   io.on("connection", (socket) => {

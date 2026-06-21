@@ -1,4 +1,4 @@
-import { Schema, model, type InferSchemaType } from "mongoose";
+import { Schema, model, type InferSchemaType, type HydratedDocument } from "mongoose";
 
 const AddressSchema = new Schema(
   {
@@ -55,5 +55,25 @@ const UserSchema = new Schema(
   { timestamps: true },
 );
 
-export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: string };
-export const User = model("User", UserSchema);
+/** Shape inferred from the schema — used internally. */
+type UserSchemaType = InferSchemaType<typeof UserSchema>;
+
+/**
+ * Instance methods / virtual fields that exist on Mongoose documents but are
+ * not part of the persisted schema.  Declaring them here causes `model<IUser>`
+ * to include them on every document returned by `findOne`, `create`, etc.
+ */
+export interface IUser extends UserSchemaType {
+  _id: string;
+  /**
+   * Transient flag set by the passport verify callback to signal that an
+   * existing-email account was just linked to Google for the first time.
+   * Never saved to the database.
+   */
+  newlyLinkedGoogle?: boolean;
+}
+
+/** Hydrated Mongoose document — what `User.findOne()` / `User.create()` return. */
+export type UserDoc = HydratedDocument<IUser>;
+
+export const User = model<IUser>("User", UserSchema);
