@@ -4,6 +4,10 @@ import { useRegisterMutation } from "../../app/api";
 import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
 import { Eye, EyeOff, Loader2, UserPlus, CheckCircle } from "lucide-react";
+import {
+  AuthErrorBanner,
+  extractAuthError,
+} from "../../components/ui/AuthErrorBanner";
 
 function GoogleIcon() {
   return (
@@ -102,11 +106,7 @@ export default function RegisterPage() {
       dispatch(setAuth({ user: res.user, accessToken: res.accessToken }));
       navigate("/", { replace: true });
     } catch (err: unknown) {
-      const msg =
-        typeof err === "object" && err !== null && "data" in err
-          ? (err as { data?: { error?: string } }).data?.error
-          : undefined;
-      setError(msg ?? "Registration failed. Please try again.");
+      setError(extractAuthError(err));
     }
   }
 
@@ -123,9 +123,7 @@ export default function RegisterPage() {
 
         <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
           {error && (
-            <div className="bg-vermillion/10 border border-vermillion/20 text-vermillion rounded-xl px-4 py-3 text-sm">
-              {error}
-            </div>
+            <AuthErrorBanner error={error} onDismiss={() => setError("")} />
           )}
 
           <a

@@ -4,6 +4,11 @@ import { useLoginMutation, useVerifyOtpMutation, useRequestOtpMutation } from ".
 import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
 import { Eye, EyeOff, Phone, Mail, Loader2, ShieldCheck } from "lucide-react";
+import {
+  AuthErrorBanner,
+  extractAuthError,
+  type AuthErrorCode,
+} from "../../components/ui/AuthErrorBanner";
 
 type Mode = "phone" | "otp";
 
@@ -15,7 +20,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<AuthErrorCode>("");
 
   const [login, { isLoading: loginLoading }] = useLoginMutation();
   const [requestOtp, { isLoading: otpReqLoading }] = useRequestOtpMutation();
@@ -41,11 +46,7 @@ export default function LoginPage() {
       dispatch(setAuth({ user: res.user, accessToken: res.accessToken }));
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const msg =
-        typeof err === "object" && err !== null && "data" in err
-          ? (err as { data?: { error?: string } }).data?.error
-          : undefined;
-      setError(msg ?? "Couldn't sign you in. Check your details.");
+      setError(extractAuthError(err));
     }
   }
 
@@ -56,11 +57,7 @@ export default function LoginPage() {
       await requestOtp({ email }).unwrap();
       setOtpSent(true);
     } catch (err: unknown) {
-      const msg =
-        typeof err === "object" && err !== null && "data" in err
-          ? (err as { data?: { error?: string } }).data?.error
-          : undefined;
-      setError(msg ?? "Couldn't send code. Try again.");
+      setError(extractAuthError(err));
     }
   }
 
@@ -72,11 +69,7 @@ export default function LoginPage() {
       dispatch(setAuth({ user: res.user, accessToken: res.accessToken }));
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const msg =
-        typeof err === "object" && err !== null && "data" in err
-          ? (err as { data?: { error?: string } }).data?.error
-          : undefined;
-      setError(msg ?? "Invalid or expired code.");
+      setError(extractAuthError(err));
     }
   }
 
@@ -123,11 +116,7 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
           {error && (
-            <div className="bg-vermillion/10 border border-vermillion/20 text-vermillion rounded-xl px-4 py-3 text-sm">
-              {error === "google"
-                ? "Google sign-in failed. Please try again or use another method."
-                : error}
-            </div>
+            <AuthErrorBanner error={error} onDismiss={() => setError("")} />
           )}
 
           <a
