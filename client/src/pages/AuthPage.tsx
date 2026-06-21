@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useLoginMutation, useRegisterMutation } from "../app/api";
 import { useAppDispatch } from "../app/hooks";
 import { setAuth } from "../features/auth/authSlice";
-import { AuthErrorBanner, extractAuthError, type AuthErrorCode } from "../components/ui/AuthErrorBanner";
+import { AuthErrorBanner } from "../components/ui/AuthErrorBanner";
+import { extractAuthError, type AuthErrorCode } from "../components/ui/authErrorUtils";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -74,7 +75,10 @@ export default function AuthPage() {
         <button
           type="button"
           className="text-sm text-slate/60 w-full"
-          onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}
+          onClick={() => {
+            setMode(mode === "login" ? "register" : "login");
+            setError("");
+          }}
         >
           {mode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>

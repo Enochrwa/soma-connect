@@ -4,10 +4,8 @@ import { useRegisterMutation } from "../../app/api";
 import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
 import { Eye, EyeOff, Loader2, UserPlus, CheckCircle } from "lucide-react";
-import {
-  AuthErrorBanner,
-  extractAuthError,
-} from "../../components/ui/AuthErrorBanner";
+import { AuthErrorBanner } from "../../components/ui/AuthErrorBanner";
+import { extractAuthError } from "../../components/ui/authErrorUtils";
 
 function GoogleIcon() {
   return (
@@ -122,9 +120,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
-          {error && (
-            <AuthErrorBanner error={error} onDismiss={() => setError("")} />
-          )}
+          {error && <AuthErrorBanner error={error} onDismiss={() => setError("")} />}
 
           <a
             href={`${import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"}/auth/google`}

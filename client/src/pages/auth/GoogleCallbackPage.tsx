@@ -4,7 +4,8 @@ import { Loader2 } from "lucide-react";
 import { useRefreshTokenMutation } from "../../app/api";
 import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
-import { AuthErrorBanner, SupportNudge, type AuthErrorCode } from "../../components/ui/AuthErrorBanner";
+import { AuthErrorBanner, SupportNudge } from "../../components/ui/AuthErrorBanner";
+import { type AuthErrorCode } from "../../components/ui/authErrorUtils";
 
 type Phase = "loading" | "error";
 
@@ -37,8 +38,7 @@ export default function GoogleCallbackPage() {
 
         if (errorParam) {
           // Backend explicitly signalled an error (e.g. user denied permissions)
-          const code: AuthErrorCode =
-            errorParam === "access_denied" ? "google_denied" : "google";
+          const code: AuthErrorCode = errorParam === "access_denied" ? "google_denied" : "google";
           setErrorCode(code);
           setPhase("error");
           return;

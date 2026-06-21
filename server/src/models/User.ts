@@ -55,5 +55,11 @@ const UserSchema = new Schema(
   { timestamps: true },
 );
 
-export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: string };
+export type UserDoc = InferSchemaType<typeof UserSchema> & {
+  _id: string;
+  /** Transient flag set by passport verify callback to signal that this
+   *  existing-email account was just linked to Google for the first time.
+   *  Never persisted to the database. */
+  newlyLinkedGoogle?: boolean;
+};
 export const User = model("User", UserSchema);
