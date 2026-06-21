@@ -295,7 +295,7 @@ authRouter.get(
     }
     passport.authenticate("google", {
       session: false,
-      failureRedirect: `${env.CLIENT_URL}/login?error=google`,
+      failureRedirect: `${env.BASE_URL}/login?error=google`,
     })(req, res, next);
   },
   (req, res) => {
@@ -305,6 +305,6 @@ authRouter.get(
     setRefreshCookie(res, refresh);
     // Hand the access token to the SPA via a short-lived redirect; the SPA
     // exchanges it for the user profile via /auth/refresh on load.
-    res.redirect(`${env.CLIENT_URL}/auth/google/callback?accessToken=${access}`);
+    res.redirect(`${env.BASE_URL}/auth/google/callback?accessToken=${access}`);
   },
 );
