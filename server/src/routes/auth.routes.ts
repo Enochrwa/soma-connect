@@ -304,7 +304,9 @@ authRouter.get(
       const user = req.user as unknown as UserDoc;
       if (!user) {
         console.error("Google callback: No user returned from Passport");
-        return res.status(401).json({ error: "Authentication failed: no user returned" });
+        return res.status(401).json({
+          error: "Authentication failed: no user returned",
+        });
       }
 
       // Validate user has required fields
@@ -313,19 +315,34 @@ authRouter.get(
         return res.status(500).json({ error: "User record is invalid" });
       }
 
+      // Check if email already exists with different auth method
+      const newlyLinkedGoogle = (user as Partial<UserDoc> & { newlyLinkedGoogle?: boolean })
+        .newlyLinkedGoogle;
+      if (newlyLinkedGoogle) {
+        console.log("Google callback: Email exists with different auth method", {
+          userId: String(user._id),
+          email: user.email,
+        });
+        return res.status(409).json({
+          error: "This email is already registered with a different login method",
+          code: "EMAIL_EXISTS",
+          suggestion: "Please login with your email and password instead",
+        });
+      }
+
       // Validate JWT secrets are configured
       if (!env.JWT_ACCESS_SECRET) {
         console.error("Google callback: JWT_ACCESS_SECRET not configured");
-        return res
-          .status(500)
-          .json({ error: "Server configuration error: JWT_ACCESS_SECRET missing" });
+        return res.status(500).json({
+          error: "Server configuration error: JWT_ACCESS_SECRET missing",
+        });
       }
 
       if (!env.JWT_REFRESH_SECRET) {
         console.error("Google callback: JWT_REFRESH_SECRET not configured");
-        return res
-          .status(500)
-          .json({ error: "Server configuration error: JWT_REFRESH_SECRET missing" });
+        return res.status(500).json({
+          error: "Server configuration error: JWT_REFRESH_SECRET missing",
+        });
       }
 
       // Sign tokens

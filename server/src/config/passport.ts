@@ -39,22 +39,25 @@ if (googleOAuthEnabled) {
       let user = await User.findOne({ googleId: profile.id });
       console.log("Passport verify: Search by googleId result", { found: !!user });
 
-      // 2. Fall back to matching an existing account by email and link it
+      // 2. Check for existing account by email - require explicit linking (don't silently link)
       if (!user && email) {
-        user = await User.findOne({ email });
-        if (user) {
-          console.log("Passport verify: Found existing user by email, linking Google account");
-          user.googleId = profile.id;
-          if (!user.emailVerifiedAt) user.emailVerifiedAt = new Date();
-          if (avatar && !user.profile?.avatar) {
-            user.profile = {
-              ...(user.profile ?? {}),
-              avatar,
-              language: user.profile?.language ?? "en",
-            };
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+          console.log("Passport verify: Found existing user by email", {
+            userId: String(existingUser._id),
+            hasGoogleId: !!existingUser.googleId,
+          });
+
+          // If they already have a Google ID, they should use that
+          if (existingUser.googleId) {
+            console.log("Passport verify: User already has Google linked");
+            return done(null, existingUser);
           }
-          await user.save();
-          console.log("Passport verify: User updated with Google ID");
+
+          // If email exists but no Google ID, require explicit linking
+          // Add flag to callback route so we can ask user to confirm
+          existingUser.newlyLinkedGoogle = true;
+          user = existingUser;
         }
       }
 
