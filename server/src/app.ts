@@ -27,8 +27,11 @@ import { bulkImportRouter } from "./routes/bulk-import.routes.js";
 import { contactRouter } from "./routes/contact.routes.js";
 
 export const app = express();
+const clientUrls = (env.CLIENT_URL ?? "")
+  .split(",")
+  .map((url) => url.trim())
+  .filter(Boolean);
 
-// ── Security ─────────────────────────────────────────────────────────────────
 app.use(
   helmet({
     crossOriginEmbedderPolicy: false,
@@ -40,17 +43,9 @@ app.use(
           "data:",
           "https://res.cloudinary.com",
           "https://placehold.co",
-          // Google OAuth profile pictures
           "https://lh3.googleusercontent.com",
         ],
-        connectSrc: [
-          "'self'",
-          env.CLIENT_URL,
-          // Allow WebSocket connections back to this server (Socket.IO).
-          // wss: covers production; ws: covers local dev.
-          "wss:",
-          "ws:",
-        ],
+        connectSrc: ["'self'", ...clientUrls, "wss:", "ws:"],
       },
     },
   }),
@@ -60,7 +55,7 @@ app.use(
 app.use(compression());
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: clientUrls,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

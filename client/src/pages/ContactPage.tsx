@@ -46,7 +46,12 @@ interface FieldErrors {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const CATEGORIES: { value: Category; label: string; icon: React.ElementType; description: string }[] = [
+const CATEGORIES: {
+  value: Category;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+}[] = [
   {
     value: "general",
     label: "General Enquiry",
@@ -97,7 +102,7 @@ const SLA_MAP: Record<Category, string> = {
 const FAQS = [
   {
     q: "How do I track my order?",
-    a: 'Go to My Orders and click on any order to see real-time tracking. You can also visit /orders/:id/track for live updates.',
+    a: "Go to My Orders and click on any order to see real-time tracking. You can also visit /orders/:id/track for live updates.",
   },
   {
     q: "How long do refunds take?",
@@ -124,7 +129,8 @@ const FAQS = [
 // ── Validation ─────────────────────────────────────────────────────────────
 function validate(form: FormState): FieldErrors {
   const errors: FieldErrors = {};
-  if (!form.name.trim() || form.name.trim().length < 2) errors.name = "Please enter your full name.";
+  if (!form.name.trim() || form.name.trim().length < 2)
+    errors.name = "Please enter your full name.";
   if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
     errors.email = "Please enter a valid email address.";
   if (!form.subject.trim() || form.subject.trim().length < 3)
@@ -245,12 +251,14 @@ export default function ContactPage() {
   const [submitContact, { isLoading, isSuccess, data: successData, error: submitError }] =
     useSubmitContactMutation();
 
-  const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setForm((f) => ({ ...f, [field]: e.target.value }));
-    if (touched[field]) {
-      setErrors((err) => ({ ...err, ...validate({ ...form, [field]: e.target.value }) }));
-    }
-  };
+  const set =
+    (field: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      setForm((f) => ({ ...f, [field]: e.target.value }));
+      if (touched[field]) {
+        setErrors((err) => ({ ...err, ...validate({ ...form, [field]: e.target.value }) }));
+      }
+    };
 
   const blur = (field: keyof FormState) => () => {
     setTouched((t) => ({ ...t, [field]: true }));
@@ -283,7 +291,7 @@ export default function ContactPage() {
   const serverErrorMsg =
     submitError &&
     ("data" in submitError
-      ? (submitError.data as { error?: string })?.error ?? "Something went wrong."
+      ? ((submitError.data as { error?: string })?.error ?? "Something went wrong.")
       : "Network error. Please try again.");
 
   return (
@@ -297,8 +305,7 @@ export default function ContactPage() {
               Support Centre
             </div>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-ivory mb-4 leading-tight">
-              How can we{" "}
-              <span className="text-saffron">help you</span>?
+              How can we <span className="text-saffron">help you</span>?
             </h1>
             <p className="text-ivory/60 text-base leading-relaxed">
               Our team is based in Kigali and ready to help. Fill in the form below — we read every
@@ -328,11 +335,7 @@ export default function ContactPage() {
                   value="+250 792 696 038"
                   href="tel:+250792696038"
                 />
-                <ContactInfoCard
-                  icon={MapPin}
-                  label="Office"
-                  value="Kigali, Rwanda"
-                />
+                <ContactInfoCard icon={MapPin} label="Office" value="Kigali, Rwanda" />
                 <ContactInfoCard
                   icon={Clock}
                   label="Support hours"
@@ -403,7 +406,9 @@ export default function ContactPage() {
           <div className="lg:col-span-2 space-y-10">
             {/* ── Contact form ─────────────────────────────────────── */}
             <section className="bg-white rounded-3xl shadow-card p-6 md:p-8">
-              <h2 className="font-display text-2xl font-bold text-forest mb-1">Send us a message</h2>
+              <h2 className="font-display text-2xl font-bold text-forest mb-1">
+                Send us a message
+              </h2>
               <p className="text-sm text-slate/50 mb-7">All fields marked with * are required.</p>
 
               {/* Success state */}
@@ -414,7 +419,8 @@ export default function ContactPage() {
                   </div>
                   <h3 className="font-display text-xl font-bold text-forest mb-2">Message sent!</h3>
                   <p className="text-slate/60 text-sm max-w-sm mb-1">
-                    {successData?.message ?? "We've received your message and will be in touch soon."}
+                    {successData?.message ??
+                      "We've received your message and will be in touch soon."}
                   </p>
                   <p className="text-xs text-slate/40 mb-6">
                     Check your inbox — we sent a confirmation to <strong>{form.email}</strong>.
@@ -422,7 +428,14 @@ export default function ContactPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setForm({ name: "", email: "", subject: "", category: "", message: "", orderId: "" });
+                      setForm({
+                        name: "",
+                        email: "",
+                        subject: "",
+                        category: "",
+                        message: "",
+                        orderId: "",
+                      });
                       setErrors({});
                       setTouched({});
                     }}
@@ -437,7 +450,11 @@ export default function ContactPage() {
                 <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   {/* Name + Email */}
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <FieldWrapper label="Full name" error={touched.name ? errors.name : undefined} required>
+                    <FieldWrapper
+                      label="Full name"
+                      error={touched.name ? errors.name : undefined}
+                      required
+                    >
                       <input
                         type="text"
                         autoComplete="name"
@@ -448,7 +465,11 @@ export default function ContactPage() {
                         className={touched.name && errors.name ? inputErrCls : inputCls}
                       />
                     </FieldWrapper>
-                    <FieldWrapper label="Email address" error={touched.email ? errors.email : undefined} required>
+                    <FieldWrapper
+                      label="Email address"
+                      error={touched.email ? errors.email : undefined}
+                      required
+                    >
                       <input
                         type="email"
                         autoComplete="email"
@@ -482,10 +503,7 @@ export default function ContactPage() {
                                 : "border-forest/10 bg-ivory hover:border-forest/30 hover:bg-forest-50"
                             }`}
                           >
-                            <Icon
-                              size={16}
-                              className={selected ? "text-saffron" : "text-forest"}
-                            />
+                            <Icon size={16} className={selected ? "text-saffron" : "text-forest"} />
                             <span
                               className={`text-xs font-semibold leading-tight ${
                                 selected ? "text-ivory" : "text-forest"
@@ -507,7 +525,11 @@ export default function ContactPage() {
                   </FieldWrapper>
 
                   {/* Subject */}
-                  <FieldWrapper label="Subject" error={touched.subject ? errors.subject : undefined} required>
+                  <FieldWrapper
+                    label="Subject"
+                    error={touched.subject ? errors.subject : undefined}
+                    required
+                  >
                     <input
                       type="text"
                       placeholder="e.g. My order hasn't arrived after 5 days"
@@ -532,7 +554,11 @@ export default function ContactPage() {
                   )}
 
                   {/* Message */}
-                  <FieldWrapper label="Message" error={touched.message ? errors.message : undefined} required>
+                  <FieldWrapper
+                    label="Message"
+                    error={touched.message ? errors.message : undefined}
+                    required
+                  >
                     <textarea
                       rows={6}
                       placeholder="Please describe your question or issue in as much detail as possible…"
