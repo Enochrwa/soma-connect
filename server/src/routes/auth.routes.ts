@@ -316,8 +316,7 @@ authRouter.get(
       }
 
       // Check if email already exists with different auth method
-      const newlyLinkedGoogle = (user as Partial<UserDoc> & { newlyLinkedGoogle?: boolean })
-        .newlyLinkedGoogle;
+      const newlyLinkedGoogle = user.newlyLinkedGoogle;
       if (newlyLinkedGoogle) {
         console.log("Google callback: Email exists with different auth method", {
           userId: String(user._id),
