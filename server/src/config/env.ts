@@ -12,7 +12,7 @@ const parseClientUrls = (raw: string = ""): { urls: string[]; base: string } => 
     .split(",")
     .map((u) => u.trim())
     .filter(Boolean);
-  
+
   return {
     urls: urls.length > 0 ? urls : ["http://localhost:5173"],
     base: urls.length > 0 ? urls[0] : "http://localhost:5173",

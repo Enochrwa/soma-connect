@@ -15,7 +15,7 @@ const parseClientOrigins = (): string[] => {
 
 export function initSocket(httpServer: HttpServer) {
   const clientOrigins = parseClientOrigins();
-  
+
   io = new Server(httpServer, {
     cors: { origin: clientOrigins, credentials: true },
   });

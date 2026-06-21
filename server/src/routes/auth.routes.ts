@@ -298,7 +298,7 @@ authRouter.get(
       failureRedirect: `${env.BASE_URL}/login?error=google`,
     })(req, res, next);
   },
-  (req, res, next) => {
+  (req, res, _next) => {
     try {
       // Validate user was authenticated by passport
       const user = req.user as unknown as UserDoc;
@@ -316,12 +316,16 @@ authRouter.get(
       // Validate JWT secrets are configured
       if (!env.JWT_ACCESS_SECRET) {
         console.error("Google callback: JWT_ACCESS_SECRET not configured");
-        return res.status(500).json({ error: "Server configuration error: JWT_ACCESS_SECRET missing" });
+        return res
+          .status(500)
+          .json({ error: "Server configuration error: JWT_ACCESS_SECRET missing" });
       }
 
       if (!env.JWT_REFRESH_SECRET) {
         console.error("Google callback: JWT_REFRESH_SECRET not configured");
-        return res.status(500).json({ error: "Server configuration error: JWT_REFRESH_SECRET missing" });
+        return res
+          .status(500)
+          .json({ error: "Server configuration error: JWT_REFRESH_SECRET missing" });
       }
 
       // Sign tokens
