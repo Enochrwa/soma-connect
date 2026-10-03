@@ -21,12 +21,7 @@ import { useSubmitContactMutation } from "../app/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Category =
-  | "general"
-  | "order_support"
-  | "seller_support"
-  | "technical"
-  | "partnership"
-  | "press";
+  "general" | "order_support" | "seller_support" | "technical" | "partnership" | "press";
 
 interface FormState {
   name: string;

@@ -121,12 +121,7 @@ export const api = createApi({
         email: string;
         subject: string;
         category:
-          | "general"
-          | "order_support"
-          | "seller_support"
-          | "technical"
-          | "partnership"
-          | "press";
+          "general" | "order_support" | "seller_support" | "technical" | "partnership" | "press";
         message: string;
         orderId?: string;
       }

@@ -20,12 +20,7 @@ export type OrderStatus =
   | "cancelled";
 
 export type PaymentStatus =
-  | "pending"
-  | "manual_review"
-  | "paid"
-  | "failed"
-  | "refunded"
-  | "refund_pending";
+  "pending" | "manual_review" | "paid" | "failed" | "refunded" | "refund_pending";
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
