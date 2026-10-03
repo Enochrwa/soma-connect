@@ -9,6 +9,12 @@ import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth
 import { validate } from "../middleware/validate.js";
 import { sendPayoutNotificationEmail } from "../services/email.service.js";
 import mongoose from "mongoose";
+import { randomUUID } from "crypto";
+import {
+  predictProvider,
+  initiatePayout,
+  PawaPayIndeterminateError,
+} from "../services/pawapay.service.js";
 
 export const payoutRouter = Router();
 
@@ -164,6 +170,81 @@ payoutRouter.patch(
 
       res.json({
         payout: await Payout.findById(payout._id).populate("sellerId", "storeName").lean(),
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Admin: automated payout via pawaPay ──────────────────────────────────────
+// Unlike /disburse (which only records a transfer an admin already made by hand),
+// this actually moves the money.
+payoutRouter.patch(
+  "/admin/:id/disburse-pawapay",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const payout = await Payout.findById(req.params.id);
+      if (!payout) throw new HttpError(404, "Payout not found.");
+      if (payout.status !== "pending") throw new HttpError(400, "Payout is not pending.");
+      if (!payout.momoPhone) throw new HttpError(400, "Payout has no mobile money number on file.");
+
+      const prediction = await predictProvider(payout.momoPhone);
+      const payoutId = randomUUID();
+
+      // Persist the payoutId BEFORE calling pawaPay so we can always reconcile.
+      payout.status = "processing";
+      payout.disbursementProvider = "pawapay";
+      payout.pawapayPayoutId = payoutId;
+      payout.pawapayProvider = prediction.provider;
+      payout.momoPhone = prediction.phoneNumber;
+      payout.initiatedBy = new mongoose.Types.ObjectId(
+        req.user!.id,
+      ) as unknown as typeof payout.initiatedBy;
+      await payout.save();
+
+      try {
+        const result = await initiatePayout({
+          payoutId,
+          amount: payout.amount,
+          phoneNumber: prediction.phoneNumber,
+          provider: prediction.provider,
+          customerMessage: "Soma payout",
+          payoutRecordId: String(payout._id),
+        });
+
+        if (result.status === "REJECTED") {
+          payout.status = "failed";
+          payout.pawapayStatus = "FAILED";
+          payout.pawapayFailureCode = result.failureReason?.failureCode;
+          payout.pawapayFailureMessage = result.failureReason?.failureMessage;
+          await payout.save();
+          throw new HttpError(
+            400,
+            result.failureReason?.failureMessage ?? "pawaPay rejected the payout.",
+          );
+        }
+
+        payout.pawapayStatus = result.status;
+        await payout.save();
+      } catch (err) {
+        if (err instanceof PawaPayIndeterminateError) {
+          payout.needsReconciliation = true;
+          await payout.save();
+          return res.status(202).json({
+            payout,
+            message: "Payout submitted but not yet confirmed — reconciliation will resolve it.",
+          });
+        }
+        throw err;
+      }
+
+      // Seller is emailed only once the callback confirms COMPLETED.
+      res.json({
+        payout,
+        message: "Payout sent to pawaPay. Status will update when it completes.",
       });
     } catch (e) {
       next(e);

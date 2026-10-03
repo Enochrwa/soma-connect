@@ -14,6 +14,18 @@ const TransactionSchema = new Schema(
       default: "initiated",
     },
     rawMeta: Schema.Types.Mixed,
+
+    // ── pawaPay (Merchant API v2) ────────────────────────────────────────────
+    provider: { type: String, enum: ["manual", "pawapay"], default: "manual", index: true },
+    pawapayDepositId: { type: String, index: true, sparse: true }, // UUIDv4 we generate
+    pawapayProvider: { type: String }, // MTN_MOMO_RWA | AIRTEL_RWA
+    pawapayStatus: { type: String }, // ACCEPTED|ENQUEUED|SUBMITTED|PROCESSING|COMPLETED|FAILED|IN_RECONCILIATION
+    pawapayFailureCode: { type: String },
+    pawapayFailureMessage: { type: String },
+    providerTransactionId: { type: String },
+    // Set when we could not determine the outcome; picked up by the reconcile job.
+    needsReconciliation: { type: Boolean, default: false, index: true },
+    lastStatusCheckAt: { type: Date },
   },
   { timestamps: true },
 );

@@ -269,6 +269,27 @@ export const api = createApi({
       query: (body) => ({ url: "/payment/mock", method: "POST", body }),
       invalidatesTags: ["Orders"],
     }),
+    // ── pawaPay (Merchant API v2) ────────────────────────────────────────────
+    pawapayPredict: b.mutation<
+      { country: string; provider: "MTN_MOMO_RWA" | "AIRTEL_RWA"; phoneNumber: string },
+      { phone: string }
+    >({
+      query: (body) => ({ url: "/payments/pawapay/predict", method: "POST", body }),
+    }),
+    pawapayInitiate: b.mutation<
+      { depositId: string; status: string; provider?: string; message: string },
+      { orderId: string; phone: string; provider?: "MTN_MOMO_RWA" | "AIRTEL_RWA" }
+    >({
+      query: (body) => ({ url: "/payments/pawapay/initiate", method: "POST", body }),
+      invalidatesTags: (_r, _e, { orderId }) => [{ type: "Order", id: orderId }],
+    }),
+    pawapayStatus: b.query<
+      { status: string; pawapayStatus?: string; message?: string },
+      string
+    >({
+      query: (depositId) => `/payments/pawapay/status/${depositId}`,
+    }),
+
     getPaymentStatus: b.query<{ status: string; method: string }, string>({
       query: (ref) => `/payment/status/${ref}`,
     }),
@@ -667,6 +688,9 @@ export const {
   useRemoveFromWishlistMutation,
   // Payment
   useInitiatePaymentMutation,
+  usePawapayPredictMutation,
+  usePawapayInitiateMutation,
+  useLazyPawapayStatusQuery,
   useGetPaymentStatusQuery,
   useGetDraftReplyQuery,
   useGetReviewSummaryQuery,

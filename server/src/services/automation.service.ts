@@ -25,8 +25,14 @@ import { Payout } from "../models/Payout.js";
 import { Coupon } from "../models/Coupon.js";
 import { Notification } from "../models/Notification.js";
 import { Review } from "../models/Review.js";
-import { initiateMobileMoneyPush } from "./payment.mock.js";
-import { sendMail, sendPayoutNotificationEmail } from "./email.service.js";
+import { randomUUID } from "crypto";
+import {
+  predictProvider,
+  initiatePayout,
+  PawaPayIndeterminateError,
+} from "./pawapay.service.js";
+import { runPawaPayReconciliation } from "./pawapay.reconcile.js";
+import { sendMail } from "./email.service.js";
 import { env } from "../config/env.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,42 +139,64 @@ async function runPayoutDisbursement() {
     createdAt: { $lte: sevenDaysAgo },
   }).lean();
 
+  let submitted = 0;
   for (const payout of pending) {
     try {
-      await Payout.findByIdAndUpdate(payout._id, { status: "processing" });
-
-      // Simulate MoMo call for auto-disbursement
-      const momoRef = `AUTO-${String(payout._id).slice(-8)}-${Date.now()}`;
-      let momoSuccess = true;
-      try {
-        await initiateMobileMoneyPush({
-          orderId: String(payout._id),
-          userId: String(payout.sellerId),
-          amount: payout.amount,
-          method: "mtn_momo",
-          phone: payout.momoPhone ?? "0780000000",
-        });
-      } catch {
-        momoSuccess = false;
+      if (!payout.momoPhone) {
+        console.warn("[automation] skipping payout with no momoPhone", payout._id);
+        continue;
       }
 
+      const prediction = await predictProvider(payout.momoPhone);
+      const payoutId = randomUUID();
+
+      // Persist the payoutId BEFORE calling pawaPay so the payment is always
+      // reconcilable, even if the call never returns.
       await Payout.findByIdAndUpdate(payout._id, {
-        status: momoSuccess ? "sent" : "failed",
-        momoRef,
+        status: "processing",
+        disbursementProvider: "pawapay",
+        pawapayPayoutId: payoutId,
+        pawapayProvider: prediction.provider,
+        momoPhone: prediction.phoneNumber,
       });
 
-      if (momoSuccess) {
-        const seller = await Seller.findById(payout.sellerId).lean();
-        const user = seller ? await User.findById(seller.userId).lean() : null;
-        if (user?.email && seller) {
-          await sendPayoutNotificationEmail(user.email, seller.storeName, payout.amount, momoRef);
+      try {
+        const result = await initiatePayout({
+          payoutId,
+          amount: payout.amount,
+          phoneNumber: prediction.phoneNumber,
+          provider: prediction.provider,
+          customerMessage: "Soma payout",
+          payoutRecordId: String(payout._id),
+        });
+
+        if (result.status === "REJECTED") {
+          await Payout.findByIdAndUpdate(payout._id, {
+            status: "failed",
+            pawapayStatus: "FAILED",
+            pawapayFailureCode: result.failureReason?.failureCode,
+            pawapayFailureMessage: result.failureReason?.failureMessage,
+          });
+          continue;
         }
+
+        await Payout.findByIdAndUpdate(payout._id, { pawapayStatus: result.status });
+        submitted += 1;
+      } catch (err) {
+        if (err instanceof PawaPayIndeterminateError) {
+          // Unknown outcome — leave processing, reconciliation will resolve it.
+          await Payout.findByIdAndUpdate(payout._id, { needsReconciliation: true });
+          continue;
+        }
+        throw err;
       }
     } catch (e) {
       console.error("[automation] payout disbursement failed", payout._id, e);
     }
   }
-  console.log(`[automation] disbursed ${pending.length} payouts`);
+  // NOTE: sellers are notified from the pawaPay payout callback once the money
+  // has actually moved (status COMPLETED) — never on submission.
+  console.log(`[automation] submitted ${submitted}/${pending.length} payouts to pawaPay`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -574,6 +602,15 @@ export function initAutomations() {
 
   // 3. Order auto-cancel — every 15 minutes
   cron.schedule("*/15 * * * *", runOrderAutoCancelTimeout);
+
+  // pawaPay reconciliation — catches payments whose callback never arrived.
+  if (env.PAWAPAY_RECONCILE_ENABLED) {
+    cron.schedule("*/5 * * * *", () => {
+      runPawaPayReconciliation().catch((e) =>
+        console.error("[automation] pawaPay reconciliation failed", e),
+      );
+    });
+  }
 
   // 4. Loyalty tier upgrades — nightly at 02:00
   cron.schedule("0 2 * * *", runLoyaltyTierUpgrade, { timezone: "Africa/Kigali" });

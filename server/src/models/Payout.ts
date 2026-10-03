@@ -14,7 +14,17 @@ const PayoutSchema = new Schema(
       index: true,
     },
     momoPhone: { type: String }, // MoMo number to disburse to
-    momoRef: { type: String }, // reference from MoMo API
+    momoRef: { type: String }, // reference from MoMo API (manual flow)
+
+    // ── pawaPay (Merchant API v2) ────────────────────────────────────────────
+    disbursementProvider: { type: String, enum: ["manual", "pawapay"], default: "manual" },
+    pawapayPayoutId: { type: String, index: true, sparse: true },
+    pawapayProvider: { type: String },
+    pawapayStatus: { type: String },
+    pawapayFailureCode: { type: String },
+    pawapayFailureMessage: { type: String },
+    needsReconciliation: { type: Boolean, default: false, index: true },
+    lastStatusCheckAt: { type: Date },
     note: { type: String },
     initiatedBy: { type: Schema.Types.ObjectId, ref: "User" }, // admin who triggered it
     periodStart: { type: Date },
