@@ -32,6 +32,8 @@ const UserSchema = new Schema(
       default: "starter",
     },
     referralCode: { type: String, unique: true, index: true },
+    // Who invited this user (set once at sign-up, never changed).
+    referredBy: { type: Schema.Types.ObjectId, ref: "User", index: true },
     failedLogins: { type: Number, default: 0 },
     lockedUntil: Date,
     emailVerifiedAt: Date,

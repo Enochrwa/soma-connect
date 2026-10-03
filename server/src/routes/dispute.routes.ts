@@ -8,6 +8,8 @@ import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth
 import { validate } from "../middleware/validate.js";
 import { sendDisputeNotificationEmail } from "../services/email.service.js";
 import { classifyDispute } from "../services/ai.service.js";
+import { holdEarningsForOrder } from "../services/earnings.service.js";
+import { reverseSettledOrder } from "../services/order.lifecycle.js";
 
 export const disputeRouter = Router();
 
@@ -57,6 +59,9 @@ disputeRouter.post(
         aiClassified,
         buyerId: req.user!.id,
       });
+      // Freeze the sellers' earnings for this order until the dispute is decided.
+      await holdEarningsForOrder(String(order._id), true);
+
       res.status(201).json({ dispute, aiClassified, aiReason });
     } catch (e) {
       next(e);
@@ -121,6 +126,31 @@ disputeRouter.patch(
         dispute.resolvedBy = req.user!.id as unknown as typeof dispute.resolvedBy;
       }
       await dispute.save();
+
+      // Money consequences of the decision
+      const order = await Order.findById(dispute.orderId);
+      if (order && ["resolved_refund", "resolved_no_action", "closed"].includes(status)) {
+        if (status === "resolved_refund") {
+          // Reverse the sellers' earnings + the loyalty points this order earned, and
+          // queue the refund for an admin to send (if the buyer had paid).
+          await reverseSettledOrder(
+            order,
+            `Dispute ${String(dispute._id)} resolved in buyer's favour`,
+          );
+          if (order.paymentStatus === "paid") {
+            order.paymentStatus = "refund_pending";
+            order.statusHistory.push({
+              status: order.status,
+              at: new Date(),
+              note: "Refund approved via dispute — awaiting transfer to buyer",
+            });
+            await order.save();
+          }
+        } else {
+          // Dispute rejected/closed: the seller's earnings are released again.
+          await holdEarningsForOrder(String(order._id), false);
+        }
+      }
 
       // Notify buyer
       const buyerUser = await User.findById(dispute.buyerId).lean();

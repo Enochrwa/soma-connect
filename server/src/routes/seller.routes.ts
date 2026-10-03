@@ -3,6 +3,9 @@ import { z } from "zod";
 import { Seller } from "../models/Seller.js";
 import { Product } from "../models/Product.js";
 import { Order } from "../models/Order.js";
+import { SellerEarning } from "../models/SellerEarning.js";
+import mongoose from "mongoose";
+import { getSellerBalance } from "../services/earnings.service.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -20,6 +23,11 @@ const applySchema = z.object({
   banner: z.string().url().optional(),
   nidUrl: z.string().url().optional(),
   licenseUrl: z.string().url().optional(),
+  // Mobile-money number earnings will be paid to (Rwandan MTN/Airtel).
+  payoutPhone: z
+    .string()
+    .regex(/^(\+?250|0)?7\d{8}$/, "Enter a valid MTN/Airtel number, e.g. 0788 123 456")
+    .optional(),
 });
 
 sellerRouter.post(
@@ -41,6 +49,7 @@ sellerRouter.post(
         location: { sector: body.sector, district: body.district },
         logo: body.logo,
         banner: body.banner,
+        payoutPhone: body.payoutPhone?.replace(/\s+/g, ""),
         documents: {
           nidUrl: body.nidUrl,
           licenseUrl: body.licenseUrl,
@@ -84,7 +93,7 @@ sellerRouter.get(
       if (!seller) throw new HttpError(404, "No store found.");
 
       const { status, page = "1", limit = "20" } = req.query as Record<string, string | undefined>;
-      const filter: Record<string, unknown> = { sellerIds: String(seller._id) };
+      const filter: Record<string, unknown> = { sellerIds: seller._id };
       if (status) filter.status = status;
 
       const pg = Math.max(1, Number(page));
@@ -124,42 +133,52 @@ sellerRouter.get(
       const seller = await Seller.findOne({ userId: req.user!.id });
       if (!seller) throw new HttpError(404, "No store found.");
 
-      const sellerId = String(seller._id);
+      const sellerOid = new mongoose.Types.ObjectId(String(seller._id));
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-      const [totalOrders, pendingOrders, recentRevenue, totalProducts, activeProducts] =
+      const [totalOrders, pendingOrders, recent, totalProducts, activeProducts, balance] =
         await Promise.all([
-          Order.countDocuments({ sellerIds: sellerId }),
-          Order.countDocuments({ sellerIds: sellerId, status: "placed" }),
-          Order.aggregate([
+          Order.countDocuments({ sellerIds: sellerOid }),
+          // Orders that need the seller's attention (paid / COD, not yet shipped)
+          Order.countDocuments({
+            sellerIds: sellerOid,
+            status: { $in: ["payment_confirmed", "preparing"] },
+          }),
+          // Revenue = delivered sales (ledger), split into gross / commission / net
+          SellerEarning.aggregate([
             {
               $match: {
-                sellerIds: sellerId,
-                paymentStatus: "paid",
+                sellerId: sellerOid,
+                status: { $ne: "reversed" },
+                clawbackRequired: { $ne: true },
                 createdAt: { $gte: thirtyDaysAgo },
               },
             },
-            { $unwind: "$items" },
-            { $match: { "items.sellerId": seller._id } },
             {
               $group: {
                 _id: null,
-                total: { $sum: { $multiply: ["$items.unitPrice", "$items.quantity"] } },
+                gross: { $sum: "$commissionBase" },
+                commission: { $sum: "$commission" },
+                net: { $sum: "$net" },
               },
             },
           ]),
           Product.countDocuments({ sellerId: seller._id }),
           Product.countDocuments({ sellerId: seller._id, isActive: true }),
+          getSellerBalance(String(seller._id)),
         ]);
 
       res.json({
         totalOrders,
         pendingOrders,
-        revenueThisMonth: recentRevenue[0]?.total ?? 0,
+        revenueThisMonth: recent[0]?.gross ?? 0,
+        commissionThisMonth: recent[0]?.commission ?? 0,
+        netThisMonth: recent[0]?.net ?? 0,
         totalProducts,
         activeProducts,
         rating: seller.rating,
         ratingCount: seller.ratingCount,
+        balance,
       });
     } catch (e) {
       next(e);

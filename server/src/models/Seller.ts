@@ -29,7 +29,11 @@ const SellerSchema = new Schema(
     approvalNote: String, // Admin note on rejection
     rating: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
-    totalSales: { type: Number, default: 0 },
+    totalSales: { type: Number, default: 0 }, // gross RWF of delivered sales (net of seller-funded discounts)
+    // Mobile-money number earnings are paid to. Captured at registration.
+    payoutPhone: { type: String },
+    // Optional per-seller commission override (0–0.5). Falls back to the platform rate.
+    commissionRate: { type: Number, min: 0, max: 0.5 },
     isActive: { type: Boolean, default: false }, // false until admin approves
     holidayMode: { type: Boolean, default: false },
   },

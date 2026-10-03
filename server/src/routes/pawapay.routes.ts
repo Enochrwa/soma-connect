@@ -12,6 +12,8 @@ import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { emitOrderUpdate } from "../socket/index.js";
+import { applyOrderPaid } from "../services/order.lifecycle.js";
+import { markEarningsPaid, releaseEarnings } from "../services/earnings.service.js";
 import {
   predictProvider,
   initiateDeposit,
@@ -94,6 +96,10 @@ pawapayRouter.post(
       if (!order) throw new HttpError(404, "Order not found.");
       if (String(order.buyerId) !== req.user!.id) throw new HttpError(403, "Not your order.");
       if (order.paymentStatus === "paid") throw new HttpError(400, "This order is already paid.");
+      if (order.status === "cancelled") throw new HttpError(400, "This order was cancelled.");
+      if (order.paymentMethod === "cod" && order.status !== "placed") {
+        throw new HttpError(400, "This order is set to cash on delivery.");
+      }
 
       // Let pawaPay validate/sanitise the number and tell us the network.
       // The customer's explicit choice wins if they overrode the prediction.
@@ -209,7 +215,8 @@ pawapayRouter.get("/status/:depositId", requireAuth, async (req: AuthedRequest, 
     res.json({
       status: updated?.status,
       pawapayStatus: updated?.pawapayStatus,
-      message: updated?.status === "failed" ? friendlyFailure(updated.pawapayFailureCode) : undefined,
+      message:
+        updated?.status === "failed" ? friendlyFailure(updated.pawapayFailureCode) : undefined,
     });
   } catch (e) {
     next(e);
@@ -218,7 +225,11 @@ pawapayRouter.get("/status/:depositId", requireAuth, async (req: AuthedRequest, 
 
 /** Rejects callbacks that don't carry our shared secret, when one is configured. */
 function callbackAuthorised(req: { query: Record<string, unknown> }): boolean {
-  if (!env.PAWAPAY_CALLBACK_SECRET) return true;
+  if (!env.PAWAPAY_CALLBACK_SECRET) {
+    // Without a secret anyone who guesses the URL could POST a fake COMPLETED and
+    // get free goods. Only tolerate that on a developer machine, never in production.
+    return env.NODE_ENV !== "production";
+  }
   return req.query.token === env.PAWAPAY_CALLBACK_SECRET;
 }
 
@@ -291,15 +302,14 @@ export async function applyDepositResult(
     tx.status = "succeeded";
     tx.needsReconciliation = false;
     if (order) {
-      order.paymentStatus = "paid";
-      order.status = "payment_confirmed";
-      order.statusHistory.push({
-        status: "payment_confirmed",
+      const outcome = await applyOrderPaid(order, "Payment confirmed by pawaPay");
+      emitOrderUpdate(String(order._id), {
+        status: order.status,
         at: new Date(),
-        note: "Payment confirmed by pawaPay",
+        ...(outcome === "cancelled_refund_pending"
+          ? { paymentFailed: false, refundPending: true }
+          : {}),
       });
-      await order.save();
-      emitOrderUpdate(String(order._id), { status: "payment_confirmed", at: new Date() });
     }
   } else if (status === "FAILED") {
     tx.status = "failed";
@@ -341,6 +351,7 @@ export async function applyPayoutResult(
   if (status === "COMPLETED") {
     payout.status = "sent";
     payout.needsReconciliation = false;
+    await markEarningsPaid(String(payout._id));
     // Notify the seller only now — the money has actually moved.
     try {
       const seller = await Seller.findById(payout.sellerId).lean();
@@ -358,6 +369,8 @@ export async function applyPayoutResult(
     payout.needsReconciliation = false;
     payout.pawapayFailureCode = failureReason?.failureCode;
     payout.pawapayFailureMessage = failureReason?.failureMessage;
+    // Nothing was paid — give the seller's earnings back so they can request again.
+    await releaseEarnings(String(payout._id));
   } else if (status === "IN_RECONCILIATION") {
     payout.needsReconciliation = true;
   }

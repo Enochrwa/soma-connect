@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import passport from "passport";
 import {
   Strategy as GoogleStrategy,
@@ -7,12 +8,14 @@ import {
 import { nanoid } from "nanoid";
 import { env } from "./env.js";
 import { User } from "../models/User.js";
+import { attachReferral, generateReferralCode } from "../services/referral.service.js";
 
 // Google OAuth is only registered when credentials are configured.
 export const googleOAuthEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
 if (googleOAuthEnabled) {
   const verify = async (
+    req: Request,
     _accessToken: string,
     _refreshToken: string,
     profile: Profile,
@@ -72,8 +75,11 @@ if (googleOAuthEnabled) {
           googleId: profile.id,
           emailVerifiedAt: email ? new Date() : undefined,
           profile: { name, avatar, language: "en" },
-          referralCode: nanoid(8).toUpperCase(),
+          referralCode: await generateReferralCode(),
         });
+        // The sign-up page passes a friend's code through the OAuth `state` param.
+        const state = typeof req.query.state === "string" ? req.query.state : "";
+        if (state.startsWith("ref:")) await attachReferral(String(user._id), state.slice(4));
         console.log("Passport verify: New user created", { userId: String(user._id), email });
       }
 
@@ -94,6 +100,7 @@ if (googleOAuthEnabled) {
         clientID: env.GOOGLE_CLIENT_ID,
         clientSecret: env.GOOGLE_CLIENT_SECRET,
         callbackURL: env.GOOGLE_CALLBACK_URL,
+        passReqToCallback: true,
       },
       verify,
     ),

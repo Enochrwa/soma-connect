@@ -6,6 +6,11 @@ import { Product } from "../models/Product.js";
 import { sendSellerApprovalEmail } from "../services/email.service.js";
 import { Order } from "../models/Order.js";
 import { Transaction } from "../models/Transaction.js";
+import { SellerEarning } from "../models/SellerEarning.js";
+import { Referral } from "../models/Referral.js";
+import { Payout } from "../models/Payout.js";
+import { applyOrderPaid } from "../services/order.lifecycle.js";
+import { BUSINESS } from "../config/business.js";
 import { Review } from "../models/Review.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -27,7 +32,12 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
       totalOrders,
       pendingSellerApprovals,
       pendingOrders,
-      paidTransactions,
+      paidOrders,
+      commission,
+      refundsPending,
+      payoutsPending,
+      clawbacks,
+      referralsRewarded,
     ] = await Promise.all([
       User.countDocuments(),
       Seller.countDocuments(),
@@ -35,10 +45,26 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
       Order.countDocuments(),
       Seller.countDocuments({ approvalStatus: "pending" }),
       Order.countDocuments({ status: { $nin: ["delivered", "cancelled"] } }),
-      Transaction.aggregate([
-        { $match: { status: "succeeded" } },
-        { $group: { _id: null, total: { $sum: "$amount" } } },
+      // GMV = every order that was actually paid for (mobile money AND cash on delivery),
+      // not just gateway transactions.
+      Order.aggregate([
+        { $match: { paymentStatus: "paid" } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
+      // Platform revenue = commission on delivered sales (reversed rows excluded)
+      SellerEarning.aggregate([
+        { $match: { status: { $ne: "reversed" }, clawbackRequired: { $ne: true } } },
+        {
+          $group: { _id: null, total: { $sum: "$commission" }, base: { $sum: "$commissionBase" } },
+        },
+      ]),
+      Order.countDocuments({ paymentStatus: "refund_pending" }),
+      Payout.aggregate([
+        { $match: { status: { $in: ["pending", "processing"] } } },
+        { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
+      ]),
+      SellerEarning.countDocuments({ clawbackRequired: true }),
+      Referral.countDocuments({ status: "rewarded" }),
     ]);
 
     const recentOrders = await Order.find()
@@ -47,7 +73,7 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
       .populate("buyerId", "profile phone")
       .lean();
 
-    const gmv = paidTransactions[0]?.total ?? 0;
+    const gmv = paidOrders[0]?.total ?? 0;
 
     res.json({
       stats: {
@@ -59,6 +85,13 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
         pendingOrders,
         gmv,
         totalRevenue: gmv,
+        commissionEarned: commission[0]?.total ?? 0,
+        commissionRate: BUSINESS.COMMISSION_RATE,
+        refundsPending,
+        pendingPayoutAmount: payoutsPending[0]?.total ?? 0,
+        pendingPayoutCount: payoutsPending[0]?.count ?? 0,
+        clawbacksOutstanding: clawbacks,
+        referralsRewarded,
       },
       recentOrders,
     });
@@ -219,9 +252,10 @@ adminRouter.patch("/products/:id/toggle", async (req, res, next) => {
 
 adminRouter.get("/orders", async (req, res, next) => {
   try {
-    const { status, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const { status, paymentStatus, page = "1", limit = "20" } = req.query as Record<string, string>;
     const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
     const pg = Math.max(1, Number(page));
     const lim = Math.min(100, Number(limit));
     const [orders, total] = await Promise.all([
@@ -271,12 +305,12 @@ adminRouter.get("/analytics/revenue", async (req, res, next) => {
   try {
     const { days = "30" } = req.query as { days?: string };
     const since = new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000);
-    const data = await Transaction.aggregate([
-      { $match: { status: "succeeded", createdAt: { $gte: since } } },
+    const data = await Order.aggregate([
+      { $match: { paymentStatus: "paid", paidAt: { $gte: since } } },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          revenue: { $sum: "$amount" },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$paidAt" } },
+          revenue: { $sum: "$total" },
           orders: { $sum: 1 },
         },
       },
@@ -412,7 +446,6 @@ adminRouter.get("/disputes", async (req, res, next) => {
 });
 
 // ── Payouts Management ────────────────────────────────────────────────────────
-import { Payout } from "../models/Payout.js";
 
 adminRouter.get("/payouts", async (_req, res, next) => {
   try {
@@ -435,25 +468,77 @@ adminRouter.post("/orders/:orderId/confirm-payment", async (req: AuthedRequest, 
     if (!order) throw new HttpError(404, "Order not found.");
     if (order.paymentStatus === "paid") throw new HttpError(400, "Payment already confirmed.");
 
-    order.paymentStatus = "paid";
-    order.status = "payment_confirmed";
-    order.statusHistory.push({
-      status: "payment_confirmed",
-      at: new Date(),
-      note: `Manual payment confirmed by admin (${req.user!.id})`,
-    });
-    await order.save();
+    const outcome = await applyOrderPaid(
+      order,
+      `Manual payment confirmed by admin (${req.user!.id})`,
+    );
 
     if (order.paymentRef) {
-      await (
-        await import("../models/Transaction.js")
-      ).Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
+      await Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
     }
 
     const { emitOrderUpdate } = await import("../socket/index.js");
-    emitOrderUpdate(String(order._id), { status: "payment_confirmed", at: new Date() });
+    emitOrderUpdate(String(order._id), { status: order.status, at: new Date() });
 
-    res.json({ message: "Payment confirmed.", order });
+    res.json({
+      message:
+        outcome === "cancelled_refund_pending"
+          ? "The order had already been cancelled — it's now flagged for refund."
+          : "Payment confirmed.",
+      order,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Admin has sent the money back to the buyer (cancelled-after-payment or refunded order).
+adminRouter.post("/orders/:orderId/mark-refunded", async (req: AuthedRequest, res, next) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) throw new HttpError(404, "Order not found.");
+    if (order.paymentStatus !== "refund_pending") {
+      throw new HttpError(400, "This order has no refund pending.");
+    }
+    order.paymentStatus = "refunded";
+    order.statusHistory.push({
+      status: order.status,
+      at: new Date(),
+      note: `Refund sent to buyer (marked by admin ${req.user!.id})`,
+    });
+    await order.save();
+    res.json({ message: "Marked as refunded.", order });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Seller commission override ────────────────────────────────────────────────
+const commissionSchema = z.object({ rate: z.number().min(0).max(0.5).nullable() });
+adminRouter.patch("/sellers/:id/commission", validate(commissionSchema), async (req, res, next) => {
+  try {
+    const { rate } = req.body as z.infer<typeof commissionSchema>;
+    const seller = await Seller.findByIdAndUpdate(
+      req.params.id,
+      rate === null ? { $unset: { commissionRate: 1 } } : { commissionRate: rate },
+      { new: true },
+    );
+    if (!seller) throw new HttpError(404, "Seller not found.");
+    res.json({ seller, effectiveRate: seller.commissionRate ?? BUSINESS.COMMISSION_RATE });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ── Refund clawbacks (refunds issued after a seller was already paid out) ────
+adminRouter.get("/earnings/clawbacks", async (_req, res, next) => {
+  try {
+    const rows = await SellerEarning.find({ clawbackRequired: true })
+      .sort({ updatedAt: -1 })
+      .limit(100)
+      .populate("sellerId", "storeName")
+      .lean();
+    res.json({ clawbacks: rows, total: rows.length });
   } catch (e) {
     next(e);
   }

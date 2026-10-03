@@ -6,7 +6,11 @@ const PayoutSchema = new Schema(
     amount: { type: Number, required: true }, // RWF, after platform commission
     grossAmount: { type: Number, required: true }, // before commission
     commission: { type: Number, required: true }, // platform fee
-    commissionRate: { type: Number, default: 0.1 }, // 10%
+    commissionRate: { type: Number, default: 0.1 }, // effective rate across the earnings in this payout
+    // Money owed back to the platform from refunds on already-paid-out sales,
+    // netted off this payout. amount = grossAmount − commission − adjustments.
+    adjustments: { type: Number, default: 0 },
+    adjustmentEarningIds: [{ type: Schema.Types.ObjectId, ref: "SellerEarning" }],
     status: {
       type: String,
       enum: ["pending", "processing", "sent", "failed"],

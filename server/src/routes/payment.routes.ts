@@ -3,7 +3,8 @@ import { z } from "zod";
 import { Order } from "../models/Order.js";
 import { Transaction } from "../models/Transaction.js";
 import { HttpError } from "../middleware/errorHandler.js";
-import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
+import { applyOrderPaid } from "../services/order.lifecycle.js";
 import { validate } from "../middleware/validate.js";
 import { emitOrderUpdate } from "../socket/index.js";
 import { nanoid } from "nanoid";
@@ -27,11 +28,16 @@ paymentRouter.post(
       const order = await Order.findById(orderId);
       if (!order) throw new HttpError(404, "Order not found.");
       if (String(order.buyerId) !== req.user!.id) throw new HttpError(403, "Not your order.");
+      if (order.status === "cancelled") throw new HttpError(400, "This order was cancelled.");
+      if (order.paymentStatus === "paid") throw new HttpError(400, "This order is already paid.");
+      if (order.status !== "placed") {
+        throw new HttpError(400, "This order has already moved past checkout.");
+      }
 
       // Cash on delivery — immediately confirm
       if (method === "cod") {
         order.paymentMethod = "cod";
-        order.paymentStatus = "pending"; // paid on delivery
+        order.paymentStatus = "pending"; // cash is collected on delivery, then marked paid
         order.status = "payment_confirmed";
         order.statusHistory.push({
           status: "payment_confirmed",
@@ -98,29 +104,36 @@ paymentRouter.get("/status/:ref", requireAuth, async (req: AuthedRequest, res, n
 });
 
 // ── Admin: confirm manual payment ─────────────────────────────────────────────
-// POST /api/payments/confirm/:orderId — admin only (checked in admin.routes)
-paymentRouter.post("/confirm/:orderId", requireAuth, async (req: AuthedRequest, res, next) => {
-  try {
-    const order = await Order.findById(req.params.orderId);
-    if (!order) throw new HttpError(404, "Order not found.");
-    if (order.paymentStatus === "paid") throw new HttpError(400, "Already confirmed.");
+// POST /api/payments/confirm/:orderId — ADMIN ONLY. (This used to be open to any
+// signed-in user, which let anyone mark their own order as paid.)
+paymentRouter.post(
+  "/confirm/:orderId",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const order = await Order.findById(req.params.orderId);
+      if (!order) throw new HttpError(404, "Order not found.");
+      if (order.paymentStatus === "paid") throw new HttpError(400, "Already confirmed.");
 
-    order.paymentStatus = "paid";
-    order.status = "payment_confirmed";
-    order.statusHistory.push({
-      status: "payment_confirmed",
-      at: new Date(),
-      note: `Payment manually confirmed by admin (${req.user!.id})`,
-    });
-    await order.save();
+      const outcome = await applyOrderPaid(
+        order,
+        `Payment manually confirmed by admin (${req.user!.id})`,
+      );
+      if (order.paymentRef) {
+        await Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
+      }
 
-    if (order.paymentRef) {
-      await Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
+      emitOrderUpdate(String(order._id), { status: order.status, at: new Date() });
+      res.json({
+        message:
+          outcome === "cancelled_refund_pending"
+            ? "The order had already been cancelled — it's now flagged for refund."
+            : "Payment confirmed.",
+        order,
+      });
+    } catch (e) {
+      next(e);
     }
-
-    emitOrderUpdate(String(order._id), { status: "payment_confirmed", at: new Date() });
-    res.json({ message: "Payment confirmed.", order });
-  } catch (e) {
-    next(e);
-  }
-});
+  },
+);

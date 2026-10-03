@@ -18,6 +18,7 @@ import {
   type PawaPayPaymentStatus,
 } from "./pawapay.service.js";
 import { applyDepositResult, applyPayoutResult } from "../routes/pawapay.routes.js";
+import { releaseEarnings } from "./earnings.service.js";
 
 const STALE_AFTER_MS = 15 * 60 * 1000; // only touch payments pending >15 min
 
@@ -81,7 +82,9 @@ export async function reconcilePawaPayPayouts() {
         await applyPayoutResult(
           payout.pawapayPayoutId,
           result.data.status as PawaPayPaymentStatus,
-          result.data.failureReason as { failureCode?: string; failureMessage?: string } | undefined,
+          result.data.failureReason as
+            | { failureCode?: string; failureMessage?: string }
+            | undefined,
         );
       } else if (result.status === "NOT_FOUND") {
         payout.status = "failed";
@@ -89,6 +92,8 @@ export async function reconcilePawaPayPayouts() {
         payout.pawapayFailureCode = "NOT_FOUND";
         payout.needsReconciliation = false;
         await payout.save();
+        // It never reached pawaPay, so nothing was paid: free the earnings up again.
+        await releaseEarnings(String(payout._id));
       } else {
         payout.lastStatusCheckAt = new Date();
         await payout.save();

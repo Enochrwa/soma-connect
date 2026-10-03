@@ -26,12 +26,11 @@ import { Coupon } from "../models/Coupon.js";
 import { Notification } from "../models/Notification.js";
 import { Review } from "../models/Review.js";
 import { randomUUID } from "crypto";
-import {
-  predictProvider,
-  initiatePayout,
-  PawaPayIndeterminateError,
-} from "./pawapay.service.js";
+import { predictProvider, initiatePayout, PawaPayIndeterminateError } from "./pawapay.service.js";
 import { runPawaPayReconciliation } from "./pawapay.reconcile.js";
+import { releaseEarnings } from "./earnings.service.js";
+import { cancelOrderWithRestore, withTransaction } from "./order.lifecycle.js";
+import { Transaction } from "../models/Transaction.js";
 import { sendMail } from "./email.service.js";
 import { env } from "../config/env.js";
 
@@ -177,6 +176,7 @@ async function runPayoutDisbursement() {
             pawapayFailureCode: result.failureReason?.failureCode,
             pawapayFailureMessage: result.failureReason?.failureMessage,
           });
+          await releaseEarnings(String(payout._id));
           continue;
         }
 
@@ -204,36 +204,40 @@ async function runPayoutDisbursement() {
 // ─────────────────────────────────────────────────────────────────────────────
 async function runOrderAutoCancelTimeout() {
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const recentlyActive = new Date(Date.now() - 30 * 60 * 1000);
 
   const staleOrders = await Order.find({
     status: "placed",
-    paymentStatus: "pending",
+    paymentStatus: { $in: ["pending", "failed"] },
     createdAt: { $lte: twoHoursAgo },
-  }).lean();
+  })
+    .select("_id orderNumber")
+    .lean();
 
-  for (const order of staleOrders) {
+  for (const stale of staleOrders) {
     try {
-      // Restore stock for each item
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(item.productId, {
-          $inc: { stock: item.quantity },
-        });
-      }
-
-      await Order.findByIdAndUpdate(order._id, {
-        status: "cancelled",
-        $push: {
-          statusHistory: {
-            status: "cancelled",
-            note: "Auto-cancelled: payment not received within 2 hours",
-            at: new Date(),
-          },
-        },
+      // Don't cancel while a mobile-money push is still in flight for this order.
+      const inFlight = await Transaction.exists({
+        orderId: stale._id,
+        status: "initiated",
+        updatedAt: { $gte: recentlyActive },
       });
+      if (inFlight) continue;
 
-      console.log(`[automation] auto-cancelled order ${order.orderNumber}`);
+      await withTransaction(async (session) => {
+        const order = await Order.findById(stale._id).session(session);
+        // Re-check inside the transaction: it may have been paid a moment ago.
+        if (!order || order.status !== "placed" || order.paymentStatus === "paid") return;
+        // Gives back stock (incl. variants), the coupon use and any redeemed points.
+        await cancelOrderWithRestore(
+          order,
+          session,
+          "Auto-cancelled: payment not received within 2 hours",
+        );
+      });
+      console.log(`[automation] auto-cancelled order ${stale.orderNumber}`);
     } catch (e) {
-      console.error("[automation] auto-cancel failed for order", order._id, e);
+      console.error("[automation] auto-cancel failed for order", stale._id, e);
     }
   }
 }

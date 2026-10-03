@@ -5,6 +5,7 @@ import { Order } from "../models/Order.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { HttpError } from "../middleware/errorHandler.js";
+import { getReferralSummary } from "../services/referral.service.js";
 
 export const userRouter = Router();
 
@@ -115,6 +116,17 @@ userRouter.delete(
     }
   },
 );
+
+// ── My referrals (invite code, stats, who joined) ────────────────────────────
+userRouter.get("/me/referrals", requireAuth, async (req: AuthedRequest, res, next) => {
+  try {
+    const user = await User.findById(req.user!.id).select("referralCode").lean();
+    if (!user) throw new HttpError(404, "User not found.");
+    res.json({ code: user.referralCode, ...(await getReferralSummary(req.user!.id)) });
+  } catch (e) {
+    next(e);
+  }
+});
 
 // ── My orders ─────────────────────────────────────────────────────────────────
 userRouter.get("/me/orders", requireAuth, async (req: AuthedRequest, res, next) => {

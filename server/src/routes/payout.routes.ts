@@ -1,13 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Payout } from "../models/Payout.js";
+import { SellerEarning } from "../models/SellerEarning.js";
 import { Seller } from "../models/Seller.js";
-import { Order } from "../models/Order.js";
 import { User } from "../models/User.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { sendPayoutNotificationEmail } from "../services/email.service.js";
+import {
+  createPayoutForSeller,
+  getSellerBalance,
+  markEarningsPaid,
+  releaseEarnings,
+} from "../services/earnings.service.js";
 import mongoose from "mongoose";
 import { randomUUID } from "crypto";
 import {
@@ -17,8 +23,6 @@ import {
 } from "../services/pawapay.service.js";
 
 export const payoutRouter = Router();
-
-const COMMISSION_RATE = 0.1; // 10% platform commission
 
 // ── Seller: view payout history ───────────────────────────────────────────────
 payoutRouter.get(
@@ -55,57 +59,61 @@ payoutRouter.post(
       const { momoPhone } = req.body as z.infer<typeof requestSchema>;
       const seller = await Seller.findOne({ userId: req.user!.id });
       if (!seller) throw new HttpError(404, "No store found.");
-
-      // Calculate unpaid earnings from delivered, paid orders
-      const lastPayout = await Payout.findOne({ sellerId: seller._id, status: "sent" })
-        .sort({ createdAt: -1 })
-        .lean();
-
-      const sincDate = lastPayout?.createdAt ?? new Date(0);
-
-      const earningsAgg = await Order.aggregate([
-        {
-          $match: {
-            sellerIds: seller._id,
-            paymentStatus: "paid",
-            status: "delivered",
-            createdAt: { $gt: sincDate },
-          },
-        },
-        { $unwind: "$items" },
-        { $match: { "items.sellerId": new mongoose.Types.ObjectId(String(seller._id)) } },
-        {
-          $group: {
-            _id: null,
-            gross: { $sum: { $multiply: ["$items.unitPrice", "$items.quantity"] } },
-          },
-        },
-      ]);
-
-      const grossAmount = earningsAgg[0]?.gross ?? 0;
-      if (grossAmount < 1000) {
-        throw new HttpError(400, "Minimum payout is RWF 1,000. Keep selling!");
+      if (!seller.isActive || seller.approvalStatus !== "approved") {
+        throw new HttpError(403, "Your store must be approved before you can request a payout.");
       }
 
-      const commission = Math.floor(grossAmount * COMMISSION_RATE);
-      const netAmount = grossAmount - commission;
+      // Atomically claims every withdrawable earning (delivered, paid, past the
+      // hold window) so the same sale can never be paid out twice, even if the
+      // seller double-clicks. Commission was already deducted at delivery.
+      const payout = await createPayoutForSeller({ sellerId: String(seller._id), momoPhone });
 
-      const payout = await Payout.create({
-        sellerId: seller._id,
-        amount: netAmount,
-        grossAmount,
-        commission,
-        commissionRate: COMMISSION_RATE,
-        status: "pending",
-        momoPhone,
-        periodStart: sincDate,
-        periodEnd: new Date(),
-      });
+      // Remember the number for next time.
+      if (seller.payoutPhone !== momoPhone) {
+        seller.payoutPhone = momoPhone;
+        await seller.save();
+      }
 
       res.status(201).json({
         payout,
         message: "Payout request submitted. Admin will process within 1 business day.",
       });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Seller: earnings balance + per-order commission breakdown ────────────────
+payoutRouter.get(
+  "/me/balance",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const seller = await Seller.findOne({ userId: req.user!.id }).lean();
+      if (!seller) throw new HttpError(404, "No store found.");
+      const balance = await getSellerBalance(String(seller._id));
+      res.json({ balance, payoutPhone: seller.payoutPhone ?? null });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+payoutRouter.get(
+  "/me/earnings",
+  requireAuth,
+  requireRole("seller", "admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const seller = await Seller.findOne({ userId: req.user!.id }).lean();
+      if (!seller) throw new HttpError(404, "No store found.");
+      const earnings = await SellerEarning.find({ sellerId: seller._id })
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean();
+      res.json({ earnings });
     } catch (e) {
       next(e);
     }
@@ -146,6 +154,7 @@ payoutRouter.patch(
       if (!payout) throw new HttpError(404, "Payout not found.");
       if (payout.status === "sent") throw new HttpError(400, "Already disbursed.");
 
+      if (payout.status === "failed") throw new HttpError(400, "This payout was marked failed.");
       payout.status = "sent";
       payout.momoRef = momoRef;
       payout.note = note;
@@ -153,6 +162,7 @@ payoutRouter.patch(
         req.user!.id,
       ) as unknown as typeof payout.initiatedBy;
       await payout.save();
+      await markEarningsPaid(String(payout._id));
 
       // Notify seller via email
       const sellerDoc = await Seller.findById(String((payout.sellerId as { _id: string })._id));
@@ -221,6 +231,106 @@ payoutRouter.patch(
           payout.pawapayFailureCode = result.failureReason?.failureCode;
           payout.pawapayFailureMessage = result.failureReason?.failureMessage;
           await payout.save();
+          await releaseEarnings(String(payout._id));
+          throw new HttpError(
+            400,
+            result.failureReason?.failureMessage ?? "pawaPay rejected the payout.",
+          );
+        }
+
+        payout.pawapayStatus = result.status;
+        await payout.save();
+      } catch (err) {
+        if (err instanceof PawaPayIndeterminateError) {
+          payout.needsReconciliation = true;
+          await payout.save();
+          return res.status(202).json({
+            payout,
+            message: "Payout submitted but not yet confirmed — reconciliation will resolve it.",
+          });
+        }
+        throw err;
+      }
+
+      // Seller is emailed only once the callback confirms COMPLETED.
+      res.json({
+        payout,
+        message: "Payout sent to pawaPay. Status will update when it completes.",
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Admin: reject / fail a payout ────────────────────────────────────────────
+payoutRouter.patch(
+  "/admin/:id/fail",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const { note } = req.body as { note?: string };
+      const existing = await Payout.findById(req.params.id);
+      if (!existing) throw new HttpError(404, "Payout not found.");
+      if (existing.status === "sent") throw new HttpError(400, "This payout was already sent.");
+      existing.status = "failed";
+      existing.note = note;
+      await existing.save();
+      // Nothing was paid — the seller's earnings become withdrawable again.
+      await releaseEarnings(String(existing._id));
+      res.json({ payout: existing });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// ── Admin: automated payout via pawaPay ──────────────────────────────────────
+// Unlike /disburse (which only records a transfer an admin already made by hand),
+// this actually moves the money.
+payoutRouter.patch(
+  "/admin/:id/disburse-pawapay",
+  requireAuth,
+  requireRole("admin"),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const payout = await Payout.findById(req.params.id);
+      if (!payout) throw new HttpError(404, "Payout not found.");
+      if (payout.status !== "pending") throw new HttpError(400, "Payout is not pending.");
+      if (!payout.momoPhone) throw new HttpError(400, "Payout has no mobile money number on file.");
+
+      const prediction = await predictProvider(payout.momoPhone);
+      const payoutId = randomUUID();
+
+      // Persist the payoutId BEFORE calling pawaPay so we can always reconcile.
+      payout.status = "processing";
+      payout.disbursementProvider = "pawapay";
+      payout.pawapayPayoutId = payoutId;
+      payout.pawapayProvider = prediction.provider;
+      payout.momoPhone = prediction.phoneNumber;
+      payout.initiatedBy = new mongoose.Types.ObjectId(
+        req.user!.id,
+      ) as unknown as typeof payout.initiatedBy;
+      await payout.save();
+
+      try {
+        const result = await initiatePayout({
+          payoutId,
+          amount: payout.amount,
+          phoneNumber: prediction.phoneNumber,
+          provider: prediction.provider,
+          customerMessage: "Soma payout",
+          payoutRecordId: String(payout._id),
+        });
+
+        if (result.status === "REJECTED") {
+          payout.status = "failed";
+          payout.pawapayStatus = "FAILED";
+          payout.pawapayFailureCode = result.failureReason?.failureCode;
+          payout.pawapayFailureMessage = result.failureReason?.failureMessage;
+          await payout.save();
+          await releaseEarnings(String(payout._id));
           throw new HttpError(
             400,
             result.failureReason?.failureMessage ?? "pawaPay rejected the payout.",
