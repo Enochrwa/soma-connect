@@ -9,6 +9,10 @@ const OrderItemSchema = new Schema(
     variant: String,
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true },
+    // Share of the order-level discounts attributed to this line. Stored so a
+    // seller's earnings can be recomputed exactly, forever, from the order alone.
+    couponDiscount: { type: Number, default: 0 },
+    loyaltyDiscount: { type: Number, default: 0 },
   },
   { _id: true },
 );
@@ -62,12 +66,22 @@ const OrderSchema = new Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "manual_review", "paid", "failed", "refunded"],
+      // refund_pending: money was received but the order is cancelled/refunded —
+      // an admin still has to send it back. refunded: it has been sent back.
+      enum: ["pending", "manual_review", "paid", "failed", "refund_pending", "refunded"],
       default: "pending",
     },
     paymentRef: String,
     statusHistory: [StatusHistorySchema],
     couponCode: String,
+    couponId: { type: Schema.Types.ObjectId, ref: "Coupon" },
+    // Set when the coupon belongs to one seller (that seller funds the discount).
+    couponSellerId: { type: Schema.Types.ObjectId, ref: "Seller" },
+    paidAt: Date,
+    deliveredAt: Date,
+    // True once delivery has been settled: seller earnings written, loyalty
+    // points credited, referral reward evaluated. Guards against doing it twice.
+    settled: { type: Boolean, default: false },
     pointsRedeemed: { type: Number, default: 0 },
     pointsEarned: { type: Number, default: 0 },
     trackingNumber: { type: String },

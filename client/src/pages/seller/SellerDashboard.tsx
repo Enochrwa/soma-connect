@@ -14,6 +14,8 @@ import {
   useGetSellerLowStockQuery,
   useGetMyPayoutsQuery,
   useRequestPayoutMutation,
+  useGetMyBalanceQuery,
+  useGetMyEarningsQuery,
   useSetOrderTrackingMutation,
 } from "../../app/api";
 import { useAppSelector, useAppDispatch } from "../../app/hooks";
@@ -135,7 +137,10 @@ function OverviewTab() {
   const stats = [
     { label: "Orders this month", value: analytics?.totalOrders ?? "—" },
     { label: "Pending orders", value: analytics?.pendingOrders ?? "—" },
-    { label: "Revenue this month", value: analytics ? formatRWF(analytics.revenueThisMonth) : "—" },
+    {
+      label: "Earned this month (after commission)",
+      value: analytics ? formatRWF(analytics.netThisMonth) : "—",
+    },
     {
       label: "Store rating",
       value: analytics ? `★ ${(analytics.rating || 0).toFixed(1)} (${analytics.ratingCount})` : "—",
@@ -599,10 +604,21 @@ const ORDER_STATUSES = [
   "payment_confirmed",
   "preparing",
   "packed",
+  "picked_up",
   "out_for_delivery",
   "delivered",
   "cancelled",
 ];
+// Same order the server enforces — orders only move forward.
+const FLOW = [
+  "payment_confirmed",
+  "preparing",
+  "packed",
+  "picked_up",
+  "out_for_delivery",
+  "delivered",
+];
+const NEXT_STEPS = ["preparing", "packed", "picked_up", "out_for_delivery", "delivered"];
 const STATUS_LABELS: Record<string, string> = {
   placed: "Placed",
   payment_confirmed: "Payment confirmed",
@@ -637,7 +653,7 @@ function OrdersTab() {
     try {
       await updateStatus({ id: orderId, status: newStatus }).unwrap();
     } catch (e) {
-      console.error("Status update failed", e);
+      alert((e as { data?: { error?: string } }).data?.error ?? "Couldn't update the order.");
     } finally {
       setUpdating(null);
     }
@@ -796,30 +812,63 @@ function OrdersTab() {
                       </div>
                     )}
 
-                    {/* Status update */}
-                    {o.status !== "delivered" && o.status !== "cancelled" && (
-                      <div className="flex flex-wrap gap-2">
-                        {ORDER_STATUSES.filter((s) => !["placed", "cancelled"].includes(s)).map(
-                          (s) => (
+                    {/* Status update — only valid next steps are offered */}
+                    {(() => {
+                      const status = String(o.status);
+                      const paymentOk = o.paymentStatus === "paid" || o.paymentMethod === "cod";
+                      const multiSeller = (o.sellerIds as unknown[] | undefined)?.length
+                        ? (o.sellerIds as unknown[]).length > 1
+                        : false;
+                      if (status === "delivered" || status === "cancelled") return null;
+                      if (!paymentOk || status === "placed") {
+                        return (
+                          <p className="text-xs bg-saffron/10 text-saffron-dark rounded-lg px-3 py-2">
+                            Waiting for payment confirmation before this order can be prepared.
+                          </p>
+                        );
+                      }
+                      const idx = FLOW.indexOf(status);
+                      const next = NEXT_STEPS.filter(
+                        (st) => FLOW.indexOf(st) > idx && !(st === "delivered" && multiSeller),
+                      );
+                      const canCancel =
+                        !multiSeller &&
+                        ["payment_confirmed", "preparing", "packed"].includes(status);
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {next.map((st) => (
                             <button
-                              key={s}
-                              disabled={updating === String(o._id) || o.status === s}
-                              onClick={() => handleStatusChange(String(o._id), s)}
-                              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                                o.status === s
-                                  ? "bg-forest text-saffron border-forest"
-                                  : "border-forest/20 text-forest hover:bg-forest/5"
-                              }`}
+                              key={st}
+                              disabled={updating === String(o._id)}
+                              onClick={() => handleStatusChange(String(o._id), st)}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-forest/20 text-forest hover:bg-forest/5 transition-colors"
                             >
                               {updating === String(o._id) ? (
                                 <Loader2 size={10} className="animate-spin inline mr-0.5" />
                               ) : null}
-                              {STATUS_LABELS[s]}
+                              Mark {STATUS_LABELS[st].toLowerCase()}
                             </button>
-                          ),
-                        )}
-                      </div>
-                    )}
+                          ))}
+                          {multiSeller && (
+                            <span className="text-xs text-slate/50">
+                              Shared order — the final delivery confirmation is done by SOMA.
+                            </span>
+                          )}
+                          {canCancel && (
+                            <button
+                              disabled={updating === String(o._id)}
+                              onClick={() => {
+                                if (confirm("Cancel this order? The buyer will be refunded."))
+                                  handleStatusChange(String(o._id), "cancelled");
+                              }}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              Cancel order
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -835,23 +884,29 @@ function OrdersTab() {
 
 function PayoutsTab() {
   const { data, isLoading } = useGetMyPayoutsQuery();
+  const { data: balanceData } = useGetMyBalanceQuery();
+  const { data: earningsData } = useGetMyEarningsQuery();
   const [requestPayout, { isLoading: requesting }] = useRequestPayoutMutation();
   const [momoPhone, setMomoPhone] = useState("");
   const [reqError, setReqError] = useState("");
   const [reqSuccess, setReqSuccess] = useState("");
 
+  const balance = balanceData?.balance;
+  const phone = momoPhone || balanceData?.payoutPhone || "";
+  const ratePct = Math.round((balance?.commissionRate ?? 0.1) * 1000) / 10;
+  const canRequest = (balance?.available ?? 0) >= (balance?.minPayout ?? 1000);
+
   async function handleRequest(e: React.FormEvent) {
     e.preventDefault();
     setReqError("");
     setReqSuccess("");
-    if (!momoPhone.trim()) {
+    if (!phone.trim()) {
       setReqError("Enter your MoMo phone number.");
       return;
     }
     try {
-      const result = await requestPayout({ momoPhone }).unwrap();
+      const result = await requestPayout({ momoPhone: phone.trim() }).unwrap();
       setReqSuccess(result.message ?? "Payout requested!");
-      setMomoPhone("");
     } catch (err: unknown) {
       setReqError(
         (err as { data?: { error?: string } }).data?.error ?? "Failed to request payout.",
@@ -860,40 +915,138 @@ function PayoutsTab() {
   }
 
   const payouts = data?.payouts ?? [];
+  const earnings = earningsData?.earnings ?? [];
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-50 text-yellow-700",
     processing: "bg-blue-50 text-blue-700",
     sent: "bg-green-50 text-green-700",
     failed: "bg-red-50 text-red-700",
+    available: "bg-green-50 text-green-700",
+    requested: "bg-blue-50 text-blue-700",
+    paid: "bg-slate/10 text-slate",
+    reversed: "bg-red-50 text-red-700",
   };
+
+  const cards = balance
+    ? [
+        { label: "Available to withdraw", value: balance.available, tone: "text-green-700" },
+        {
+          label: `Clearing (${balance.holdDays}-day hold)`,
+          value: balance.clearing,
+          tone: "text-saffron",
+        },
+        { label: "In payout", value: balance.inPayout, tone: "text-blue-700" },
+        { label: "Paid out", value: balance.paidOut, tone: "text-forest" },
+        { label: "Coming from open orders", value: balance.upcoming, tone: "text-slate/70" },
+        {
+          label: `Commission paid (${ratePct}%)`,
+          value: balance.totalCommission,
+          tone: "text-slate/70",
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
-      <h2 className="font-display text-lg text-forest">Payouts</h2>
-      <p className="text-sm text-slate/60">Platform commission: 10%. Minimum payout: RWF 1,000.</p>
+      <h2 className="font-display text-lg text-forest">Earnings &amp; payouts</h2>
+      <p className="text-sm text-slate/60">
+        SOMA keeps a {ratePct}% commission on item sales (delivery fees are yours to pass on, not
+        commissionable). Earnings become withdrawable {balance?.holdDays ?? 2} day(s) after an order
+        is delivered. Minimum payout: {formatRWF(balance?.minPayout ?? 1000)}.
+      </p>
+
+      {cards.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {cards.map((c) => (
+            <div key={c.label} className="bg-white rounded-2xl shadow-card p-4">
+              <p className="text-xs text-slate/50">{c.label}</p>
+              <p className={`font-mono font-bold text-lg mt-1 ${c.tone}`}>{formatRWF(c.value)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {balance && balance.owed > 0 && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+          {formatRWF(balance.owed)} from refunded orders will be deducted from your next payout.
+        </div>
+      )}
 
       {/* Request payout */}
       <div className="bg-white rounded-2xl shadow-card p-5">
-        <h3 className="font-semibold text-forest mb-3">Request payout</h3>
+        <h3 className="font-semibold text-forest mb-3">Withdraw earnings</h3>
         <form onSubmit={handleRequest} className="flex gap-2">
           <input
             placeholder="MoMo phone (e.g. 0781234567)"
-            value={momoPhone}
+            value={phone}
             onChange={(e) => setMomoPhone(e.target.value)}
             className="flex-1 border border-forest/15 rounded-lg px-3 py-2 text-sm font-mono"
           />
           <button
             type="submit"
-            disabled={requesting}
-            className="btn-primary flex items-center gap-2"
+            disabled={requesting || !canRequest}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50"
           >
             {requesting ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
-            Request
+            Withdraw {balance ? formatRWF(balance.available) : ""}
           </button>
         </form>
+        {!canRequest && balance && (
+          <p className="text-xs text-slate/50 mt-2">
+            You can withdraw once {formatRWF(balance.minPayout)} is available.
+          </p>
+        )}
         {reqError && <p className="text-vermillion text-xs mt-2">{reqError}</p>}
         {reqSuccess && <p className="text-green-700 text-xs mt-2">{reqSuccess}</p>}
       </div>
+
+      {/* Per-order commission breakdown */}
+      {earnings.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-card p-5">
+          <h3 className="font-semibold text-forest mb-3">Earnings by order</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate/50 border-b border-forest/8">
+                  <th className="py-2 pr-3">Order</th>
+                  <th className="py-2 pr-3 text-right">Sales</th>
+                  <th className="py-2 pr-3 text-right">Commission</th>
+                  <th className="py-2 pr-3 text-right">You earn</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {earnings.map((e) => (
+                  <tr key={e._id} className="border-b border-forest/5 last:border-0">
+                    <td className="py-2 pr-3 font-mono text-xs">{e.orderNumber}</td>
+                    <td className="py-2 pr-3 text-right font-mono">
+                      {formatRWF(e.commissionBase)}
+                    </td>
+                    <td className="py-2 pr-3 text-right font-mono text-slate/60">
+                      −{formatRWF(e.commission)}
+                    </td>
+                    <td className="py-2 pr-3 text-right font-mono font-bold text-forest">
+                      {formatRWF(e.net)}
+                    </td>
+                    <td className="py-2">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${statusColors[e.clawbackRequired ? "reversed" : e.status] ?? "bg-slate/10"}`}
+                      >
+                        {e.clawbackRequired
+                          ? "refunded"
+                          : e.onHold
+                            ? "on hold (dispute)"
+                            : e.status === "available" && new Date(e.availableAt) > new Date()
+                              ? `clears ${new Date(e.availableAt).toLocaleDateString("en-RW")}`
+                              : e.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Payout history */}
       {isLoading ? (
@@ -904,6 +1057,7 @@ function PayoutsTab() {
         <p className="text-slate/50 text-center py-8">No payout history yet.</p>
       ) : (
         <div className="space-y-3">
+          <h3 className="font-semibold text-forest">Payout history</h3>
           {payouts.map((p) => {
             const payout = p as unknown as Record<string, unknown>;
             return (
@@ -923,9 +1077,12 @@ function PayoutsTab() {
                     {String(payout.status)}
                   </span>
                 </div>
-                <div className="mt-2 text-xs text-slate/50 flex gap-4">
-                  <span>Gross: {formatRWF(Number(payout.grossAmount))}</span>
-                  <span>Commission: {formatRWF(Number(payout.commission))}</span>
+                <div className="mt-2 text-xs text-slate/50 flex flex-wrap gap-x-4 gap-y-1">
+                  <span>Sales: {formatRWF(Number(payout.grossAmount))}</span>
+                  <span>Commission: −{formatRWF(Number(payout.commission))}</span>
+                  {Number(payout.adjustments) > 0 && (
+                    <span>Refund adjustments: −{formatRWF(Number(payout.adjustments))}</span>
+                  )}
                   {payout.momoRef != null && (
                     <span>
                       Ref: <span className="font-mono">{String(payout.momoRef)}</span>
@@ -954,7 +1111,9 @@ function AnalyticsTab() {
   const metrics = [
     { label: "Total orders", value: data.totalOrders, icon: ShoppingBag },
     { label: "Pending", value: data.pendingOrders, icon: Clock },
-    { label: "Revenue (30d)", value: formatRWF(data.revenueThisMonth), icon: BarChart2 },
+    { label: "Sales (30d)", value: formatRWF(data.revenueThisMonth), icon: BarChart2 },
+    { label: "Commission (30d)", value: formatRWF(data.commissionThisMonth), icon: BarChart2 },
+    { label: "You earned (30d)", value: formatRWF(data.netThisMonth), icon: BarChart2 },
     { label: "Rating", value: `★ ${(data.rating || 0).toFixed(1)}`, icon: CheckCircle },
     { label: "Active listings", value: data.activeProducts, icon: Package },
     { label: "Total listings", value: data.totalProducts, icon: Truck },

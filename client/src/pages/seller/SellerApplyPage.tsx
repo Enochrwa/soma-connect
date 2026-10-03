@@ -29,6 +29,7 @@ export default function SellerApplyPage() {
     description: "",
     accountType: "individual",
     sector: "",
+    payoutPhone: "",
     logo: [] as string[],
     banner: [] as string[],
     nidUrl: [] as string[],
@@ -43,21 +44,24 @@ export default function SellerApplyPage() {
   }
 
   const setText =
-    (k: "storeName" | "description" | "accountType" | "sector") =>
+    (k: "storeName" | "description" | "accountType" | "sector" | "payoutPhone") =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const setImages = (k: "logo" | "banner" | "nidUrl" | "licenseUrl") => (urls: string[]) =>
     setForm((f) => ({ ...f, [k]: urls }));
 
+  const payoutPhoneValid = /^(\+?250|0)?7\d{8}$/.test(form.payoutPhone.replace(/\s+/g, ""));
+
   const handleSubmit = async () => {
-    if (!form.storeName.trim() || !form.sector) return;
+    if (!form.storeName.trim() || !form.sector || !payoutPhoneValid) return;
     try {
       await apply({
         storeName: form.storeName.trim(),
         description: form.description.trim() || undefined,
         accountType: form.accountType,
         sector: form.sector,
+        payoutPhone: form.payoutPhone.replace(/\s+/g, ""),
         logo: form.logo[0] || undefined,
         banner: form.banner[0] || undefined,
         nidUrl: form.nidUrl[0] || undefined,
@@ -90,7 +94,9 @@ export default function SellerApplyPage() {
 
   const errMsg =
     error && "data" in error
-      ? ((error.data as { message?: string })?.message ?? "Something went wrong. Please try again.")
+      ? ((error.data as { error?: string; message?: string })?.error ??
+        (error.data as { message?: string })?.message ??
+        "Something went wrong. Please try again.")
       : null;
 
   return (
@@ -206,10 +212,29 @@ export default function SellerApplyPage() {
           </div>
         )}
 
+        {/* Where earnings are paid */}
+        <div>
+          <label className="label">Mobile money number for payouts *</label>
+          <input
+            type="tel"
+            className="input w-full font-mono"
+            placeholder="0788 123 456"
+            value={form.payoutPhone}
+            onChange={setText("payoutPhone")}
+          />
+          {form.payoutPhone && !payoutPhoneValid && (
+            <p className="text-xs text-vermillion mt-1">Enter a valid MTN or Airtel number.</p>
+          )}
+          <p className="text-xs text-slate/50 mt-1">
+            Your sales earnings are paid here after a 10% platform commission is deducted. You can
+            change it whenever you request a payout.
+          </p>
+        </div>
+
         {/* Submit */}
         <button
           onClick={handleSubmit}
-          disabled={isLoading || !form.storeName.trim() || !form.sector}
+          disabled={isLoading || !form.storeName.trim() || !form.sector || !payoutPhoneValid}
           className="w-full btn-primary py-3 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (

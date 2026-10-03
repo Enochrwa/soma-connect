@@ -73,7 +73,7 @@ export default function ProductPage() {
         image: p.images?.[0] ?? "",
         unitPrice: p.price,
         quantity,
-        sellerId: typeof p.sellerId === "string" ? p.sellerId : p._id,
+        sellerId: typeof p.sellerId === "string" ? p.sellerId : (seller?._id ?? ""),
         sellerName: seller?.storeName,
         stock: p.stock,
       }),

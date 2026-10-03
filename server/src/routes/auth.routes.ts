@@ -18,6 +18,11 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { passport, googleOAuthEnabled } from "../config/passport.js";
 import type { UserDoc } from "../models/User.js";
+import {
+  attachReferral,
+  findReferrerByCode,
+  generateReferralCode,
+} from "../services/referral.service.js";
 
 export const authRouter = Router();
 
@@ -28,11 +33,25 @@ const registerSchema = z.object({
   phone: z.string().regex(phoneRwRegex, "Use the format +250 7XX XXX XXX"),
   email: z.string().email().optional(),
   password: z.string().min(8).max(128),
+  referralCode: z.string().max(30).optional(),
+});
+
+// Lets the sign-up form confirm a code is real before the user submits.
+authRouter.get("/referral/:code", strictLimiter, async (req, res, next) => {
+  try {
+    const referrer = await findReferrerByCode(req.params.code);
+    if (!referrer) return res.json({ valid: false });
+    res.json({ valid: true, referrerName: referrer.firstName });
+  } catch (e) {
+    next(e);
+  }
 });
 
 authRouter.post("/register", strictLimiter, validate(registerSchema), async (req, res, next) => {
   try {
-    const { name, phone, email, password } = req.body as z.infer<typeof registerSchema>;
+    const { name, phone, email, password, referralCode } = req.body as z.infer<
+      typeof registerSchema
+    >;
     const existing = await User.findOne({ phone });
     if (existing) throw new HttpError(409, "An account with this phone already exists.");
     const passwordHash = await bcrypt.hash(password, 10);
@@ -41,8 +60,10 @@ authRouter.post("/register", strictLimiter, validate(registerSchema), async (req
       email,
       passwordHash,
       profile: { name },
-      referralCode: nanoid(8).toUpperCase(),
+      referralCode: await generateReferralCode(),
     });
+    // Link to whoever invited them (silently ignored if the code is bad).
+    if (referralCode) await attachReferral(String(user._id), referralCode);
     const access = signAccessToken({ id: String(user._id), role: user.role });
     const refresh = signRefreshToken({ id: String(user._id), role: user.role });
     setRefreshCookie(res, refresh);
@@ -106,10 +127,18 @@ authRouter.post(
   },
 );
 
-const otpVerifySchema = z.object({ email: z.string().email(), code: z.string().length(6) });
+const otpVerifySchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6),
+  referralCode: z.string().max(30).optional(),
+});
 authRouter.post("/otp/verify", strictLimiter, validate(otpVerifySchema), async (req, res, next) => {
   try {
-    const { email, code } = req.body as { email: string; code: string };
+    const { email, code, referralCode } = req.body as {
+      email: string;
+      code: string;
+      referralCode?: string;
+    };
     const record = await Otp.findOne({ email }).sort({ createdAt: -1 });
     if (!record) throw new HttpError(400, "No code found — request a new one.");
     if (record.attempts >= 5) throw new HttpError(429, "Too many attempts. Request a new code.");
@@ -127,8 +156,9 @@ authRouter.post("/otp/verify", strictLimiter, validate(otpVerifySchema), async (
           .slice(0, 9)}`,
         email,
         emailVerifiedAt: new Date(),
-        referralCode: nanoid(8).toUpperCase(),
+        referralCode: await generateReferralCode(),
       });
+      if (referralCode) await attachReferral(String(user._id), referralCode);
     } else if (!user.emailVerifiedAt) {
       user.emailVerifiedAt = new Date();
       await user.save();
@@ -281,9 +311,11 @@ authRouter.get("/google", (req, res, next) => {
   if (!googleOAuthEnabled) {
     throw new HttpError(503, "Google sign-in is not configured.");
   }
+  const ref = typeof req.query.ref === "string" ? req.query.ref.slice(0, 30) : "";
   passport.authenticate("google", {
     scope: ["profile", "email"],
     session: false,
+    state: ref ? `ref:${ref}` : undefined,
   })(req, res, next);
 });
 

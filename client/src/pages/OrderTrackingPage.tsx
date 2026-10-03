@@ -130,10 +130,13 @@ export default function OrderTrackingPage() {
             <XCircle size={20} className="text-vermillion flex-shrink-0" />
             <div>
               <p className="font-semibold text-vermillion">Order Cancelled</p>
-              {order.paymentStatus === "refunded" && (
+              {order.paymentStatus === "refund_pending" && (
                 <p className="text-sm text-slate/60 mt-0.5">
-                  Your payment has been marked for refund.
+                  Your payment will be refunded to your mobile money account.
                 </p>
+              )}
+              {order.paymentStatus === "refunded" && (
+                <p className="text-sm text-slate/60 mt-0.5">Your payment has been refunded.</p>
               )}
             </div>
           </div>

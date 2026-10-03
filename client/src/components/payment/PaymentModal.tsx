@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useInitiatePaymentMutation } from "../../app/api";
+import {
+  useInitiatePaymentMutation,
+  usePawapayPredictMutation,
+  usePawapayInitiateMutation,
+  useLazyPawapayStatusQuery,
+} from "../../app/api";
 import { CheckCircle, XCircle, Smartphone, Banknote, Info, Copy, Loader2 } from "lucide-react";
 import { formatRWF } from "../../utils/format";
 
@@ -14,11 +19,15 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-type PaymentState = "idle" | "submitting" | "instructions" | "success" | "failed";
+type PaymentState = "idle" | "submitting" | "waiting" | "instructions" | "success" | "failed";
 
-// SOMA Connect business payment details
+// Legacy manual-transfer fallback only. Set VITE_PAWAPAY_ENABLED=false to use it.
+const PAWAPAY_ENABLED = import.meta.env.VITE_PAWAPAY_ENABLED !== "false";
 const SOMA_MTN_NUMBER = "+250 788 000 000";
 const SOMA_AIRTEL_NUMBER = "+250 732 000 000";
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS = 120_000; // MoMo PIN entry can take a couple of minutes
 
 export function PaymentModal({
   orderId,
@@ -35,6 +44,18 @@ export function PaymentModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
   const [initiatePayment] = useInitiatePaymentMutation();
+  const [pawapayPredict] = usePawapayPredictMutation();
+  const [pawapayInitiate] = usePawapayInitiateMutation();
+  const [fetchPawapayStatus] = useLazyPawapayStatusQuery();
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const deadlineRef = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    },
+    [],
+  );
 
   const isMoMo = method !== "cod";
   const methodLabel =
@@ -60,6 +81,44 @@ export function PaymentModal({
     });
   }
 
+  function stopPolling() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = null;
+  }
+
+  function succeed() {
+    stopPolling();
+    setState("success");
+    setTimeout(() => {
+      onSuccess();
+      navigate(`/orders/${orderId}`);
+    }, 1800);
+  }
+
+  function pollDepositStatus(depositId: string) {
+    deadlineRef.current = Date.now() + POLL_TIMEOUT_MS;
+    pollRef.current = setInterval(async () => {
+      try {
+        const result = await fetchPawapayStatus(depositId).unwrap();
+        if (result.status === "succeeded") {
+          succeed();
+        } else if (result.status === "failed") {
+          stopPolling();
+          setState("failed");
+          setErrorMsg(result.message ?? "The payment wasn't approved. You can try again.");
+        } else if (Date.now() > deadlineRef.current) {
+          stopPolling();
+          setState("failed");
+          setErrorMsg(
+            "We haven't had confirmation yet. If you approved the payment, your order will update automatically — otherwise please try again.",
+          );
+        }
+      } catch {
+        // Transient network error — keep polling until the deadline.
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
   async function handlePay() {
     if (isMoMo && !phone.trim()) {
       setErrorMsg("Please enter your mobile money number.");
@@ -71,15 +130,24 @@ export function PaymentModal({
     try {
       if (method === "cod") {
         await initiatePayment({ orderId, method, phone: "" }).unwrap();
-        setState("success");
-        setTimeout(() => {
-          onSuccess();
-          navigate(`/orders/${orderId}`);
-        }, 1800);
+        succeed();
         return;
       }
 
-      // For MoMo: place order in pending_payment status and show instructions
+      if (PAWAPAY_ENABLED) {
+        // pawaPay validates the number and tells us which network it's on.
+        const prediction = await pawapayPredict({ phone: phone.trim() }).unwrap();
+        const { depositId } = await pawapayInitiate({
+          orderId,
+          phone: prediction.phoneNumber,
+          provider: prediction.provider,
+        }).unwrap();
+        setState("waiting");
+        pollDepositStatus(depositId);
+        return;
+      }
+
+      // Legacy fallback: manual transfer instructions.
       await initiatePayment({ orderId, method, phone: phone.trim() }).unwrap();
       setState("instructions");
     } catch (err: unknown) {
@@ -87,6 +155,12 @@ export function PaymentModal({
       setState("failed");
       setErrorMsg(e?.data?.error ?? "Failed to place order. Please try again.");
     }
+  }
+
+  function retry() {
+    stopPolling();
+    setErrorMsg("");
+    setState("idle");
   }
 
   function handleDone() {
@@ -164,6 +238,39 @@ export function PaymentModal({
             <div className="flex flex-col items-center py-6 gap-3">
               <Loader2 className="animate-spin text-forest" size={32} />
               <p className="text-sm text-slate/70 font-medium">Placing your order…</p>
+            </div>
+          )}
+
+          {state === "waiting" && (
+            <div className="flex flex-col items-center py-6 gap-3 text-center">
+              <div className="relative">
+                <Smartphone size={40} className="text-forest" />
+                <Loader2
+                  className="animate-spin text-yellow-500 absolute -right-2 -bottom-2"
+                  size={18}
+                />
+              </div>
+              <div>
+                <p className="font-bold text-forest">Check your phone</p>
+                <p className="text-sm text-slate/60 mt-1">
+                  We sent a payment request to{" "}
+                  <span className="font-mono font-semibold text-forest">{phone}</span>. Enter your{" "}
+                  {methodLabel} PIN to approve {formatRWF(total)}.
+                </p>
+              </div>
+              <div className="flex items-start gap-2 bg-blue-50 rounded-lg p-2.5 text-left w-full">
+                <Info size={13} className="text-blue-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-700">
+                  This can take up to a minute. Your order updates automatically — no need to
+                  refresh or pay again.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-full text-center text-xs text-slate/40 hover:text-slate/60 transition"
+              >
+                Close and check later
+              </button>
             </div>
           )}
 
@@ -277,7 +384,7 @@ export function PaymentModal({
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => {
-                    setState("idle");
+                    retry();
                     setErrorMsg("");
                   }}
                   className="flex-1 bg-forest text-white font-bold py-2.5 rounded-xl text-sm"

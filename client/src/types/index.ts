@@ -19,7 +19,13 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
-export type PaymentStatus = "pending" | "manual_review" | "paid" | "failed" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "manual_review"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "refund_pending";
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +73,8 @@ export interface Seller {
   rating: number;
   ratingCount: number;
   totalSales: number;
+  payoutPhone?: string;
+  commissionRate?: number;
   isActive: boolean;
   holidayMode: boolean;
   createdAt: string;
@@ -275,3 +283,54 @@ export interface AppNotification {
 
 // Extends Order with new fields
 declare module "./index" {}
+
+// ─── Earnings & referrals ────────────────────────────────────────────────────
+
+export interface SellerBalance {
+  available: number;
+  clearing: number;
+  inPayout: number;
+  paidOut: number;
+  upcoming: number;
+  totalCommission: number;
+  totalSales: number;
+  owed: number;
+  commissionRate: number;
+  minPayout: number;
+  holdDays: number;
+}
+
+export interface SellerEarningRow {
+  _id: string;
+  orderNumber: string;
+  gross: number;
+  sellerDiscount: number;
+  commissionBase: number;
+  commissionRate: number;
+  commission: number;
+  net: number;
+  status: "available" | "requested" | "paid" | "reversed";
+  availableAt: string;
+  onHold?: boolean;
+  clawbackRequired?: boolean;
+  createdAt: string;
+}
+
+export interface ReferralSummary {
+  code: string;
+  stats: { invited: number; rewarded: number; pending: number; pointsEarned: number };
+  rules: {
+    referrerBonusPoints: number;
+    refereeBonusPoints: number;
+    minQualifyingOrder: number;
+    maxRewards: number;
+  };
+  referrals: Array<{
+    id: string;
+    friend: string;
+    status: "pending" | "rewarded" | "rejected";
+    joinedAt: string;
+    rewardedAt?: string;
+    pointsEarned: number;
+  }>;
+}

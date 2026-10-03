@@ -48,4 +48,19 @@ export const env = {
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? "",
   COOKIE_SECURE: process.env.COOKIE_SECURE === "true",
   SUPPORT_EMAIL: process.env.SUPPORT_EMAIL ?? "support@soma.rw",
+
+  // ── pawaPay (Merchant API v2) ───────────────────────────────────────────────
+  PAWAPAY_ENV: (process.env.PAWAPAY_ENV as "sandbox" | "production") ?? "sandbox",
+  PAWAPAY_API_TOKEN: process.env.PAWAPAY_API_TOKEN ?? "",
+  PAWAPAY_BASE_URL:
+    process.env.PAWAPAY_BASE_URL ??
+    (process.env.PAWAPAY_ENV === "production"
+      ? "https://api.pawapay.io"
+      : "https://api.sandbox.pawapay.io"),
+  // Shared secret appended to the callback path as ?token=… so a stranger who
+  // guesses the URL can't POST fake "COMPLETED" callbacks. This is a stopgap
+  // until RFC-9421 signature verification is enabled in the pawaPay Dashboard.
+  PAWAPAY_CALLBACK_SECRET: process.env.PAWAPAY_CALLBACK_SECRET ?? "",
+  // Enable the reconciliation cron that re-checks stuck payments.
+  PAWAPAY_RECONCILE_ENABLED: process.env.PAWAPAY_RECONCILE_ENABLED !== "false",
 };
