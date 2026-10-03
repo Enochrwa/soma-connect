@@ -10,6 +10,9 @@ import type {
   PaginatedResponse,
   Coupon,
   Payout,
+  SellerBalance,
+  SellerEarningRow,
+  ReferralSummary,
   Dispute,
   AppNotification,
 } from "../types";
@@ -138,10 +141,13 @@ export const api = createApi({
     }),
     register: b.mutation<
       { user: User; accessToken: string },
-      { name: string; phone: string; email?: string; password: string }
+      { name: string; phone: string; email?: string; password: string; referralCode?: string }
     >({
       query: (body) => ({ url: "/auth/register", method: "POST", body }),
       invalidatesTags: ["Me"],
+    }),
+    checkReferralCode: b.query<{ valid: boolean; referrerName?: string }, string>({
+      query: (code) => `/auth/referral/${encodeURIComponent(code)}`,
     }),
     requestOtp: b.mutation<{ ok: boolean }, { email: string }>({
       query: (body) => ({ url: "/auth/otp/request", method: "POST", body }),
@@ -247,6 +253,7 @@ export const api = createApi({
         description?: string;
         accountType?: string;
         sector: string;
+        payoutPhone?: string;
         logo?: string;
         banner?: string;
         nidUrl?: string;
@@ -266,7 +273,7 @@ export const api = createApi({
       { mockRef?: string; txRef?: string; message: string },
       { orderId: string; method: string; phone: string }
     >({
-      query: (body) => ({ url: "/payment/mock", method: "POST", body }),
+      query: (body) => ({ url: "/payments/mock", method: "POST", body }),
       invalidatesTags: ["Orders"],
     }),
     // ── pawaPay (Merchant API v2) ────────────────────────────────────────────
@@ -283,15 +290,12 @@ export const api = createApi({
       query: (body) => ({ url: "/payments/pawapay/initiate", method: "POST", body }),
       invalidatesTags: (_r, _e, { orderId }) => [{ type: "Order", id: orderId }],
     }),
-    pawapayStatus: b.query<
-      { status: string; pawapayStatus?: string; message?: string },
-      string
-    >({
+    pawapayStatus: b.query<{ status: string; pawapayStatus?: string; message?: string }, string>({
       query: (depositId) => `/payments/pawapay/status/${depositId}`,
     }),
 
     getPaymentStatus: b.query<{ status: string; method: string }, string>({
-      query: (ref) => `/payment/status/${ref}`,
+      query: (ref) => `/payments/status/${ref}`,
     }),
 
     uploadFiles: b.mutation<{ urls: string[] }, FormData>({
@@ -314,6 +318,10 @@ export const api = createApi({
     // ── Loyalty ──────────────────────────────────────────────────────────────
     getLoyalty: b.query<{ points: number; tier: string; events: LoyaltyEvent[] }, void>({
       query: () => "/loyalty/me",
+      providesTags: ["Loyalty"],
+    }),
+    getMyReferrals: b.query<ReferralSummary, void>({
+      query: () => "/users/me/referrals",
       providesTags: ["Loyalty"],
     }),
     claimDailyLogin: b.mutation<{ awarded: number; message?: string }, void>({
@@ -378,6 +386,9 @@ export const api = createApi({
         totalOrders: number;
         pendingOrders: number;
         revenueThisMonth: number;
+        commissionThisMonth: number;
+        netThisMonth: number;
+        balance: SellerBalance;
         totalProducts: number;
         activeProducts: number;
         rating: number;
@@ -404,9 +415,18 @@ export const api = createApi({
     validateCoupon: b.mutation<
       {
         valid: boolean;
-        coupon: { code: string; type: string; value: number; discountAmount: number };
+        coupon: {
+          code: string;
+          type: string;
+          value: number;
+          discountAmount: number;
+          storeSpecific?: boolean;
+        };
       },
-      { code: string; subtotal: number }
+      {
+        code: string;
+        items: Array<{ productId: string; quantity: number; variant?: string }>;
+      }
     >({
       query: (body) => ({ url: "/coupons/validate", method: "POST", body }),
     }),
@@ -432,6 +452,14 @@ export const api = createApi({
       query: () => "/payouts/me",
       providesTags: ["Seller"],
     }),
+    getMyBalance: b.query<{ balance: SellerBalance; payoutPhone: string | null }, void>({
+      query: () => "/payouts/me/balance",
+      providesTags: ["Seller"],
+    }),
+    getMyEarnings: b.query<{ earnings: SellerEarningRow[] }, void>({
+      query: () => "/payouts/me/earnings",
+      providesTags: ["Seller"],
+    }),
     requestPayout: b.mutation<{ payout: Payout; message: string }, { momoPhone: string }>({
       query: (body) => ({ url: "/payouts/me/request", method: "POST", body }),
       invalidatesTags: ["Seller"],
@@ -445,6 +473,39 @@ export const api = createApi({
       { id: string; momoRef: string; note?: string }
     >({
       query: ({ id, ...body }) => ({ url: `/payouts/admin/${id}/disburse`, method: "PATCH", body }),
+      invalidatesTags: ["AdminStats"],
+    }),
+
+    adminOrders: b.query<
+      { orders: Order[]; total: number; pages: number },
+      { status?: string; paymentStatus?: string; page?: number }
+    >({
+      query: (params) => ({ url: "/admin/orders", params }),
+      providesTags: ["Orders"],
+    }),
+    adminConfirmPayment: b.mutation<{ message: string; order: Order }, string>({
+      query: (id) => ({ url: `/admin/orders/${id}/confirm-payment`, method: "POST" }),
+      invalidatesTags: ["Orders", "AdminStats"],
+    }),
+    adminMarkRefunded: b.mutation<{ message: string; order: Order }, string>({
+      query: (id) => ({ url: `/admin/orders/${id}/mark-refunded`, method: "POST" }),
+      invalidatesTags: ["Orders", "AdminStats"],
+    }),
+    adminSetCommission: b.mutation<{ effectiveRate: number }, { id: string; rate: number | null }>({
+      query: ({ id, rate }) => ({
+        url: `/admin/sellers/${id}/commission`,
+        method: "PATCH",
+        body: { rate },
+      }),
+      invalidatesTags: ["AdminStats"],
+    }),
+
+    adminDisbursePawapay: b.mutation<{ payout: Payout; message: string }, string>({
+      query: (id) => ({ url: `/payouts/admin/${id}/disburse-pawapay`, method: "PATCH" }),
+      invalidatesTags: ["AdminStats"],
+    }),
+    adminFailPayout: b.mutation<{ payout: Payout }, { id: string; note?: string }>({
+      query: ({ id, ...body }) => ({ url: `/payouts/admin/${id}/fail`, method: "PATCH", body }),
       invalidatesTags: ["AdminStats"],
     }),
 
@@ -677,6 +738,16 @@ export const {
   useUpdateOrderStatusMutation,
   useGetMyPayoutsQuery,
   useRequestPayoutMutation,
+  useGetMyBalanceQuery,
+  useGetMyEarningsQuery,
+  useGetMyReferralsQuery,
+  useCheckReferralCodeQuery,
+  useAdminConfirmPaymentMutation,
+  useAdminDisbursePawapayMutation,
+  useAdminFailPayoutMutation,
+  useAdminMarkRefundedMutation,
+  useAdminSetCommissionMutation,
+  useAdminOrdersQuery,
   // Coupons
   useValidateCouponMutation,
   // Disputes

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useRegisterMutation } from "../../app/api";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useRegisterMutation, useCheckReferralCodeQuery } from "../../app/api";
 import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
 import { Eye, EyeOff, Loader2, UserPlus, CheckCircle } from "lucide-react";
@@ -73,6 +73,15 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
+  const [searchParams] = useSearchParams();
+  // A friend's invite link looks like /register?ref=ABCD1234
+  const [referralCode, setReferralCode] = useState(
+    (searchParams.get("ref") ?? "").trim().toUpperCase(),
+  );
+  const refTrimmed = referralCode.trim();
+  const { data: refCheck, isFetching: checkingRef } = useCheckReferralCodeQuery(refTrimmed, {
+    skip: refTrimmed.length < 4,
+  });
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [register, { isLoading }] = useRegisterMutation();
@@ -94,12 +103,19 @@ export default function RegisterPage() {
       return;
     }
     try {
-      const payload: { name: string; phone: string; email?: string; password: string } = {
+      const payload: {
+        name: string;
+        phone: string;
+        email?: string;
+        password: string;
+        referralCode?: string;
+      } = {
         name: form.name,
         phone: form.phone,
         password: form.password,
       };
       if (form.email) payload.email = form.email;
+      if (refTrimmed && refCheck?.valid) payload.referralCode = refTrimmed;
       const res = await register(payload).unwrap();
       dispatch(setAuth({ user: res.user, accessToken: res.accessToken }));
       navigate("/", { replace: true });
@@ -123,7 +139,9 @@ export default function RegisterPage() {
           {error && <AuthErrorBanner error={error} onDismiss={() => setError("")} />}
 
           <a
-            href={`${import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"}/auth/google`}
+            href={`${import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"}/auth/google${
+              refTrimmed && refCheck?.valid ? `?ref=${encodeURIComponent(refTrimmed)}` : ""
+            }`}
             className="w-full flex items-center justify-center gap-2 border border-forest/15 rounded-xl py-3 text-sm font-semibold text-slate hover:bg-forest/5 transition"
           >
             <GoogleIcon />
@@ -222,6 +240,29 @@ export default function RegisterPage() {
               />
               {form.confirmPassword && form.password !== form.confirmPassword && (
                 <p className="text-xs text-vermillion mt-1">Passwords don't match</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate/60 uppercase tracking-wide mb-1.5">
+                Referral code <span className="text-slate/30">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="Friend's invite code"
+                maxLength={20}
+                className="w-full rounded-xl border border-forest/15 px-4 py-3 font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-saffron/40 focus:border-saffron transition"
+              />
+              {refTrimmed.length >= 4 && !checkingRef && refCheck && (
+                <p
+                  className={`text-xs mt-1 ${refCheck.valid ? "text-green-600" : "text-vermillion"}`}
+                >
+                  {refCheck.valid
+                    ? `🎁 Invited by ${refCheck.referrerName} — you'll both earn bonus points after your first order is delivered.`
+                    : "That code isn't valid — you can still sign up without it."}
+                </p>
               )}
             </div>
 

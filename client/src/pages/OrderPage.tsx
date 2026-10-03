@@ -225,7 +225,7 @@ export default function OrderPage() {
                 <span className="font-mono text-saffron">{formatRWF(order.total)}</span>
               </div>
               <div className="text-xs text-slate/40 capitalize mt-1">
-                {order.paymentMethod.replace("_", " ")} · {order.paymentStatus}
+                {order.paymentMethod.replace("_", " ")} · {order.paymentStatus.replace("_", " ")}
               </div>
             </div>
           </div>

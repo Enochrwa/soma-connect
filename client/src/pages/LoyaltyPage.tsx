@@ -1,7 +1,7 @@
-import { useGetLoyaltyQuery, useClaimDailyLoginMutation } from "../app/api";
+import { useGetLoyaltyQuery, useClaimDailyLoginMutation, useGetMyReferralsQuery } from "../app/api";
 import { useAppSelector } from "../app/hooks";
 import type { RootState } from "../app/store";
-import { Star, Gift, Zap, Loader2, CheckCircle } from "lucide-react";
+import { Star, Gift, Zap, Loader2, CheckCircle, Copy, Share2, Users } from "lucide-react";
 import { useState } from "react";
 
 const TIER_CONFIG = {
@@ -14,13 +14,13 @@ const TIER_CONFIG = {
   regular: {
     color: "bg-blue-50 text-blue-700",
     next: "trusted",
-    pointsNeeded: 1500,
+    pointsNeeded: 2000,
     label: "Regular",
   },
   trusted: {
     color: "bg-purple-50 text-purple-700",
     next: "vip",
-    pointsNeeded: 5000,
+    pointsNeeded: 10000,
     label: "Trusted",
   },
   vip: {
@@ -37,6 +37,8 @@ export default function LoyaltyPage() {
   const [claimDaily, { isLoading: claiming }] = useClaimDailyLoginMutation();
   const [claimed, setClaimed] = useState(false);
   const [claimMsg, setClaimMsg] = useState("");
+  const { data: referrals } = useGetMyReferralsQuery(undefined, { skip: !user });
+  const [copied, setCopied] = useState(false);
 
   async function handleClaim() {
     try {
@@ -60,9 +62,18 @@ export default function LoyaltyPage() {
       </div>
     );
 
-  const tier = (user?.tier ?? "starter") as keyof typeof TIER_CONFIG;
+  const tier = (data?.tier ?? user?.tier ?? "starter") as keyof typeof TIER_CONFIG;
   const tierInfo = TIER_CONFIG[tier];
-  const points = user?.loyaltyPoints ?? 0;
+  const points = data?.points ?? user?.loyaltyPoints ?? 0;
+  const inviteLink = referrals ? `${window.location.origin}/register?ref=${referrals.code}` : "";
+  const bonus = referrals?.rules.referrerBonusPoints ?? 500;
+
+  async function copyInvite() {
+    if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
   const progress = tierInfo.pointsNeeded
     ? Math.min((points / tierInfo.pointsNeeded) * 100, 100)
     : 100;
@@ -131,6 +142,86 @@ export default function LoyaltyPage() {
         )}
       </div>
 
+      {/* Refer a friend */}
+      {referrals && (
+        <div className="bg-white rounded-2xl shadow-card p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-saffron/10 rounded-xl flex items-center justify-center">
+              <Users size={20} className="text-saffron" />
+            </div>
+            <div>
+              <h2 className="font-display font-bold text-forest">Refer a friend</h2>
+              <p className="text-xs text-slate/50">
+                You earn {bonus} points and your friend gets {referrals.rules.refereeBonusPoints}{" "}
+                when their first order (min. {referrals.rules.minQualifyingOrder.toLocaleString()}{" "}
+                RWF) is delivered.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-forest/5 rounded-xl px-4 py-3">
+            <span className="font-mono font-bold text-forest tracking-widest flex-1">
+              {referrals.code}
+            </span>
+            <button
+              onClick={copyInvite}
+              className="flex items-center gap-1.5 text-xs font-semibold text-forest hover:text-saffron"
+            >
+              {copied ? <CheckCircle size={14} /> : <Copy size={14} />}
+              {copied ? "Link copied" : "Copy invite link"}
+            </button>
+          </div>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(
+              `Join me on SOMA Market and get ${referrals.rules.refereeBonusPoints} bonus points: ${inviteLink}`,
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl transition"
+          >
+            <Share2 size={14} /> Share on WhatsApp
+          </a>
+
+          <div className="grid grid-cols-3 gap-3 mt-4 text-center">
+            {[
+              { label: "Joined", value: referrals.stats.invited },
+              { label: "Rewarded", value: referrals.stats.rewarded },
+              { label: "Points earned", value: referrals.stats.pointsEarned },
+            ].map((x) => (
+              <div key={x.label} className="bg-slate/5 rounded-xl py-3">
+                <p className="font-display text-xl font-bold text-forest">{x.value}</p>
+                <p className="text-xs text-slate/50">{x.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {referrals.referrals.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {referrals.referrals.map((r) => (
+                <div key={r.id} className="flex items-center justify-between text-sm">
+                  <span className="text-slate/70">{r.friend}</span>
+                  <span
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      r.status === "rewarded"
+                        ? "bg-green-50 text-green-700"
+                        : r.status === "rejected"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-saffron/15 text-saffron-dark"
+                    }`}
+                  >
+                    {r.status === "rewarded"
+                      ? `+${r.pointsEarned} pts`
+                      : r.status === "rejected"
+                        ? "Not eligible"
+                        : "Waiting for first delivery"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* History */}
       {data?.events?.length ? (
         <div className="bg-white rounded-2xl shadow-card p-5">
@@ -166,10 +257,9 @@ export default function LoyaltyPage() {
         </h2>
         <div className="space-y-3">
           {[
-            { label: "Daily login", points: "+10", icon: "🌅" },
-            { label: "Make a purchase", points: "+1 per 100 RWF", icon: "🛒" },
-            { label: "Leave a review", points: "+50", icon: "⭐" },
-            { label: "Refer a friend", points: "+200", icon: "👥" },
+            { label: "Daily login", points: "+5", icon: "🌅" },
+            { label: "Delivered purchase", points: "+1 per 100 RWF", icon: "🛒" },
+            { label: "Refer a friend", points: `+${bonus}`, icon: "👥" },
           ].map(({ label, points: pts, icon }) => (
             <div key={label} className="flex items-center justify-between">
               <div className="flex items-center gap-3 text-sm text-slate/70">

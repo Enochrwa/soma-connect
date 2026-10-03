@@ -5,14 +5,14 @@ collections and automated seller payouts across MTN and Airtel in Rwanda.
 
 ## What changed
 
-| File | Change |
-|---|---|
-| `src/services/pawapay.service.ts` | **New.** v2 API client — deposits, payouts, refunds, predict-provider, active-config. |
-| `src/services/pawapay.reconcile.ts` | **New.** Recheck cycle for payments whose callback never arrived. |
-| `src/routes/pawapay.routes.ts` | **New.** `/api/payments/pawapay/*` — providers, predict, initiate, status, deposit + payout callbacks. |
-| `src/routes/payout.routes.ts` | Added `PATCH /admin/:id/disburse-pawapay` — actually moves money, unlike `/disburse` which only records a manual transfer. |
-| `src/services/automation.service.ts` | **Bug fix** — the weekly payout cron used to call a 3-second mock, mark payouts `sent`, and email sellers saying they'd been paid, while no money moved. Now calls pawaPay for real, and the email only fires from the callback once the status is `COMPLETED`. |
-| `src/models/Transaction.ts`, `Payout.ts` | Additive pawaPay fields. COD and the manual flow are untouched. |
+| File                                     | Change                                                                                                                                                                                                                                                          |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/services/pawapay.service.ts`        | **New.** v2 API client — deposits, payouts, refunds, predict-provider, active-config.                                                                                                                                                                           |
+| `src/services/pawapay.reconcile.ts`      | **New.** Recheck cycle for payments whose callback never arrived.                                                                                                                                                                                               |
+| `src/routes/pawapay.routes.ts`           | **New.** `/api/payments/pawapay/*` — providers, predict, initiate, status, deposit + payout callbacks.                                                                                                                                                          |
+| `src/routes/payout.routes.ts`            | Added `PATCH /admin/:id/disburse-pawapay` — actually moves money, unlike `/disburse` which only records a manual transfer.                                                                                                                                      |
+| `src/services/automation.service.ts`     | **Bug fix** — the weekly payout cron used to call a 3-second mock, mark payouts `sent`, and email sellers saying they'd been paid, while no money moved. Now calls pawaPay for real, and the email only fires from the callback once the status is `COMPLETED`. |
+| `src/models/Transaction.ts`, `Payout.ts` | Additive pawaPay fields. COD and the manual flow are untouched.                                                                                                                                                                                                 |
 
 ## API version note
 
@@ -47,6 +47,7 @@ decimals, so amounts are rounded to whole francs before sending.
    - Payouts: `https://<api-host>/api/payments/pawapay/payouts/callback?token=<secret>`
 
    Locally, expose your server with `ngrok http 4000` and use the HTTPS URL.
+
 4. Frontend: `VITE_PAWAPAY_ENABLED=true` (default). Set `false` to revert to the
    manual-transfer flow without a code change.
 
@@ -56,22 +57,22 @@ The sandbox **skips the PIN prompt**, so payments resolve quickly.
 
 **MTN (`MTN_MOMO_RWA`)**
 
-| Number | Deposit result |
-|---|---|
-| `250783456789` | COMPLETED |
-| `250783456039` | FAILED — PAYMENT_NOT_APPROVED |
-| `250783456029` | FAILED — PAYER_NOT_FOUND |
-| `250783456019` | FAILED — PAYER_LIMIT_REACHED |
+| Number         | Deposit result                                                   |
+| -------------- | ---------------------------------------------------------------- |
+| `250783456789` | COMPLETED                                                        |
+| `250783456039` | FAILED — PAYMENT_NOT_APPROVED                                    |
+| `250783456029` | FAILED — PAYER_NOT_FOUND                                         |
+| `250783456019` | FAILED — PAYER_LIMIT_REACHED                                     |
 | `250783456129` | Stuck in SUBMITTED — **use this to test the reconciliation job** |
 
 **Airtel (`AIRTEL_RWA`)**
 
-| Number | Deposit result |
-|---|---|
-| `250733456789` | COMPLETED |
+| Number         | Deposit result                |
+| -------------- | ----------------------------- |
+| `250733456789` | COMPLETED                     |
 | `250733456049` | FAILED — INSUFFICIENT_BALANCE |
 | `250733456039` | FAILED — PAYMENT_NOT_APPROVED |
-| `250733456129` | Stuck in SUBMITTED |
+| `250733456129` | Stuck in SUBMITTED            |
 
 For payouts, `250783456789` / `250733456789` complete; `…456089` gives
 RECIPIENT_NOT_FOUND.

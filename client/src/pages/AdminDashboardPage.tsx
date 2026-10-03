@@ -10,6 +10,11 @@ import {
   useAdminDeleteCouponMutation,
   useAdminGetPayoutsQuery,
   useAdminDisbursePayoutMutation,
+  useAdminDisbursePawapayMutation,
+  useAdminFailPayoutMutation,
+  useAdminOrdersQuery,
+  useAdminConfirmPaymentMutation,
+  useAdminMarkRefundedMutation,
   useAdminGetDisputesQuery,
   useAdminResolveDisputeMutation,
   useGetAdminModerationQueueQuery,
@@ -38,6 +43,7 @@ import {
 
 type AdminTab =
   | "overview"
+  | "orders"
   | "sellers"
   | "coupons"
   | "payouts"
@@ -48,6 +54,7 @@ type AdminTab =
 
 const TAB_LABELS: Record<AdminTab, string> = {
   overview: "Overview",
+  orders: "Orders & Payments",
   sellers: "Pending Sellers",
   coupons: "Coupons",
   payouts: "Payouts",
@@ -75,7 +82,18 @@ function OverviewTab() {
     { label: "Active Products", value: stats.totalProducts },
     { label: "Total Orders", value: stats.totalOrders },
     { label: "Pending Approvals", value: stats.pendingSellerApprovals },
-    { label: "Platform Revenue", value: formatRWF(stats.gmv ?? 0) },
+    { label: "Gross sales (paid orders)", value: formatRWF(stats.gmv ?? 0) },
+    {
+      label: `Commission earned (${Math.round((stats.commissionRate ?? 0.1) * 1000) / 10}%)`,
+      value: formatRWF(stats.commissionEarned ?? 0),
+    },
+    {
+      label: `Payouts waiting (${stats.pendingPayoutCount ?? 0})`,
+      value: formatRWF(stats.pendingPayoutAmount ?? 0),
+    },
+    { label: "Refunds to send", value: stats.refundsPending ?? 0 },
+    { label: "Refund clawbacks", value: stats.clawbacksOutstanding ?? 0 },
+    { label: "Referrals rewarded", value: stats.referralsRewarded ?? 0 },
   ];
   return (
     <div className="space-y-6">
@@ -127,6 +145,123 @@ function OverviewTab() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Orders & Payments ─────────────────────────────────────────────────────────
+
+function OrdersTab() {
+  const [filter, setFilter] = useState<"awaiting" | "refund" | "all">("awaiting");
+  const query =
+    filter === "awaiting"
+      ? { status: "placed", paymentStatus: "pending" }
+      : filter === "refund"
+        ? { paymentStatus: "refund_pending" }
+        : {};
+  const { data, isLoading } = useAdminOrdersQuery(query);
+  const [confirmPayment] = useAdminConfirmPaymentMutation();
+  const [markRefunded] = useAdminMarkRefundedMutation();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function run(
+    id: string,
+    fn: (id: string) => { unwrap: () => Promise<{ message: string }> },
+  ) {
+    setBusy(id);
+    try {
+      const r = await fn(id).unwrap();
+      alert(r.message);
+    } catch (err: unknown) {
+      alert((err as { data?: { error?: string } }).data?.error ?? "Action failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const orders = data?.orders ?? [];
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        {(
+          [
+            ["awaiting", "Awaiting payment"],
+            ["refund", "Refunds to send"],
+            ["all", "All orders"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setFilter(k)}
+            className={`px-3 py-1.5 rounded-lg text-sm ${filter === k ? "bg-forest text-saffron" : "bg-white shadow-card text-slate/70"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="animate-spin text-forest" size={24} />
+        </div>
+      ) : orders.length === 0 ? (
+        <p className="text-slate/50 text-center py-12">Nothing here.</p>
+      ) : (
+        orders.map((o) => {
+          const order = o as unknown as Record<string, unknown>;
+          const buyer = order.buyerId as Record<string, unknown> | null;
+          const id = String(order._id);
+          return (
+            <div
+              key={id}
+              className="bg-white rounded-2xl shadow-card p-4 flex flex-wrap items-center gap-3"
+            >
+              <div className="flex-1 min-w-[200px]">
+                <p className="font-mono font-bold text-forest text-sm">
+                  {String(order.orderNumber)}
+                </p>
+                <p className="text-xs text-slate/50">
+                  {String((buyer?.profile as Record<string, unknown>)?.name ?? buyer?.phone ?? "—")}{" "}
+                  · {String(order.paymentMethod)} · ref {String(order.paymentRef ?? "—")}
+                </p>
+              </div>
+              <span className="font-mono font-bold text-saffron">
+                {formatRWF(Number(order.total))}
+              </span>
+              <span className="text-xs bg-forest/10 text-forest px-2 py-0.5 rounded-full">
+                {String(order.status)} / {String(order.paymentStatus)}
+              </span>
+              {order.paymentStatus === "pending" && order.status === "placed" && (
+                <button
+                  disabled={busy === id}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Confirm that RWF ${Number(order.total).toLocaleString()} was received?`,
+                      )
+                    )
+                      void run(id, confirmPayment);
+                  }}
+                  className="text-sm bg-forest text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
+                >
+                  Confirm payment received
+                </button>
+              )}
+              {order.paymentStatus === "refund_pending" && (
+                <button
+                  disabled={busy === id}
+                  onClick={() => {
+                    if (confirm("Have you sent the refund to the buyer?"))
+                      void run(id, markRefunded);
+                  }}
+                  className="text-sm bg-saffron text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
+                >
+                  Mark refund sent
+                </button>
+              )}
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }
@@ -466,6 +601,8 @@ function CouponsTab() {
 function PayoutsTab() {
   const { data, isLoading, refetch } = useAdminGetPayoutsQuery();
   const [disbursePayout] = useAdminDisbursePayoutMutation();
+  const [disbursePawapay] = useAdminDisbursePawapayMutation();
+  const [failPayout] = useAdminFailPayoutMutation();
   const [momoRefMap, setMomoRefMap] = useState<Record<string, string>>({});
   const [disbursing, setDisbursing] = useState<string | null>(null);
 
@@ -483,6 +620,31 @@ function PayoutsTab() {
       alert((err as { data?: { error?: string } }).data?.error ?? "Failed to disburse.");
     } finally {
       setDisbursing(null);
+    }
+  }
+
+  async function handlePawapay(id: string) {
+    if (!confirm("Send this payout to the seller's mobile money now via pawaPay?")) return;
+    setDisbursing(id);
+    try {
+      const r = await disbursePawapay(id).unwrap();
+      alert(r.message);
+      refetch();
+    } catch (err: unknown) {
+      alert((err as { data?: { error?: string } }).data?.error ?? "pawaPay payout failed.");
+    } finally {
+      setDisbursing(null);
+    }
+  }
+
+  async function handleFail(id: string) {
+    const note = prompt("Why is this payout being rejected? (the seller's earnings are released)");
+    if (note === null) return;
+    try {
+      await failPayout({ id, note }).unwrap();
+      refetch();
+    } catch (err: unknown) {
+      alert((err as { data?: { error?: string } }).data?.error ?? "Failed.");
     }
   }
 
@@ -533,7 +695,9 @@ function PayoutsTab() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate/50">Commission (10%)</p>
+                  <p className="text-xs text-slate/50">
+                    Commission ({Math.round(Number(payout.commissionRate ?? 0.1) * 1000) / 10}%)
+                  </p>
                   <p className="font-mono text-slate/60">{formatRWF(Number(payout.commission))}</p>
                 </div>
                 <div>
@@ -546,6 +710,28 @@ function PayoutsTab() {
               <p className="text-xs text-slate/60 mb-3">
                 MoMo: <span className="font-mono">{String(payout.momoPhone ?? "—")}</span>
               </p>
+              {Number(payout.adjustments) > 0 && (
+                <p className="text-xs text-red-600 mb-2">
+                  Includes −{formatRWF(Number(payout.adjustments))} recovered from refunded orders.
+                </p>
+              )}
+              {payout.status === "pending" && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <button
+                    onClick={() => handlePawapay(String(payout._id))}
+                    disabled={disbursing === String(payout._id)}
+                    className="flex items-center gap-1.5 text-sm bg-saffron text-white px-4 py-2 rounded-lg hover:bg-saffron-dark disabled:opacity-50"
+                  >
+                    <Zap size={13} /> Pay now (pawaPay)
+                  </button>
+                  <button
+                    onClick={() => handleFail(String(payout._id))}
+                    className="text-sm border border-red-200 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
               {payout.status === "pending" && (
                 <div className="flex gap-2">
                   <input
@@ -715,6 +901,7 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const tabs: AdminTab[] = [
     "overview",
+    "orders",
     "sellers",
     "coupons",
     "payouts",
@@ -725,6 +912,7 @@ export default function AdminDashboardPage() {
   ];
   const TAB_ICONS: Record<AdminTab, React.ElementType> = {
     overview: Users,
+    orders: CreditCard,
     sellers: CheckCircle,
     coupons: Tag,
     payouts: CreditCard,
@@ -757,6 +945,7 @@ export default function AdminDashboardPage() {
           })}
         </nav>
         {activeTab === "overview" && <OverviewTab />}
+        {activeTab === "orders" && <OrdersTab />}
         {activeTab === "sellers" && <SellersTab />}
         {activeTab === "coupons" && <CouponsTab />}
         {activeTab === "payouts" && <PayoutsTab />}

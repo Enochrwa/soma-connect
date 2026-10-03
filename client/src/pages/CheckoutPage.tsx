@@ -33,11 +33,22 @@ const PAYMENT_OPTIONS = [
   },
 ];
 
+// Keep in sync with server/src/config/business.ts
+const FREE_STANDARD_DELIVERY_THRESHOLD = 10_000;
+const MAX_POINTS_REDEMPTION_PCT = 0.2;
+const POINTS_PER_RWF = 1 / 100;
+
 const DELIVERY_OPTIONS = [
   { value: "standard" as DeliverySpeed, label: "Standard", fee: 1500, eta: "2–4 days" },
   { value: "express" as DeliverySpeed, label: "Express", fee: 2000, eta: "Same day" },
   { value: "pickup" as DeliverySpeed, label: "Pickup", fee: 0, eta: "Ready in 2 hrs" },
 ];
+
+function deliveryFeeFor(speed: DeliverySpeed, subtotal: number) {
+  if (speed === "pickup") return 0;
+  if (speed === "express") return 2000;
+  return subtotal >= FREE_STANDARD_DELIVERY_THRESHOLD ? 0 : 1500;
+}
 
 const DISTRICTS = [
   "Kigali",
@@ -86,14 +97,22 @@ export default function CheckoutPage() {
     total: number;
   } | null>(null);
 
-  const deliveryFee = DELIVERY_OPTIONS.find((d) => d.value === deliverySpeed)?.fee ?? 1500;
   const subtotal = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+  const deliveryFee = deliveryFeeFor(deliverySpeed, subtotal);
   const couponDiscount = couponApplied?.discountAmount ?? 0;
-  const loyaltyDiscount = pointsToRedeem; // 1 point = 1 RWF
-  const total = Math.max(0, subtotal + deliveryFee - couponDiscount - loyaltyDiscount);
 
+  // Points can cover at most 20% of what's left after the coupon (same rule as the server)
   const availablePoints = loyaltyData?.points ?? 0;
-  const maxRedeemable = Math.min(availablePoints, Math.floor(subtotal * 0.2));
+  const maxRedeemable = Math.max(
+    0,
+    Math.min(availablePoints, Math.floor((subtotal - couponDiscount) * MAX_POINTS_REDEMPTION_PCT)),
+  );
+  const appliedPoints = Math.min(pointsToRedeem, maxRedeemable); // 1 point = 1 RWF
+  const loyaltyDiscount = appliedPoints;
+  const total = Math.max(0, subtotal + deliveryFee - couponDiscount - loyaltyDiscount);
+  const pointsToEarn = Math.floor(
+    Math.max(0, subtotal - couponDiscount - loyaltyDiscount) * POINTS_PER_RWF,
+  );
 
   if (!items.length) {
     navigate("/cart");
@@ -104,7 +123,14 @@ export default function CheckoutPage() {
     setCouponError("");
     if (!couponInput.trim()) return;
     try {
-      const result = await validateCoupon({ code: couponInput.trim(), subtotal }).unwrap();
+      const result = await validateCoupon({
+        code: couponInput.trim(),
+        items: items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          variant: i.variant,
+        })),
+      }).unwrap();
       setCouponApplied({ code: result.coupon.code, discountAmount: result.coupon.discountAmount });
       setCouponError("");
     } catch (err: unknown) {
@@ -142,7 +168,7 @@ export default function CheckoutPage() {
         deliverySpeed,
         paymentMethod,
         couponCode: couponApplied?.code,
-        pointsToRedeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+        pointsToRedeem: appliedPoints > 0 ? appliedPoints : undefined,
       }).unwrap();
       setPendingOrder({
         id: result.order._id,
@@ -267,9 +293,11 @@ export default function CheckoutPage() {
                       <div className="font-semibold text-sm text-forest">{opt.label}</div>
                       <div className="text-xs text-slate/50 mt-0.5">{opt.eta}</div>
                       <div
-                        className={`font-mono text-sm font-bold mt-1 ${opt.fee === 0 ? "text-green-600" : "text-saffron"}`}
+                        className={`font-mono text-sm font-bold mt-1 ${deliveryFeeFor(opt.value, subtotal) === 0 ? "text-green-600" : "text-saffron"}`}
                       >
-                        {opt.fee === 0 ? "Free" : formatRWF(opt.fee)}
+                        {deliveryFeeFor(opt.value, subtotal) === 0
+                          ? "Free"
+                          : formatRWF(deliveryFeeFor(opt.value, subtotal))}
                       </div>
                     </button>
                   ))}
@@ -342,12 +370,12 @@ export default function CheckoutPage() {
                       type="range"
                       min={0}
                       max={maxRedeemable}
-                      value={pointsToRedeem}
+                      value={appliedPoints}
                       onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                       className="flex-1 accent-forest"
                     />
                     <span className="font-mono text-sm text-forest font-bold w-24 text-right">
-                      {pointsToRedeem} pts = {formatRWF(loyaltyDiscount)}
+                      {appliedPoints} pts = {formatRWF(loyaltyDiscount)}
                     </span>
                   </div>
                   {pointsToRedeem > 0 && (
@@ -439,7 +467,7 @@ export default function CheckoutPage() {
                   )}
                   {loyaltyDiscount > 0 && (
                     <div className="flex justify-between text-saffron">
-                      <span>Loyalty points ({pointsToRedeem} pts)</span>
+                      <span>Loyalty points ({appliedPoints} pts)</span>
                       <span className="font-mono">−{formatRWF(loyaltyDiscount)}</span>
                     </div>
                   )}
@@ -447,6 +475,11 @@ export default function CheckoutPage() {
                     <span className="text-forest">Total</span>
                     <span className="font-mono text-saffron">{formatRWF(total)}</span>
                   </div>
+                  {pointsToEarn > 0 && (
+                    <p className="text-xs text-slate/50 pt-1">
+                      You'll earn {pointsToEarn} loyalty points once this order is delivered.
+                    </p>
+                  )}
                 </div>
                 <button
                   type="submit"
