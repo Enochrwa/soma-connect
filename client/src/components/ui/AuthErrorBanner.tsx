@@ -96,8 +96,8 @@ export function SupportNudge() {
     <div className="mt-2 flex items-center gap-3 text-xs text-slate/50">
       <span className="flex items-center gap-1">
         <Mail size={11} />
-        <a href="mailto:support@somaconnect.rw" className="transition hover:text-forest">
-          support@somaconnect.rw
+        <a href="mailto:support@oneafricashop.rw" className="transition hover:text-forest">
+          support@oneafricashop.rw
         </a>
       </span>
       <span className="flex items-center gap-1">

@@ -8,4 +8,4 @@ Disallow: /checkout
 Disallow: /orders
 Allow: /
 
-Sitemap: https://soma-connect.vercel.app/sitemap.xml
+Sitemap: https://oneafricashop.vercel.app/sitemap.xml

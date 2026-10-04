@@ -93,7 +93,7 @@ https://dashboard.render.com/services
 
 ### Step 2: Select Your Service
 ```
-soma-connect-api (or whatever it's named)
+oneafricashop-api (or whatever it's named)
 ```
 
 ### Step 3: Click "Logs" Tab

@@ -302,7 +302,7 @@ export function PaymentModal({
                     {copied === "phone" ? "Copied!" : "Copy"}
                   </button>
                 </div>
-                <p className="text-xs text-slate/50">SOMA Connect — {methodLabel}</p>
+                <p className="text-xs text-slate/50">OneAfricaShop — {methodLabel}</p>
               </div>
 
               {/* Step 2 */}

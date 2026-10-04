@@ -8,10 +8,10 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <p>
-        SOMA Connect ("we", "our", "us") operates the SOMA digital marketplace at{" "}
-        <strong>soma-connect.vercel.app</strong> and its associated mobile applications. This policy
-        explains how we collect, use, and protect your personal data in compliance with Rwanda's{" "}
-        <strong>Law N°058/2021 on the Protection of Personal Data and Privacy</strong>.
+        OneAfricaShop ("we", "our", "us") operates the SOMA digital marketplace at{" "}
+        <strong>oneafricashop.vercel.app</strong> and its associated mobile applications. This
+        policy explains how we collect, use, and protect your personal data in compliance with
+        Rwanda's <strong>Law N°058/2021 on the Protection of Personal Data and Privacy</strong>.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">1. Data We Collect</h2>
@@ -107,8 +107,8 @@ export default function PrivacyPolicyPage() {
         8. Children's Privacy
       </h2>
       <p>
-        SOMA Connect is not directed at children under 16. We do not knowingly collect personal data
-        from minors. If you believe a minor has registered, contact us immediately.
+        OneAfricaShop is not directed at children under 16. We do not knowingly collect personal
+        data from minors. If you believe a minor has registered, contact us immediately.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">
@@ -121,7 +121,7 @@ export default function PrivacyPolicyPage() {
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">10. Contact</h2>
       <p>
-        Data Controller: SOMA Connect, Kigali, Rwanda.
+        Data Controller: OneAfricaShop, Kigali, Rwanda.
         <br />
         Email:{" "}
         <a href="mailto:privacy@soma.rw" className="text-forest hover:underline">
