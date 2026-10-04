@@ -34,7 +34,7 @@ export function Footer() {
             to="/"
             className="font-display text-2xl font-bold text-saffron block mb-3 hover:opacity-90 transition"
           >
-            SOMA
+            OAS
           </Link>
           <p className="text-ivory/60 leading-relaxed mb-4">
             Rwanda's digital marketplace. Connecting buyers and sellers across the country.
@@ -46,8 +46,8 @@ export function Footer() {
             </div>
             <div className="flex items-center gap-2">
               <Mail size={13} className="shrink-0" />
-              <a href="mailto:hello@soma.rw" className="hover:text-saffron transition">
-                hello@soma.rw
+              <a href="mailto:hello@oneafricashop.rw" className="hover:text-saffron transition">
+                hello@oneafricashop.rw
               </a>
             </div>
             <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export function Footer() {
 
       <div className="border-t border-white/10 py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ivory/40">
-          <span>© {new Date().getFullYear()} SOMA Market. Murakoze!</span>
+          <span>© {new Date().getFullYear()} OneAfricaShop. Murakoze!</span>
           <div className="flex items-center gap-4">
             <Link to="/privacy" className="hover:text-ivory/70 transition">
               Privacy Policy

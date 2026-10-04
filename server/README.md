@@ -1,4 +1,4 @@
-# SOMA Market — Server
+# OneAfricaShop — Server
 
 Express + TypeScript + Mongoose + Socket.IO.
 

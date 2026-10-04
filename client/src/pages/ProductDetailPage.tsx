@@ -437,22 +437,22 @@ export default function ProductDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{p.title} — SOMA Market</title>
+        <title>{p.title} — OneAfricaShop</title>
         <meta
           name="description"
-          content={p.description?.slice(0, 155) ?? `Buy ${p.title} on SOMA Market`}
+          content={p.description?.slice(0, 155) ?? `Buy ${p.title} on OneAfricaShop`}
         />
-        <meta property="og:title" content={`${p.title} — SOMA Market`} />
+        <meta property="og:title" content={`${p.title} — OneAfricaShop`} />
         <meta
           property="og:description"
-          content={p.description?.slice(0, 155) ?? `Shop ${p.title} on SOMA Market`}
+          content={p.description?.slice(0, 155) ?? `Shop ${p.title} on OneAfricaShop`}
         />
         {images[0] && <meta property="og:image" content={images[0]} />}
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="product" />
-        <meta property="og:site_name" content="SOMA Market" />
+        <meta property="og:site_name" content="OneAfricaShop" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${p.title} — SOMA Market`} />
+        <meta name="twitter:title" content={`${p.title} — OneAfricaShop`} />
         <meta name="twitter:description" content={p.description?.slice(0, 155) ?? ""} />
         {images[0] && <meta name="twitter:image" content={images[0]} />}
         {/* WhatsApp / general OG price */}

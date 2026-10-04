@@ -22,11 +22,11 @@ async function hfPost<T>(model: string, body: unknown): Promise<T | null> {
 }
 
 // ── 1. Upgraded Chat (Zephyr-7B-beta — returns only assistant turn) ──────────
-export async function somaAiReply(
+export async function oasAiReply(
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
 ): Promise<string> {
   if (!env.HF_API_TOKEN) {
-    return "SOMA AI isn't connected yet — add HF_API_TOKEN to your .env to enable chat.";
+    return "OneAfricaShop AI isn't connected yet — add HF_API_TOKEN to your .env to enable chat.";
   }
 
   // Build OpenAI-compatible messages for Zephyr
@@ -57,7 +57,7 @@ export async function somaAiReply(
     });
 
     if (res.status === 429 || res.status === 503) {
-      return "SOMA AI is busy right now — try again in a moment.";
+      return "OneAfricaShop AI is busy right now — try again in a moment.";
     }
     const data = (await res.json()) as Array<{ generated_text?: string }>;
     const text = data?.[0]?.generated_text?.trim() ?? "";
@@ -67,7 +67,7 @@ export async function somaAiReply(
     );
   } catch (err) {
     console.error("[ai] hf error", err);
-    return "SOMA AI is taking a break — please try again soon.";
+    return "OneAfricaShop AI is taking a break — please try again soon.";
   }
 }
 

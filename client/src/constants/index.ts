@@ -72,6 +72,6 @@ export const VERIFICATION_BADGE: Record<string, { label: string; color: string }
   top_seller: { label: "Top Seller", color: "#A855F7" },
 };
 
-export const APP_NAME = "SOMA Market";
+export const APP_NAME = "OneAfricaShop";
 export const CURRENCY = "RWF";
 export const SUPPORT_WHATSAPP = "+250 788 000 000";

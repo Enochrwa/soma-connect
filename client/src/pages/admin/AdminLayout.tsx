@@ -606,7 +606,7 @@ export default function AdminLayout() {
         </div>
         <div>
           <h1 className="font-display text-xl font-bold text-forest">Admin Panel</h1>
-          <p className="text-xs text-slate/50">SOMA Marketplace Management</p>
+          <p className="text-xs text-slate/50">OneAfricaShop Marketplace Management</p>
         </div>
       </div>
 

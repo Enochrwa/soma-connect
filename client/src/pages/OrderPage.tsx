@@ -71,7 +71,7 @@ export default function OrderPage() {
   return (
     <>
       <Helmet>
-        <title>Order {order.orderNumber} — SOMA Market</title>
+        <title>Order {order.orderNumber} — OneAfricaShop</title>
       </Helmet>
 
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">

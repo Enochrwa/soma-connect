@@ -140,7 +140,7 @@ pawapayRouter.post(
           amount: order.total,
           phoneNumber: msisdn,
           provider: chosen,
-          customerMessage: `Soma ${order.orderNumber}`,
+          customerMessage: `OAS ${order.orderNumber}`,
           orderId: String(order._id),
           clientReferenceId: order.orderNumber,
         });
@@ -287,7 +287,8 @@ export async function applyDepositResult(
   if (tx.status === "succeeded" || tx.status === "failed") return; // already settled
 
   const failureReason = payload.failureReason as
-    { failureCode?: string; failureMessage?: string } | undefined;
+    | { failureCode?: string; failureMessage?: string }
+    | undefined;
 
   tx.pawapayStatus = status;
   tx.lastStatusCheckAt = new Date();

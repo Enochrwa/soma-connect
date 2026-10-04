@@ -39,7 +39,7 @@ export const env = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY ?? "",
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ?? "",
   BREVO_API_KEY: process.env.BREVO_API_KEY ?? "",
-  SMTP_FROM: process.env.SMTP_FROM ?? "SOMA Market <no-reply@somamarket.rw>",
+  SMTP_FROM: process.env.SMTP_FROM ?? "OneAfricaShop <no-reply@somamarket.rw>",
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? "",
   GOOGLE_CALLBACK_URL:

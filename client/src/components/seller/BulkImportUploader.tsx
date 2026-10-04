@@ -162,7 +162,7 @@ export function BulkImportUploader({ onDone }: { onDone?: () => void }) {
           </p>
           <a
             href={TEMPLATE_URL}
-            download="soma-products-template.csv"
+            download="oneafricashop-products-template.csv"
             className="inline-flex items-center gap-1.5 text-xs bg-forest text-saffron px-3 py-1.5 rounded-lg hover:bg-forest/90 transition-colors"
           >
             <Download size={13} /> Download template

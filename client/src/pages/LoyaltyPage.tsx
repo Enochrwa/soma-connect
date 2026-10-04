@@ -173,7 +173,7 @@ export default function LoyaltyPage() {
           </div>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(
-              `Join me on SOMA Market and get ${referrals.rules.refereeBonusPoints} bonus points: ${inviteLink}`,
+              `Join me on OneAfricaShop and get ${referrals.rules.refereeBonusPoints} bonus points: ${inviteLink}`,
             )}`}
             target="_blank"
             rel="noreferrer"

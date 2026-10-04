@@ -151,7 +151,7 @@ export default function HomePage() {
                 to="/register"
                 className="border border-white/20 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition"
               >
-                Sell on SOMA
+                Sell on OneAfricaShop
               </Link>
             </div>
           </div>

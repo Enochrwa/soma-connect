@@ -74,8 +74,8 @@ export default function TermsOfServicePage() {
       <p>
         Buyers may request a return within 7 days of delivery if the item is significantly different
         from the listing. Contact support at{" "}
-        <a href="mailto:support@soma.rw" className="text-forest hover:underline">
-          support@soma.rw
+        <a href="mailto:support@oneafricashop.rw" className="text-forest hover:underline">
+          support@oneafricashop.rw
         </a>{" "}
         to open a dispute. Refunds are processed within 14 business days of a resolved dispute.
       </p>
@@ -126,8 +126,8 @@ export default function TermsOfServicePage() {
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">13. Contact</h2>
       <p>
         Questions about these terms?{" "}
-        <a href="mailto:legal@soma.rw" className="text-forest hover:underline">
-          legal@soma.rw
+        <a href="mailto:legal@oneafricashop.rw" className="text-forest hover:underline">
+          legal@oneafricashop.rw
         </a>
       </p>
     </div>

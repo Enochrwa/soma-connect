@@ -21,7 +21,12 @@ import { useSubmitContactMutation } from "../app/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Category =
-  "general" | "order_support" | "seller_support" | "technical" | "partnership" | "press";
+  | "general"
+  | "order_support"
+  | "seller_support"
+  | "technical"
+  | "partnership"
+  | "press";
 
 interface FormState {
   name: string;
@@ -51,7 +56,7 @@ const CATEGORIES: {
     value: "general",
     label: "General Enquiry",
     icon: MessageSquare,
-    description: "Questions about SOMA Market",
+    description: "Questions about OneAfricaShop",
   },
   {
     value: "order_support",
@@ -104,12 +109,12 @@ const FAQS = [
     a: "Refunds are processed within 3–5 business days after we confirm the return. MoMo refunds typically appear within 24 hours once processed.",
   },
   {
-    q: "How do I become a seller on SOMA?",
+    q: "How do I become a seller on OneAfricaShop?",
     a: "Visit our Become a Seller page to submit your application. Our team reviews applications within 2 business days.",
   },
   {
     q: "Is my payment information secure?",
-    a: "Yes. SOMA Market never stores your card details. All payments go through encrypted channels and are processed by certified payment providers.",
+    a: "Yes. OneAfricaShop never stores your card details. All payments go through encrypted channels and are processed by certified payment providers.",
   },
   {
     q: "Can I change or cancel my order?",
@@ -321,8 +326,8 @@ export default function ContactPage() {
                 <ContactInfoCard
                   icon={Mail}
                   label="Email"
-                  value="support@soma.rw"
-                  href="mailto:support@soma.rw"
+                  value="support@oneafricashop.rw"
+                  href="mailto:support@oneafricashop.rw"
                 />
                 <ContactInfoCard
                   icon={Phone}
@@ -634,7 +639,7 @@ export default function ContactPage() {
               <p className="mt-6 text-sm text-slate/50 text-center">
                 Still need help?{" "}
                 <a
-                  href="mailto:support@soma.rw"
+                  href="mailto:support@oneafricashop.rw"
                   className="text-forest font-semibold hover:underline"
                 >
                   Email us directly

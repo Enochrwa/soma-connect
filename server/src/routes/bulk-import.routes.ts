@@ -130,7 +130,7 @@ bulkImportRouter.get("/template", (_req: Request, res: Response) => {
   const csv = [headers.join(","), exampleRow.join(",")].join("\n");
 
   res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=soma-products-template.csv");
+  res.setHeader("Content-Disposition", "attachment; filename=oneafricashop-products-template.csv");
   res.send(csv);
 });
 

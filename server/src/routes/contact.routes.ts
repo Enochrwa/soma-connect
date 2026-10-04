@@ -2,7 +2,7 @@
  * contact.routes.ts
  *
  * Public endpoint — no auth required.
- * POST /api/contact  →  sends an email to the SOMA support inbox
+ * POST /api/contact  →  sends an email to the OneAfricaShop support inbox
  *                        and an auto-reply to the sender.
  *
  * Rate-limited at the app level (rateLimiter middleware).
@@ -51,7 +51,7 @@ const CATEGORY_LABELS: Record<ContactPayload["category"], string> = {
 
 const SUPPORT_INBOX = env.SUPPORT_EMAIL;
 
-/** Email sent to the SOMA support inbox */
+/** Email sent to the OneAfricaShop support inbox */
 function buildSupportEmail(p: ContactPayload) {
   const categoryLabel = CATEGORY_LABELS[p.category];
   const orderRow = p.orderId
@@ -65,7 +65,7 @@ function buildSupportEmail(p: ContactPayload) {
     html: `
 <div style="font-family:DM Sans,Arial,sans-serif;max-width:640px;margin:0 auto;background:#FAF7F2;color:#1C1C1E;border-radius:12px;overflow:hidden">
   <div style="background:#0A2E1F;padding:20px 24px">
-    <h1 style="color:#F5A623;margin:0;font-size:20px">SOMA Market — New Contact Submission</h1>
+    <h1 style="color:#F5A623;margin:0;font-size:20px">OneAfricaShop — New Contact Submission</h1>
     <p style="color:#a8c5b5;margin:4px 0 0;font-size:13px">Received ${new Date().toLocaleString("en-RW", { timeZone: "Africa/Kigali" })} (Kigali)</p>
   </div>
   <div style="padding:24px">
@@ -85,7 +85,7 @@ function buildSupportEmail(p: ContactPayload) {
     </p>
   </div>
   <div style="padding:12px 24px;background:#e8e0d4;font-size:11px;color:#888;text-align:center">
-    © SOMA Market · Kigali, Rwanda
+    © OneAfricaShop · Kigali, Rwanda
   </div>
 </div>`,
   };
@@ -106,18 +106,18 @@ function buildAutoReply(p: ContactPayload) {
 
   return {
     to: p.email,
-    subject: `We received your message — SOMA Market`,
-    text: `Hi ${p.name},\n\nThank you for reaching out! We've received your message about "${p.subject}" and will respond within ${sla}.\n\nYour reference category: ${categoryLabel}\n\nIf this is urgent, you can also call us at +250 792 696 038 (Mon–Fri, 8am–6pm Kigali time).\n\nMurakoze,\nThe SOMA Market Team`,
+    subject: `We received your message — OneAfricaShop`,
+    text: `Hi ${p.name},\n\nThank you for reaching out! We've received your message about "${p.subject}" and will respond within ${sla}.\n\nYour reference category: ${categoryLabel}\n\nIf this is urgent, you can also call us at +250 792 696 038 (Mon–Fri, 8am–6pm Kigali time).\n\nMurakoze,\nThe OneAfricaShop Team`,
     html: `
 <div style="font-family:DM Sans,Arial,sans-serif;max-width:600px;margin:0 auto;background:#FAF7F2;color:#1C1C1E;border-radius:12px;overflow:hidden">
   <div style="background:#0A2E1F;padding:20px 24px">
-    <h1 style="color:#F5A623;margin:0;font-size:22px">SOMA Market</h1>
+    <h1 style="color:#F5A623;margin:0;font-size:22px">OneAfricaShop</h1>
     <p style="color:#a8c5b5;margin:4px 0 0;font-size:13px">Rwanda's marketplace</p>
   </div>
   <div style="padding:24px">
     <h2 style="color:#0A2E1F;margin:0 0 12px">We've received your message! 🙏</h2>
     <p>Hi <strong>${p.name}</strong>,</p>
-    <p>Thank you for contacting SOMA Market. We've received your message and a member of our team will respond within <strong>${sla}</strong>.</p>
+    <p>Thank you for contacting OneAfricaShop. We've received your message and a member of our team will respond within <strong>${sla}</strong>.</p>
     <div style="background:#fff;border-radius:8px;padding:16px;margin:20px 0;border:1px solid #e5e5e5">
       <p style="margin:0 0 8px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:.5px">Your message summary</p>
       <p style="margin:0 0 4px"><strong>Subject:</strong> ${p.subject}</p>
@@ -127,12 +127,12 @@ function buildAutoReply(p: ContactPayload) {
     <p style="margin-bottom:4px">For urgent matters, reach us directly:</p>
     <ul style="color:#444;padding-left:20px;line-height:2">
       <li>📞 <a href="tel:+250792696038" style="color:#0A2E1F">+250 792 696 038</a> (Mon–Fri, 8am–6pm)</li>
-      <li>✉️ <a href="mailto:support@soma.rw" style="color:#0A2E1F">support@soma.rw</a></li>
+      <li>✉️ <a href="mailto:support@oneafricashop.rw" style="color:#0A2E1F">support@oneafricashop.rw</a></li>
     </ul>
-    <p style="margin-top:24px">Murakoze,<br/><strong>The SOMA Market Team</strong></p>
+    <p style="margin-top:24px">Murakoze,<br/><strong>The OneAfricaShop Team</strong></p>
   </div>
   <div style="padding:12px 24px;background:#e8e0d4;font-size:11px;color:#888;text-align:center">
-    © ${new Date().getFullYear()} SOMA Market · Kigali, Rwanda · <a href="${env.CLIENT_URL}/privacy" style="color:#888">Privacy Policy</a>
+    © ${new Date().getFullYear()} OneAfricaShop · Kigali, Rwanda · <a href="${env.CLIENT_URL}/privacy" style="color:#888">Privacy Policy</a>
   </div>
 </div>`,
   };

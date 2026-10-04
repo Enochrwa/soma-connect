@@ -124,7 +124,7 @@ export function Navbar() {
           to="/"
           className="font-display text-xl font-bold text-saffron shrink-0 hover:opacity-90 transition"
         >
-          SOMA
+          OAS
         </Link>
 
         {/* Search bar — desktop */}
@@ -277,7 +277,7 @@ export function Navbar() {
                   {/* User info header */}
                   <div className="px-4 py-2 border-b border-gray-50 mb-1">
                     <p className="text-sm font-semibold text-forest truncate">
-                      {user.profile?.name ?? "SOMA User"}
+                      {user.profile?.name ?? "OneAfricaShop User"}
                     </p>
                     <p className="text-xs text-slate/50 truncate">{user.email ?? user.phone}</p>
                   </div>
@@ -385,7 +385,7 @@ export function Navbar() {
                 <UserAvatar name={user.profile?.name} avatar={user.profile?.avatar} />
                 <div className="min-w-0">
                   <p className="text-white font-semibold text-sm truncate">
-                    {user.profile?.name ?? "SOMA User"}
+                    {user.profile?.name ?? "OneAfricaShop User"}
                   </p>
                   <p className="text-white/50 text-xs truncate">{user.email ?? user.phone}</p>
                 </div>

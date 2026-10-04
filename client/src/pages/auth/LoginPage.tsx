@@ -79,7 +79,7 @@ export default function LoginPage() {
             <ShieldCheck className="text-saffron" size={28} />
           </div>
           <h1 className="font-display text-3xl font-bold text-forest">Welcome back</h1>
-          <p className="text-slate/60 mt-1 text-sm">Sign in to your SOMA account</p>
+          <p className="text-slate/60 mt-1 text-sm">Sign in to your OneAfricaShop account</p>
         </div>
 
         {/* Mode toggle */}
@@ -251,7 +251,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-slate/60 mt-6">
-          New to SOMA?{" "}
+          New to OneAfricaShop?{" "}
           <Link to="/register" className="text-forest font-semibold hover:text-saffron transition">
             Create an account
           </Link>

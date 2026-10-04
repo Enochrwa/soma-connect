@@ -221,7 +221,7 @@ payoutRouter.patch(
           amount: payout.amount,
           phoneNumber: prediction.phoneNumber,
           provider: prediction.provider,
-          customerMessage: "Soma payout",
+          customerMessage: "OAS payout",
           payoutRecordId: String(payout._id),
         });
 
@@ -320,7 +320,7 @@ payoutRouter.patch(
           amount: payout.amount,
           phoneNumber: prediction.phoneNumber,
           provider: prediction.provider,
-          customerMessage: "Soma payout",
+          customerMessage: "OAS payout",
           payoutRecordId: String(payout._id),
         });
 

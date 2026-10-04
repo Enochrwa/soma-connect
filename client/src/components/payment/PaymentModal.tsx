@@ -23,8 +23,8 @@ type PaymentState = "idle" | "submitting" | "waiting" | "instructions" | "succes
 
 // Legacy manual-transfer fallback only. Set VITE_PAWAPAY_ENABLED=false to use it.
 const PAWAPAY_ENABLED = import.meta.env.VITE_PAWAPAY_ENABLED !== "false";
-const SOMA_MTN_NUMBER = "+250 788 000 000";
-const SOMA_AIRTEL_NUMBER = "+250 732 000 000";
+const OAS_MTN_NUMBER = "+250 788 000 000";
+const OAS_AIRTEL_NUMBER = "+250 732 000 000";
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 120_000; // MoMo PIN entry can take a couple of minutes
@@ -72,7 +72,7 @@ export function PaymentModal({
         ? "bg-red-500"
         : "bg-green-600";
 
-  const businessNumber = method === "mtn_momo" ? SOMA_MTN_NUMBER : SOMA_AIRTEL_NUMBER;
+  const businessNumber = method === "mtn_momo" ? OAS_MTN_NUMBER : OAS_AIRTEL_NUMBER;
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {

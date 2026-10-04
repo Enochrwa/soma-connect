@@ -76,16 +76,16 @@ export default function SearchPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Helmet>
-        <title>{q ? `"${q}" — Search — SOMA Market` : "Search — SOMA Market"}</title>
+        <title>{q ? `"${q}" — Search — OneAfricaShop` : "Search — OneAfricaShop"}</title>
         <meta
           name="description"
           content={
             q
-              ? `Find ${q} on SOMA Market — Rwanda's online marketplace.`
-              : "Search products on SOMA Market."
+              ? `Find ${q} on OneAfricaShop — Rwanda's online marketplace.`
+              : "Search products on OneAfricaShop."
           }
         />
-        <meta property="og:title" content={q ? `Search: ${q} — SOMA Market` : "SOMA Market"} />
+        <meta property="og:title" content={q ? `Search: ${q} — OneAfricaShop` : "OneAfricaShop"} />
       </Helmet>
       {/* Top bar */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">

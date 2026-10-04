@@ -8,7 +8,7 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <p>
-        OneAfricaShop ("we", "our", "us") operates the SOMA digital marketplace at{" "}
+        OneAfricaShop ("we", "our", "us") operates the OneAfricaShop digital marketplace at{" "}
         <strong>oneafricashop.vercel.app</strong> and its associated mobile applications. This
         policy explains how we collect, use, and protect your personal data in compliance with
         Rwanda's <strong>Law N°058/2021 on the Protection of Personal Data and Privacy</strong>.
@@ -91,8 +91,8 @@ export default function PrivacyPolicyPage() {
       </ul>
       <p className="mt-2">
         To exercise these rights, email us at{" "}
-        <a href="mailto:privacy@soma.rw" className="text-forest hover:underline">
-          privacy@soma.rw
+        <a href="mailto:privacy@oneafricashop.rw" className="text-forest hover:underline">
+          privacy@oneafricashop.rw
         </a>
         . We will respond within 30 days.
       </p>
@@ -124,8 +124,8 @@ export default function PrivacyPolicyPage() {
         Data Controller: OneAfricaShop, Kigali, Rwanda.
         <br />
         Email:{" "}
-        <a href="mailto:privacy@soma.rw" className="text-forest hover:underline">
-          privacy@soma.rw
+        <a href="mailto:privacy@oneafricashop.rw" className="text-forest hover:underline">
+          privacy@oneafricashop.rw
         </a>
         <br />
         Phone: +250 792 696 038

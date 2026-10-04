@@ -34,7 +34,7 @@ if (googleOAuthEnabled) {
 
       const email = profile.emails?.[0]?.value;
       const avatar = profile.photos?.[0]?.value;
-      const name = profile.displayName || profile.name?.givenName || "SOMA User";
+      const name = profile.displayName || profile.name?.givenName || "OneAfricaShop User";
 
       console.log("Passport verify: Profile data extracted", { email, name, avatar: !!avatar });
 

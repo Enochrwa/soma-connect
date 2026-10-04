@@ -84,7 +84,7 @@ async function run(): Promise<void> {
       passwordHash,
       role: "admin",
       emailVerifiedAt: new Date(),
-      profile: { name: "SOMA Admin", language: "en" },
+      profile: { name: "OneAfricaShop Admin", language: "en" },
       referralCode: nanoid(8).toUpperCase(),
       notificationPrefs: { email: true, sms: false, push: true },
     });
@@ -98,7 +98,7 @@ async function run(): Promise<void> {
 
   console.log("\n[create-admin] ⚠️   Security reminder:");
   console.log("   → Remove ADMIN_PHONE, ADMIN_EMAIL, ADMIN_PASSWORD from Render env vars now.");
-  console.log("   → Log in at https://somamarket.vercel.app with the phone + password above.\n");
+  console.log("   → Log in at https://oneafricashop.vercel.app with the phone + password above.\n");
 }
 
 run()

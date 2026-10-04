@@ -54,7 +54,7 @@ const baseStyle =
   "font-family:DM Sans,Arial,sans-serif;max-width:600px;margin:0 auto;background:#FAF7F2;color:#1C1C1E;border-radius:12px;overflow:hidden";
 
 function wrap(content: string) {
-  return `<div style="${baseStyle}"><div style="background:#0A2E1F;padding:20px 24px"><h1 style="color:#F5A623;margin:0;font-size:22px">SOMA Market</h1></div><div style="padding:24px">${content}</div><div style="padding:16px 24px;background:#e8e0d4;font-size:11px;color:#888;text-align:center">© SOMA Market · Kigali, Rwanda</div></div>`;
+  return `<div style="${baseStyle}"><div style="background:#0A2E1F;padding:20px 24px"><h1 style="color:#F5A623;margin:0;font-size:22px">OneAfricaShop</h1></div><div style="padding:24px">${content}</div><div style="padding:16px 24px;background:#e8e0d4;font-size:11px;color:#888;text-align:center">© OneAfricaShop · Kigali, Rwanda</div></div>`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ async function runLowStockAlerts() {
       await sendMail({
         to: user.email,
         subject: `⚠️ Stock alert — ${lowStockProducts.length + outOfStockProducts.length} product(s) need restocking`,
-        text: `You have ${lowStockProducts.length} low-stock and ${outOfStockProducts.length} out-of-stock products in your SOMA store.`,
+        text: `You have ${lowStockProducts.length} low-stock and ${outOfStockProducts.length} out-of-stock products in your OneAfricaShop store.`,
         html: wrap(`
           <h2 style="color:#0A2E1F;margin:0 0 8px">Stock Alert 📦</h2>
           <p>Hi ${seller.storeName}, here are products that need your attention:</p>
@@ -165,7 +165,7 @@ async function runPayoutDisbursement() {
           amount: payout.amount,
           phoneNumber: prediction.phoneNumber,
           provider: prediction.provider,
-          customerMessage: "Soma payout",
+          customerMessage: "OAS payout",
           payoutRecordId: String(payout._id),
         });
 
@@ -273,7 +273,7 @@ async function runLoyaltyTierUpgrade() {
       if (user.email) {
         await sendMail({
           to: user.email,
-          subject: `🎉 Congratulations! You've reached ${label} tier on SOMA Market`,
+          subject: `🎉 Congratulations! You've reached ${label} tier on OneAfricaShop`,
           text: `You've reached ${label} tier! You now have ${user.loyaltyPoints.toLocaleString()} loyalty points.`,
           html: wrap(`
             <h2 style="color:#0A2E1F">You've levelled up! 🎉</h2>
@@ -370,8 +370,8 @@ async function runSellerOnboardingDrip() {
     if (!user?.email) continue;
     await sendMail({
       to: user.email,
-      subject: `📦 Day 1 tip: Add your first product on SOMA Market`,
-      text: `Welcome to SOMA! Here's how to list your first product and start selling.`,
+      subject: `📦 Day 1 tip: Add your first product on OneAfricaShop`,
+      text: `Welcome to OneAfricaShop! Here's how to list your first product and start selling.`,
       html: wrap(`
         <h2 style="color:#0A2E1F">Ready to make your first sale? 🛍️</h2>
         <p>Hi ${seller.storeName}! Your store is live. Here's how to get your first product listed:</p>
@@ -399,7 +399,7 @@ async function runSellerOnboardingDrip() {
     await sendMail({
       to: user.email,
       subject: `💡 Tips for your first sale — ${seller.storeName}`,
-      text: `Here are tips to help you get your first sale on SOMA Market.`,
+      text: `Here are tips to help you get your first sale on OneAfricaShop.`,
       html: wrap(`
         <h2 style="color:#0A2E1F">Tips for your first sale 💡</h2>
         <p>Hi ${seller.storeName}! ${productCount > 0 ? `Great — you've already listed ${productCount} product(s)!` : "It looks like you haven't listed any products yet. Here's a nudge!"}</p>
@@ -436,7 +436,7 @@ async function runCouponExpiryNotifications() {
       await sendMail({
         to: user.email,
         subject: `⏰ Your coupon ${coupon.code} expires in 48 hours!`,
-        text: `Don't miss it! Your coupon code ${coupon.code} expires soon. Use it on your next SOMA Market order.`,
+        text: `Don't miss it! Your coupon code ${coupon.code} expires soon. Use it on your next OneAfricaShop order.`,
         html: wrap(`
           <h2 style="color:#0A2E1F">Your coupon expires soon! ⏰</h2>
           <p>Use coupon code <strong style="font-family:monospace;font-size:20px;color:#F5A623;background:#fff;padding:4px 8px;border-radius:4px">${coupon.code}</strong> before it expires.</p>
@@ -561,7 +561,7 @@ async function runWeeklyAnalyticsDigest() {
 
       await sendMail({
         to: user.email,
-        subject: `📊 Your SOMA week in review — ${seller.storeName}`,
+        subject: `📊 Your OneAfricaShop week in review — ${seller.storeName}`,
         text: `Last week: ${weekOrders.length} orders, RWF ${revenue.toLocaleString()} revenue. Best seller: ${bestSeller?.title ?? "N/A"}.`,
         html: wrap(`
           <h2 style="color:#0A2E1F">Your Week in Review 📊</h2>

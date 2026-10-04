@@ -132,7 +132,7 @@ export default function RegisterPage() {
             <UserPlus className="text-white" size={28} />
           </div>
           <h1 className="font-display text-3xl font-bold text-forest">Create account</h1>
-          <p className="text-slate/60 mt-1 text-sm">Join SOMA — Rwanda's marketplace</p>
+          <p className="text-slate/60 mt-1 text-sm">Join OneAfricaShop — Rwanda's marketplace</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
