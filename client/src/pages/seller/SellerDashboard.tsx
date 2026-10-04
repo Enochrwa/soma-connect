@@ -100,7 +100,7 @@ function OverviewTab() {
       <div className="text-center py-16">
         <Store size={48} className="text-forest/20 mx-auto mb-4" />
         <h2 className="font-display text-xl text-forest mb-2">No store yet</h2>
-        <p className="text-slate/60 mb-4">You haven't applied to sell on SOMA Market yet.</p>
+        <p className="text-slate/60 mb-4">You haven't applied to sell on OneAfricaShop yet.</p>
         <NavLink to="/seller/apply" className="btn-primary">
           Apply as Seller
         </NavLink>
@@ -851,7 +851,8 @@ function OrdersTab() {
                           ))}
                           {multiSeller && (
                             <span className="text-xs text-slate/50">
-                              Shared order — the final delivery confirmation is done by SOMA.
+                              Shared order — the final delivery confirmation is done by
+                              OneAfricaShop.
                             </span>
                           )}
                           {canCancel && (
@@ -950,9 +951,9 @@ function PayoutsTab() {
     <div className="space-y-6">
       <h2 className="font-display text-lg text-forest">Earnings &amp; payouts</h2>
       <p className="text-sm text-slate/60">
-        SOMA keeps a {ratePct}% commission on item sales (delivery fees are yours to pass on, not
-        commissionable). Earnings become withdrawable {balance?.holdDays ?? 2} day(s) after an order
-        is delivered. Minimum payout: {formatRWF(balance?.minPayout ?? 1000)}.
+        OneAfricaShop keeps a {ratePct}% commission on item sales (delivery fees are yours to pass
+        on, not commissionable). Earnings become withdrawable {balance?.holdDays ?? 2} day(s) after
+        an order is delivered. Minimum payout: {formatRWF(balance?.minPayout ?? 1000)}.
       </p>
 
       {cards.length > 0 && (

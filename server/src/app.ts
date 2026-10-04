@@ -73,7 +73,7 @@ app.use(rateLimiter);
 app.get("/api/health", (_req, res) =>
   res.json({
     ok: true,
-    name: "soma-market",
+    name: "oneafricashop",
     env: env.NODE_ENV,
     time: new Date().toISOString(),
   }),

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { somaAiReply } from "../services/ai.service.js";
+import { oasAiReply } from "../services/ai.service.js";
 import { validate } from "../middleware/validate.js";
 import { strictLimiter } from "../middleware/rateLimiter.js";
 
@@ -21,7 +21,7 @@ const chatSchema = z.object({
 aiRouter.post("/chat", strictLimiter, validate(chatSchema), async (req, res, next) => {
   try {
     const { messages } = req.body as z.infer<typeof chatSchema>;
-    const reply = await somaAiReply(messages);
+    const reply = await oasAiReply(messages);
     res.json({ reply });
   } catch (e) {
     next(e);

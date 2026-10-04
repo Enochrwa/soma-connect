@@ -925,7 +925,7 @@ export default function AdminDashboardPage() {
   return (
     <>
       <Helmet>
-        <title>Admin Dashboard — SOMA Market</title>
+        <title>Admin Dashboard — OneAfricaShop</title>
       </Helmet>
       <div className="mx-auto max-w-7xl px-4 py-8">
         <h1 className="font-display text-3xl text-forest mb-6">Admin Dashboard</h1>

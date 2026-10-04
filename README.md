@@ -1,4 +1,4 @@
-# SOMA Market 🛒
+# OneAfricaShop 🛒
 
 > Rwanda's digital marketplace — connecting buyers and sellers across the country with a fast, mobile-first, offline-capable platform built for African users.
 

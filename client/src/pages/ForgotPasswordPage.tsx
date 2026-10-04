@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <Helmet>
-        <title>Reset password — SOMA Market</title>
+        <title>Reset password — OneAfricaShop</title>
       </Helmet>
       <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-ivory">
         <div className="w-full max-w-md">

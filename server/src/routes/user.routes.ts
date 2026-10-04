@@ -204,7 +204,7 @@ userRouter.get("/me/export", requireAuth, async (req: AuthedRequest, res, next) 
       LoyaltyEvent.find({ userId: req.user!.id }).lean(),
     ]);
 
-    res.setHeader("Content-Disposition", "attachment; filename=soma-my-data.json");
+    res.setHeader("Content-Disposition", "attachment; filename=oneafricashop-my-data.json");
     res.setHeader("Content-Type", "application/json");
     res.json({
       exportedAt: new Date().toISOString(),

@@ -118,7 +118,7 @@ export default function OrderTrackingPage() {
   return (
     <>
       <Helmet>
-        <title>Order {order.orderNumber} — SOMA Market</title>
+        <title>Order {order.orderNumber} — OneAfricaShop</title>
       </Helmet>
       <div className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="font-display text-2xl text-forest">Order {order.orderNumber}</h1>

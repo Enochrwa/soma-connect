@@ -62,7 +62,7 @@ export default function Hero() {
           </AnimatePresence>
           <div className="hidden md:flex items-center justify-end">
             <div className="w-72 h-72 rounded-3xl bg-white/10 grid place-items-center font-display text-7xl text-saffron">
-              SOMA
+              OAS
             </div>
           </div>
         </div>

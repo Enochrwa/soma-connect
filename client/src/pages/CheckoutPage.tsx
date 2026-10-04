@@ -184,8 +184,8 @@ export default function CheckoutPage() {
   return (
     <>
       <Helmet>
-        <title>Checkout — SOMA Market</title>
-        <meta name="description" content="Complete your SOMA Market order securely." />
+        <title>Checkout — OneAfricaShop</title>
+        <meta name="description" content="Complete your OneAfricaShop order securely." />
       </Helmet>
 
       {pendingOrder && (

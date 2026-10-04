@@ -37,7 +37,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: SMTP_FROM
-        value: "SOMA Market <no-reply@somamarket.rw>"
+        value: "OneAfricaShop <no-reply@somamarket.rw>"
       - key: COOKIE_SECURE
         value: "true"
       # IMPORTANT: Leave COOKIE_DOMAIN blank (empty string) for cross-origin

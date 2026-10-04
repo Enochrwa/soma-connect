@@ -2,7 +2,7 @@
   "name": "oneafricashop",
   "version": "1.0.0",
   "private": true,
-  "description": "SOMA Market — Rwanda's digital marketplace (monorepo)",
+  "description": "OneAfricaShop — Rwanda's digital marketplace (monorepo)",
   "scripts": {
     "dev": "concurrently -n client,server -c cyan,green \"npm --prefix client run dev\" \"npm --prefix server run dev\"",
     "build": "npm --prefix client run build && npm --prefix server run build",

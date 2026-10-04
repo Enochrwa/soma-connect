@@ -28,11 +28,11 @@ interface BrevoSender {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Parse "SOMA Market <no-reply@somamarket.rw>" → { name, email } */
+/** Parse "OneAfricaShop <no-reply@somamarket.rw>" → { name, email } */
 function parseSender(from: string): BrevoSender {
   const match = from.match(/^(.+?)\s*<(.+?)>$/);
   if (match) return { name: match[1].trim(), email: match[2].trim() };
-  return { name: "SOMA Market", email: from.trim() };
+  return { name: "OneAfricaShop", email: from.trim() };
 }
 
 // ── Core send ─────────────────────────────────────────────────────────────────
@@ -86,18 +86,18 @@ function emailWrapper(content: string, footer = "") {
   return `
 <div style="${baseStyle}">
   <div style="${headerStyle}">
-    <h1 style="color:#F5A623;margin:0;font-size:22px">SOMA Market</h1>
+    <h1 style="color:#F5A623;margin:0;font-size:22px">OneAfricaShop</h1>
     <p style="color:#a8c5b5;margin:4px 0 0;font-size:13px">Rwanda's marketplace</p>
   </div>
   <div style="${bodyStyle}">${content}</div>
-  <div style="${footerStyle}">${footer || '© SOMA Market · Kigali, Rwanda · <a href="#" style="color:#888">Unsubscribe</a>'}</div>
+  <div style="${footerStyle}">${footer || '© OneAfricaShop · Kigali, Rwanda · <a href="#" style="color:#888">Unsubscribe</a>'}</div>
 </div>`;
 }
 
 export async function sendOtpEmail(to: string, code: string) {
   return sendMail({
     to,
-    subject: "Your SOMA Market verification code",
+    subject: "Your OneAfricaShop verification code",
     text: `Your verification code is ${code}. It expires in 10 minutes.`,
     html: emailWrapper(`
       <h2 style="color:#0A2E1F;margin:0 0 12px">Verify your identity</h2>
@@ -111,8 +111,8 @@ export async function sendOtpEmail(to: string, code: string) {
 export async function sendOrderConfirmation(to: string, orderNumber: string, total: number) {
   return sendMail({
     to,
-    subject: `✅ Order ${orderNumber} confirmed — SOMA Market`,
-    text: `Murakoze! Your SOMA Market order ${orderNumber} for RWF ${total.toLocaleString()} is confirmed.`,
+    subject: `✅ Order ${orderNumber} confirmed — OneAfricaShop`,
+    text: `Murakoze! Your OneAfricaShop order ${orderNumber} for RWF ${total.toLocaleString()} is confirmed.`,
     html: emailWrapper(`
       <h2 style="color:#0A2E1F;margin:0 0 8px">Murakoze! Order confirmed 🎉</h2>
       <p>Your order <strong>${orderNumber}</strong> has been received and is being processed.</p>
@@ -141,7 +141,7 @@ export async function sendNewOrderAlertToSeller(
   return sendMail({
     to,
     subject: `🛒 New order ${orderNumber} — ${storeName}`,
-    text: `You have a new order ${orderNumber} on SOMA Market. Log in to your seller dashboard to process it.`,
+    text: `You have a new order ${orderNumber} on OneAfricaShop. Log in to your seller dashboard to process it.`,
     html: emailWrapper(`
       <h2 style="color:#0A2E1F;margin:0 0 8px">New order received! 🛒</h2>
       <p>Hi ${storeName}, you have a new order <strong>${orderNumber}</strong>.</p>
@@ -192,16 +192,16 @@ export async function sendSellerApprovalEmail(
   return sendMail({
     to,
     subject: approved
-      ? `✅ Your SOMA store "${storeName}" is approved!`
-      : `ℹ️ Update on your SOMA store application — ${storeName}`,
+      ? `✅ Your OneAfricaShop store "${storeName}" is approved!`
+      : `ℹ️ Update on your OneAfricaShop store application — ${storeName}`,
     text: approved
-      ? `Congratulations! Your store "${storeName}" has been approved on SOMA Market. You can now start listing products.`
+      ? `Congratulations! Your store "${storeName}" has been approved on OneAfricaShop. You can now start listing products.`
       : `Your store application for "${storeName}" needs attention. ${note ?? "Please contact support."}`,
     html: emailWrapper(
       approved
         ? `
           <h2 style="color:#0A2E1F">Congratulations! Your store is live 🎉</h2>
-          <p>Your store <strong>"${storeName}"</strong> has been approved on SOMA Market.</p>
+          <p>Your store <strong>"${storeName}"</strong> has been approved on OneAfricaShop.</p>
           <p>You can now:</p>
           <ul style="color:#444"><li>List your first products</li><li>Set up your store profile</li><li>Share your store link with customers</li></ul>
           <a href="${env.CLIENT_URL}/seller" style="${btnStyle}">Go to Seller Dashboard →</a>
@@ -210,7 +210,7 @@ export async function sendSellerApprovalEmail(
           <h2 style="color:#0A2E1F">Store Application Update</h2>
           <p>We've reviewed your store application for <strong>"${storeName}"</strong>.</p>
           ${note ? `<p style="background:#fff;padding:12px;border-radius:8px;border-left:3px solid #e55">Reason: ${note}</p>` : ""}
-          <p>Please contact <a href="mailto:support@somamarket.rw">support@somamarket.rw</a> if you have questions.</p>
+          <p>Please contact <a href="mailto:support@oneafricashop.rw">support@oneafricashop.rw</a> if you have questions.</p>
         `,
     ),
   });
@@ -219,7 +219,7 @@ export async function sendSellerApprovalEmail(
 export async function sendPasswordResetEmail(to: string, code: string) {
   return sendMail({
     to,
-    subject: "Reset your SOMA Market password",
+    subject: "Reset your OneAfricaShop password",
     text: `Your password reset code is ${code}. It expires in 15 minutes.`,
     html: emailWrapper(`
       <h2 style="color:#0A2E1F;margin:0 0 12px">Reset your password</h2>
@@ -259,7 +259,7 @@ export async function sendDisputeNotificationEmail(
 ) {
   return sendMail({
     to,
-    subject: `Dispute update for order ${orderNumber} — SOMA Market`,
+    subject: `Dispute update for order ${orderNumber} — OneAfricaShop`,
     text: `Your dispute for order ${orderNumber} has been updated: ${status}.`,
     html: emailWrapper(`
       <h2 style="color:#0A2E1F;margin:0 0 8px">Dispute Update</h2>

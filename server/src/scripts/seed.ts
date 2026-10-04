@@ -168,7 +168,7 @@ async function main() {
     email: "admin@somamarket.rw",
     passwordHash: adminHash,
     role: "admin",
-    profile: { name: "SOMA Admin" },
+    profile: { name: "OneAfricaShop Admin" },
     referralCode: "ADMIN001",
   });
 
