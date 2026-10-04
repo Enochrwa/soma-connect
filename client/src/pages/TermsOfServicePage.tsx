@@ -8,20 +8,20 @@ export default function TermsOfServicePage() {
       </p>
 
       <p>
-        Welcome to SOMA Connect. By creating an account or using our platform you agree to these
-        Terms of Service. Please read them carefully. If you do not agree, do not use SOMA Connect.
+        Welcome to OneAfricaShop. By creating an account or using our platform you agree to these
+        Terms of Service. Please read them carefully. If you do not agree, do not use OneAfricaShop.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">1. Who We Are</h2>
       <p>
-        SOMA Connect is a digital marketplace that connects buyers and sellers across Rwanda. We
+        OneAfricaShop is a digital marketplace that connects buyers and sellers across Rwanda. We
         provide the platform; individual sellers are responsible for their listings and fulfilment.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">2. Eligibility</h2>
       <p>
         You must be at least 18 years old and legally capable of entering into contracts under
-        Rwandan law to use SOMA Connect. By registering, you confirm this.
+        Rwandan law to use OneAfricaShop. By registering, you confirm this.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">3. Accounts</h2>
@@ -43,7 +43,7 @@ export default function TermsOfServicePage() {
           For mobile money orders, payment must be sent within 24 hours or the order may be
           cancelled.
         </li>
-        <li>SOMA Connect is not liable for seller disputes, but we will mediate in good faith.</li>
+        <li>OneAfricaShop is not liable for seller disputes, but we will mediate in good faith.</li>
       </ul>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">5. Selling</h2>
@@ -57,7 +57,7 @@ export default function TermsOfServicePage() {
           violate Rwandan law.
         </li>
         <li>
-          SOMA Connect charges a commission on completed sales as detailed in the Seller Fee
+          OneAfricaShop charges a commission on completed sales as detailed in the Seller Fee
           Schedule.
         </li>
         <li>Payouts are processed within 7 business days of order delivery confirmation.</li>
@@ -65,7 +65,7 @@ export default function TermsOfServicePage() {
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">6. Payments</h2>
       <p>
-        SOMA Connect currently supports Cash on Delivery, MTN MoMo (manual transfer), and Airtel
+        OneAfricaShop currently supports Cash on Delivery, MTN MoMo (manual transfer), and Airtel
         Money (manual transfer). All payments are processed in RWF. We are not a payment service
         provider; we facilitate transactions between buyers and sellers.
       </p>
@@ -85,27 +85,27 @@ export default function TermsOfServicePage() {
       </h2>
       <p>You may not:</p>
       <ul className="space-y-1 list-disc list-inside">
-        <li>Use SOMA Connect for any unlawful purpose.</li>
+        <li>Use OneAfricaShop for any unlawful purpose.</li>
         <li>Post false reviews or manipulate ratings.</li>
         <li>Attempt to circumvent the platform to transact directly and avoid fees.</li>
         <li>Scrape, reverse-engineer, or attack the platform.</li>
-        <li>Harass other users or SOMA Connect staff.</li>
+        <li>Harass other users or OneAfricaShop staff.</li>
       </ul>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">
         9. Intellectual Property
       </h2>
       <p>
-        SOMA Connect's branding, design, and code are our property. Seller product images remain the
-        seller's property; by uploading them, sellers grant us a non-exclusive licence to display
-        them on the platform.
+        OneAfricaShop's branding, design, and code are our property. Seller product images remain
+        the seller's property; by uploading them, sellers grant us a non-exclusive licence to
+        display them on the platform.
       </p>
 
       <h2 className="font-display text-xl font-bold text-forest mt-8 mb-3">
         10. Limitation of Liability
       </h2>
       <p>
-        To the maximum extent permitted by Rwandan law, SOMA Connect is not liable for indirect,
+        To the maximum extent permitted by Rwandan law, OneAfricaShop is not liable for indirect,
         incidental, or consequential damages arising from use of the platform. Our liability is
         capped at the value of the relevant transaction.
       </p>

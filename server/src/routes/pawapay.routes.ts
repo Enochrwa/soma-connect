@@ -287,8 +287,7 @@ export async function applyDepositResult(
   if (tx.status === "succeeded" || tx.status === "failed") return; // already settled
 
   const failureReason = payload.failureReason as
-    | { failureCode?: string; failureMessage?: string }
-    | undefined;
+    { failureCode?: string; failureMessage?: string } | undefined;
 
   tx.pawapayStatus = status;
   tx.lastStatusCheckAt = new Date();

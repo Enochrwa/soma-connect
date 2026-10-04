@@ -202,7 +202,7 @@ All URLs in `CLIENT_URL` are automatically allowed for:
 
 ## 🎉 Summary
 
-Your `soma-connect` application now properly handles multiple client domains:
+Your `oneafricashop` application now properly handles multiple client domains:
 
 - **OAuth**: Uses canonical base URL (no more malformed URLs)
 - **WebSocket**: Accepts all configured origins

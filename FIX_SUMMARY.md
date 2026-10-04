@@ -1,4 +1,4 @@
-# CLIENT_URL Fix Summary - soma-connect
+# CLIENT_URL Fix Summary - oneafricashop
 
 ## ✅ Issues Fixed
 

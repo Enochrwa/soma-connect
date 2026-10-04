@@ -1,4 +1,4 @@
-# SOMA Connect — Deployment Guide
+# OneAfricaShop — Deployment Guide
 
 This guide covers deploying the **server** on [Render](https://render.com) (free tier) and the **client** on [Vercel](https://vercel.com) (free tier).
 
@@ -39,7 +39,7 @@ This guide covers deploying the **server** on [Render](https://render.com) (free
 2. Click **New → Web Service**.
 3. Connect your GitHub account and select the `soma-connect` repository.
 4. Configure the service:
-   - **Name:** `soma-connect-api`
+   - **Name:** `oneafricashop-api`
    - **Root Directory:** `server`
    - **Environment:** `Node`
    - **Build Command:** `npm install && npm run build`
@@ -81,7 +81,7 @@ Use the values from your `.env` file:
 
 ### 2c. Deploy
 
-Click **Create Web Service**. Render will build and deploy automatically. Note your service URL — it will look like `https://soma-connect-api.onrender.com`.
+Click **Create Web Service**. Render will build and deploy automatically. Note your service URL — it will look like `https://oneafricashop-api.onrender.com`.
 
 ---
 
@@ -111,7 +111,7 @@ Replace `<your-render-service>` with your actual Render service name.
 
 ### 3c. Deploy
 
-Click **Deploy**. Vercel will build and publish. Note your Vercel URL — e.g. `https://soma-connect.vercel.app`.
+Click **Deploy**. Vercel will build and publish. Note your Vercel URL — e.g. `https://oneafricashop.vercel.app`.
 
 ---
 
@@ -120,7 +120,7 @@ Click **Deploy**. Vercel will build and publish. Note your Vercel URL — e.g. `
 After both are deployed:
 
 1. Go to your **Render** service → **Environment**.
-2. Set `CLIENT_URL` to your Vercel URL (e.g. `https://soma-connect.vercel.app`).
+2. Set `CLIENT_URL` to your Vercel URL (e.g. `https://oneafricashop.vercel.app`).
 3. Click **Save Changes** — Render will auto-redeploy.
 
 This ensures the CORS configuration and cookie `SameSite` settings allow the frontend to communicate with the API.
@@ -181,7 +181,7 @@ Render's free tier spins down services after 15 minutes of inactivity, causing t
 2. Click **Add New Monitor**.
 3. Configure:
    - **Monitor Type:** HTTP(s)
-   - **Friendly Name:** `SOMA Connect API`
+   - **Friendly Name:** `OneAfricaShop API`
    - **URL:** `https://<your-render-service>.onrender.com/api/health`
    - **Monitoring Interval:** Every **5 minutes**
 4. Click **Create Monitor**.
@@ -224,7 +224,7 @@ JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
 
 # Client URL — your Vercel deployment URL
-CLIENT_URL=https://soma-connect.vercel.app
+CLIENT_URL=https://oneafricashop.vercel.app
 
 # Cookies
 COOKIE_SECURE=true
@@ -240,7 +240,7 @@ SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
 SMTP_USER=<your-brevo-smtp-user>
 SMTP_PASS=<your-brevo-smtp-password>
-SMTP_FROM=SOMA Connect <enockuwumukiza850@gmail.com>
+SMTP_FROM=OneAfricaShop <enockuwumukiza850@gmail.com>
 
 # Google OAuth (optional)
 GOOGLE_CLIENT_ID=<your-client-id>

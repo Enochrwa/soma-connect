@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: soma-connect-api
+    name: oneafricashop-api
     env: node
     region: oregon
     plan: starter
@@ -19,7 +19,7 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
-      # Set to your Vercel frontend URL, e.g. https://soma-connect.vercel.app
+      # Set to your Vercel frontend URL, e.g. https://oneafricashop.vercel.app
       - key: CLIENT_URL
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
