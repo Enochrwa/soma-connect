@@ -148,7 +148,7 @@ export default function HomePage() {
                 <ShoppingBag size={18} /> Start Shopping
               </Link>
               <Link
-                to="/register"
+                to="/seller/apply"
                 className="border border-white/20 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition"
               >
                 Sell on OneAfricaShop

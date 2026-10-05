@@ -252,7 +252,11 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-slate/60 mt-6">
           New to OneAfricaShop?{" "}
-          <Link to="/register" className="text-forest font-semibold hover:text-saffron transition">
+          <Link
+            to="/register"
+            state={{ from }}
+            className="text-forest font-semibold hover:text-saffron transition"
+          >
             Create an account
           </Link>
         </p>

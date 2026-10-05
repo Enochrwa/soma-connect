@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useRegisterMutation, useCheckReferralCodeQuery } from "../../app/api";
 import { useAppDispatch } from "../../app/hooks";
 import { setAuth } from "../../features/auth/authSlice";
@@ -74,6 +74,10 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
   const [searchParams] = useSearchParams();
+  // If the visitor was sent here from a protected page (e.g. /seller/apply), return them to it.
+  const location = useLocation();
+  const rawFrom = (location.state as { from?: string } | null)?.from;
+  const from = rawFrom && rawFrom.startsWith("/") && !rawFrom.startsWith("//") ? rawFrom : "/";
   // A friend's invite link looks like /register?ref=ABCD1234
   const [referralCode, setReferralCode] = useState(
     (searchParams.get("ref") ?? "").trim().toUpperCase(),
@@ -118,7 +122,7 @@ export default function RegisterPage() {
       if (refTrimmed && refCheck?.valid) payload.referralCode = refTrimmed;
       const res = await register(payload).unwrap();
       dispatch(setAuth({ user: res.user, accessToken: res.accessToken }));
-      navigate("/", { replace: true });
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       setError(extractAuthError(err));
     }
