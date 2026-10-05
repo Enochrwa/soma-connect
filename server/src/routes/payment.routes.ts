@@ -130,7 +130,7 @@ paymentRouter.post(
             type: "system" as const,
             title: "Payment to verify",
             body: `Order ${order.orderNumber}: ${account.label} transfer of RWF ${order.total.toLocaleString()} (ref ${reference}).`,
-            link: "/admin",
+            link: "/admin/orders?queue=verify",
             metadata: { orderId: String(order._id) },
           })),
         );

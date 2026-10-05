@@ -17,6 +17,7 @@ import {
   type PricedLine,
 } from "../services/finance.js";
 import { evaluateCoupon, redeemCoupon } from "../services/coupon.service.js";
+import { logAdmin } from "../services/admin.helpers.js";
 import {
   cancelOrderWithRestore,
   settleDeliveredOrder,
@@ -464,6 +465,14 @@ orderRouter.patch(
         return doc;
       });
 
+      if (actor === "admin") {
+        await logAdmin(
+          req,
+          `order.${status}`,
+          { type: "order", id: order._id },
+          `Set ${order.orderNumber} to ${status}${note ? ` — ${note}` : ""}`,
+        );
+      }
       emitOrderUpdate(String(order._id), { status, at: new Date(), note });
 
       const notifyStatuses = ["preparing", "packed", "out_for_delivery", "delivered", "cancelled"];

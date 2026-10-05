@@ -83,7 +83,8 @@ export async function reconcilePawaPayPayouts() {
           payout.pawapayPayoutId,
           result.data.status as PawaPayPaymentStatus,
           result.data.failureReason as
-            { failureCode?: string; failureMessage?: string } | undefined,
+            | { failureCode?: string; failureMessage?: string }
+            | undefined,
         );
       } else if (result.status === "NOT_FOUND") {
         payout.status = "failed";
