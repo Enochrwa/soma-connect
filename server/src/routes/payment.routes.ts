@@ -8,6 +8,16 @@ import { applyOrderPaid } from "../services/order.lifecycle.js";
 import { validate } from "../middleware/validate.js";
 import { emitOrderUpdate } from "../socket/index.js";
 import { nanoid } from "nanoid";
+import { Notification } from "../models/Notification.js";
+import { User } from "../models/User.js";
+import {
+  manualAccounts,
+  normalizeReference,
+  normalizeRwandaPhone,
+  notifyBuyerPayment,
+  pawapayConfigured,
+  settleManualTransaction,
+} from "../services/manual-payment.js";
 
 export const paymentRouter = Router();
 
@@ -16,6 +26,126 @@ const initiateSchema = z.object({
   method: z.enum(["mtn_momo", "airtel_money", "cod"]),
   phone: z.string().default(""),
 });
+
+// ── Which payment methods are available right now ─────────────────────────────
+// The checkout page uses this so it never offers a method that can't work
+// (e.g. instant MoMo when pawaPay isn't configured).
+paymentRouter.get("/config", (_req, res) => {
+  res.json({
+    pawapay: pawapayConfigured(),
+    manual: { enabled: manualAccounts().length > 0, accounts: manualAccounts() },
+    cod: true,
+  });
+});
+
+// ── Manual transfer: buyer submits proof of payment ──────────────────────────
+const manualSchema = z.object({
+  orderId: z.string(),
+  provider: z.enum(["mtn_momo", "airtel_money"]),
+  senderPhone: z.string().min(9).max(20),
+  reference: z.string().min(4).max(60),
+});
+
+paymentRouter.post(
+  "/manual",
+  requireAuth,
+  validate(manualSchema),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const body = req.body as z.infer<typeof manualSchema>;
+      const account = manualAccounts().find((a) => a.provider === body.provider);
+      if (!account) {
+        throw new HttpError(400, "Manual transfer isn't available for that network right now.");
+      }
+      const reference = normalizeReference(body.reference);
+      if (!reference) {
+        throw new HttpError(
+          400,
+          "Enter the transaction ID from your MoMo confirmation SMS (letters and numbers, 4–40 characters).",
+        );
+      }
+      const senderPhone = normalizeRwandaPhone(body.senderPhone);
+      if (!senderPhone) throw new HttpError(400, "Enter the MTN/Airtel number you paid from.");
+
+      const order = await Order.findById(body.orderId);
+      if (!order) throw new HttpError(404, "Order not found.");
+      if (String(order.buyerId) !== req.user!.id) throw new HttpError(403, "Not your order.");
+      if (order.status === "cancelled") throw new HttpError(400, "This order was cancelled.");
+      if (order.status !== "placed") {
+        throw new HttpError(400, "This order has already moved past checkout.");
+      }
+      if (order.paymentStatus === "paid") throw new HttpError(400, "This order is already paid.");
+
+      // One real payment must not be able to "pay" for several orders.
+      const reused = await Order.exists({
+        _id: { $ne: order._id },
+        "manualPayment.reference": reference,
+        paymentStatus: { $in: ["manual_review", "paid"] },
+      });
+      if (reused) {
+        throw new HttpError(400, "That transaction ID was already used for another order.");
+      }
+
+      const wasResubmission = order.paymentStatus === "manual_review";
+      order.paymentMethod = "manual_transfer";
+      order.paymentStatus = "manual_review";
+      order.paymentRef = reference;
+      order.manualPayment = {
+        provider: body.provider,
+        senderPhone,
+        reference,
+        submittedAt: new Date(),
+        rejectedReason: undefined,
+      };
+      order.statusHistory.push({
+        status: "placed",
+        at: new Date(),
+        note: `${account.label} transfer submitted (ref ${reference}) — awaiting admin verification`,
+      });
+      await order.save();
+
+      // Keep one transaction record per order for manual payments.
+      await Transaction.findOneAndUpdate(
+        { orderId: order._id, provider: "manual" },
+        {
+          $set: {
+            userId: req.user!.id,
+            amount: order.total,
+            method: "manual_transfer",
+            phone: senderPhone,
+            mockRef: reference,
+            status: "manual_review",
+            rawMeta: { provider: body.provider, reference },
+          },
+        },
+        { upsert: true },
+      );
+
+      // Tell the admins there's something to verify.
+      const admins = await User.find({ role: "admin" }).select("_id").lean();
+      if (admins.length > 0 && !wasResubmission) {
+        await Notification.insertMany(
+          admins.map((a) => ({
+            userId: a._id,
+            type: "system" as const,
+            title: "Payment to verify",
+            body: `Order ${order.orderNumber}: ${account.label} transfer of RWF ${order.total.toLocaleString()} (ref ${reference}).`,
+            link: "/admin",
+            metadata: { orderId: String(order._id) },
+          })),
+        );
+      }
+
+      emitOrderUpdate(String(order._id), { status: "placed", at: new Date() });
+      res.json({
+        status: "manual_review",
+        message: "Payment details received. We'll confirm your payment within 1–2 hours.",
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 // ── Initiate payment ──────────────────────────────────────────────────────────
 paymentRouter.post(
@@ -123,6 +253,8 @@ paymentRouter.post(
       if (order.paymentRef) {
         await Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
       }
+      await settleManualTransaction(order._id, true);
+      if (outcome === "paid") await notifyBuyerPayment(order, "confirmed");
 
       emitOrderUpdate(String(order._id), { status: order.status, at: new Date() });
       res.json({

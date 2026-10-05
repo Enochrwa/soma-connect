@@ -1,37 +1,55 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAppSelector, useAppDispatch } from "../app/hooks";
-import { useCreateOrderMutation, useValidateCouponMutation, useGetLoyaltyQuery } from "../app/api";
+import {
+  useCreateOrderMutation,
+  useValidateCouponMutation,
+  useGetLoyaltyQuery,
+  useGetPaymentConfigQuery,
+} from "../app/api";
 import { clearCart } from "../features/cart/cartSlice";
 import { PaymentModal } from "../components/payment/PaymentModal";
 import type { RootState } from "../app/store";
 import { formatRWF } from "../utils/format";
 import { Loader2, MapPin, CreditCard, Truck, CheckCircle, Tag, Gift, X } from "lucide-react";
 
-type PaymentMethod = "mtn_momo" | "airtel_money" | "cod";
+type PaymentMethod = "mtn_momo" | "airtel_money" | "manual_transfer" | "cod";
 type DeliverySpeed = "standard" | "express" | "pickup";
 
-const PAYMENT_OPTIONS = [
-  {
-    value: "mtn_momo" as PaymentMethod,
+interface PaymentOption {
+  value: PaymentMethod;
+  label: string;
+  emoji: string;
+  desc: string;
+}
+
+const ALL_PAYMENT_OPTIONS: Record<PaymentMethod, PaymentOption> = {
+  mtn_momo: {
+    value: "mtn_momo",
     label: "MTN MoMo",
     emoji: "📱",
-    desc: "Pay via MTN Mobile Money USSD push",
+    desc: "Approve the payment on your phone — confirmed instantly",
   },
-  {
-    value: "airtel_money" as PaymentMethod,
+  airtel_money: {
+    value: "airtel_money",
     label: "Airtel Money",
     emoji: "📲",
-    desc: "Pay via Airtel Money USSD push",
+    desc: "Approve the payment on your phone — confirmed instantly",
   },
-  {
-    value: "cod" as PaymentMethod,
+  manual_transfer: {
+    value: "manual_transfer",
+    label: "Manual mobile-money transfer",
+    emoji: "🏦",
+    desc: "Send to our MTN/Airtel number — an admin confirms within 1–2 hours",
+  },
+  cod: {
+    value: "cod",
     label: "Cash on Delivery",
     emoji: "💵",
     desc: "Pay when your order arrives",
   },
-];
+};
 
 // Keep in sync with server/src/config/business.ts
 const FREE_STANDARD_DELIVERY_THRESHOLD = 10_000;
@@ -76,7 +94,23 @@ export default function CheckoutPage() {
     street: "",
     phone: user?.phone ?? "",
   });
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mtn_momo");
+  const { data: payConfig, isLoading: payConfigLoading } = useGetPaymentConfigQuery();
+  // Only offer what the server can actually process right now.
+  const paymentOptions = useMemo<PaymentOption[]>(() => {
+    if (!payConfig) return [ALL_PAYMENT_OPTIONS.cod];
+    const opts: PaymentOption[] = [];
+    if (payConfig.pawapay)
+      opts.push(ALL_PAYMENT_OPTIONS.mtn_momo, ALL_PAYMENT_OPTIONS.airtel_money);
+    if (payConfig.manual.enabled) opts.push(ALL_PAYMENT_OPTIONS.manual_transfer);
+    if (payConfig.cod) opts.push(ALL_PAYMENT_OPTIONS.cod);
+    return opts;
+  }, [payConfig]);
+  const [chosenMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  // Default to the first available option until the buyer picks one.
+  const paymentMethod: PaymentMethod =
+    chosenMethod && paymentOptions.some((o) => o.value === chosenMethod)
+      ? chosenMethod
+      : (paymentOptions[0]?.value ?? "cod");
   const [deliverySpeed, setDeliverySpeed] = useState<DeliverySpeed>("standard");
   const [error, setError] = useState("");
 
@@ -195,7 +229,10 @@ export default function CheckoutPage() {
           total={pendingOrder.total}
           method={paymentMethod}
           defaultPhone={form.phone}
-          onClose={() => navigate(`/orders/${pendingOrder.id}`)}
+          onClose={() => {
+            dispatch(clearCart());
+            navigate(`/orders/${pendingOrder.id}`);
+          }}
           onSuccess={() => dispatch(clearCart())}
         />
       )}
@@ -396,8 +433,11 @@ export default function CheckoutPage() {
                   <CreditCard size={18} className="text-forest" />
                   <h2 className="font-display font-bold text-forest">Payment method</h2>
                 </div>
+                {payConfigLoading && (
+                  <p className="text-xs text-slate/50 mb-2">Loading payment options…</p>
+                )}
                 <div className="space-y-2">
-                  {PAYMENT_OPTIONS.map((opt) => (
+                  {paymentOptions.map((opt) => (
                     <label
                       key={opt.value}
                       className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition ${paymentMethod === opt.value ? "border-forest bg-forest/5" : "border-forest/10 hover:border-forest/25"}`}

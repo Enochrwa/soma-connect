@@ -61,7 +61,7 @@ const OrderSchema = new Schema(
     total: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ["mtn_momo", "airtel_money", "cod"],
+      enum: ["mtn_momo", "airtel_money", "manual_transfer", "cod"],
       required: true,
     },
     paymentStatus: {
@@ -70,6 +70,15 @@ const OrderSchema = new Schema(
       // an admin still has to send it back. refunded: it has been sent back.
       enum: ["pending", "manual_review", "paid", "failed", "refund_pending", "refunded"],
       default: "pending",
+    },
+    // Filled when the buyer pays by manual mobile-money transfer and submits proof.
+    // An admin checks it against the MoMo statement, then confirms or rejects.
+    manualPayment: {
+      provider: { type: String, enum: ["mtn_momo", "airtel_money"] },
+      senderPhone: String,
+      reference: { type: String, index: true, sparse: true },
+      submittedAt: Date,
+      rejectedReason: String,
     },
     paymentRef: String,
     statusHistory: [StatusHistorySchema],

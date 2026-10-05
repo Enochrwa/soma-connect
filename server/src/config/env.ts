@@ -50,6 +50,11 @@ export const env = {
   SUPPORT_EMAIL: process.env.SUPPORT_EMAIL ?? "support@soma.rw",
 
   // ── pawaPay (Merchant API v2) ───────────────────────────────────────────────
+  // Manual mobile-money transfer (buyer pays a business number, admin confirms).
+  // The option only appears at checkout when at least one number is set.
+  MANUAL_PAY_MTN_NUMBER: process.env.MANUAL_PAY_MTN_NUMBER ?? "",
+  MANUAL_PAY_AIRTEL_NUMBER: process.env.MANUAL_PAY_AIRTEL_NUMBER ?? "",
+  MANUAL_PAY_ACCOUNT_NAME: process.env.MANUAL_PAY_ACCOUNT_NAME ?? "OneAfricaShop",
   PAWAPAY_ENV: (process.env.PAWAPAY_ENV as "sandbox" | "production") ?? "sandbox",
   PAWAPAY_API_TOKEN: process.env.PAWAPAY_API_TOKEN ?? "",
   PAWAPAY_BASE_URL:

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useGetOrderQuery } from "../app/api";
+import { PaymentModal } from "../components/payment/PaymentModal";
 import { useOrderTracking } from "../hooks/useSocket";
 import { formatRWF } from "../utils/format";
 import { Loader2, Package, MapPin, CheckCircle, Circle, Clock, Zap } from "lucide-react";
@@ -33,6 +34,7 @@ export default function OrderPage() {
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveNote, setLiveNote] = useState<string | undefined>(undefined);
   const [flash, setFlash] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
 
   // Real-time order updates via Socket.IO
   useOrderTracking(id, (payload) => {
@@ -66,6 +68,13 @@ export default function OrderPage() {
 
   const order = data.order;
   const currentStatus = liveStatus ?? order.status;
+  // Order placed but the money hasn't arrived yet (and it isn't pay-on-delivery).
+  const awaitingPayment =
+    order.status === "placed" &&
+    order.paymentMethod !== "cod" &&
+    ["pending", "failed", "manual_review"].includes(order.paymentStatus);
+  const inReview = order.paymentStatus === "manual_review";
+  const rejected = order.paymentStatus === "failed" && order.manualPayment?.rejectedReason;
   const currentStep = STATUSES.indexOf(currentStatus as OrderStatus);
 
   return (
@@ -193,6 +202,70 @@ export default function OrderPage() {
           </div>
         </div>
 
+        {awaitingPayment && (
+          <div
+            className={`rounded-2xl p-4 mb-4 border ${inReview ? "bg-blue-50 border-blue-200" : "bg-saffron/10 border-saffron/30"}`}
+          >
+            {inReview ? (
+              <>
+                <p className="font-semibold text-blue-800 text-sm">
+                  Payment submitted — awaiting verification
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  We're checking your transfer (ref{" "}
+                  <span className="font-mono">
+                    {order.manualPayment?.reference ?? order.paymentRef}
+                  </span>
+                  ). Most payments are confirmed within 1–2 hours. Got the wrong ID? You can
+                  resubmit it.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-forest text-sm">
+                  {rejected
+                    ? "We couldn't verify your payment"
+                    : "Payment needed to process this order"}
+                </p>
+                {rejected && (
+                  <p className="text-xs text-vermillion mt-1">
+                    Reason: {order.manualPayment?.rejectedReason}
+                  </p>
+                )}
+                <p className="text-xs text-slate/60 mt-1">
+                  Unpaid orders are cancelled automatically after 2 hours.
+                </p>
+              </>
+            )}
+            <button
+              onClick={() => setPayOpen(true)}
+              className="mt-3 bg-forest text-white font-semibold text-sm px-4 py-2 rounded-xl hover:bg-forest/90 transition"
+            >
+              {inReview
+                ? "Resubmit payment details"
+                : order.paymentMethod === "manual_transfer"
+                  ? "Submit payment details"
+                  : "Complete payment"}
+            </button>
+          </div>
+        )}
+        {payOpen && (
+          <PaymentModal
+            orderId={order._id}
+            orderNumber={order.orderNumber}
+            total={order.total}
+            method={order.paymentMethod}
+            defaultPhone={order.deliveryAddress.phone}
+            onClose={() => {
+              setPayOpen(false);
+              void refetch();
+            }}
+            onSuccess={() => {
+              void refetch();
+            }}
+          />
+        )}
+
         {/* Delivery & Payment */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl shadow-card p-5">
@@ -225,7 +298,10 @@ export default function OrderPage() {
                 <span className="font-mono text-saffron">{formatRWF(order.total)}</span>
               </div>
               <div className="text-xs text-slate/40 capitalize mt-1">
-                {order.paymentMethod.replace("_", " ")} · {order.paymentStatus.replace("_", " ")}
+                {order.paymentMethod.replace("_", " ")} ·{" "}
+                {order.paymentStatus === "manual_review"
+                  ? "awaiting verification"
+                  : order.paymentStatus.replace("_", " ")}
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ import { Referral } from "../models/Referral.js";
 import { Payout } from "../models/Payout.js";
 import { applyOrderPaid } from "../services/order.lifecycle.js";
 import { BUSINESS } from "../config/business.js";
+import { notifyBuyerPayment, settleManualTransaction } from "../services/manual-payment.js";
 import { Review } from "../models/Review.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -35,6 +36,7 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
       paidOrders,
       commission,
       refundsPending,
+      paymentsToVerify,
       payoutsPending,
       clawbacks,
       referralsRewarded,
@@ -59,6 +61,7 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
         },
       ]),
       Order.countDocuments({ paymentStatus: "refund_pending" }),
+      Order.countDocuments({ paymentStatus: "manual_review", status: "placed" }),
       Payout.aggregate([
         { $match: { status: { $in: ["pending", "processing"] } } },
         { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } },
@@ -88,6 +91,7 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
         commissionEarned: commission[0]?.total ?? 0,
         commissionRate: BUSINESS.COMMISSION_RATE,
         refundsPending,
+        paymentsToVerify,
         pendingPayoutAmount: payoutsPending[0]?.total ?? 0,
         pendingPayoutCount: payoutsPending[0]?.count ?? 0,
         clawbacksOutstanding: clawbacks,
@@ -476,6 +480,8 @@ adminRouter.post("/orders/:orderId/confirm-payment", async (req: AuthedRequest, 
     if (order.paymentRef) {
       await Transaction.updateOne({ mockRef: order.paymentRef }, { status: "succeeded" });
     }
+    await settleManualTransaction(order._id, true);
+    if (outcome === "paid") await notifyBuyerPayment(order, "confirmed");
 
     const { emitOrderUpdate } = await import("../socket/index.js");
     emitOrderUpdate(String(order._id), { status: order.status, at: new Date() });
@@ -491,6 +497,39 @@ adminRouter.post("/orders/:orderId/confirm-payment", async (req: AuthedRequest, 
     next(e);
   }
 });
+
+// Admin could not find the buyer's manual transfer: send it back so they can re-check and resubmit.
+const rejectSchema = z.object({ reason: z.string().min(2).max(200) });
+adminRouter.post(
+  "/orders/:orderId/reject-payment",
+  validate(rejectSchema),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const { reason } = req.body as z.infer<typeof rejectSchema>;
+      const order = await Order.findById(req.params.orderId);
+      if (!order) throw new HttpError(404, "Order not found.");
+      if (order.paymentStatus !== "manual_review") {
+        throw new HttpError(400, "There is no manual payment waiting for verification on this order.");
+      }
+      order.paymentStatus = "failed";
+      if (order.manualPayment) order.manualPayment.rejectedReason = reason;
+      order.statusHistory.push({
+        status: order.status,
+        at: new Date(),
+        note: `Manual payment rejected by admin: ${reason}`,
+      });
+      await order.save();
+      await settleManualTransaction(order._id, false, reason);
+      await notifyBuyerPayment(order, "rejected", reason);
+
+      const { emitOrderUpdate } = await import("../socket/index.js");
+      emitOrderUpdate(String(order._id), { status: order.status, at: new Date() });
+      res.json({ message: "Payment rejected — the buyer was asked to re-check and resubmit.", order });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 // Admin has sent the money back to the buyer (cancelled-after-payment or refunded order).
 adminRouter.post("/orders/:orderId/mark-refunded", async (req: AuthedRequest, res, next) => {

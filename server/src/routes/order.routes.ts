@@ -54,7 +54,7 @@ const createSchema = z.object({
     phone: z.string().min(7),
   }),
   deliverySpeed: z.enum(["standard", "express", "pickup"]).default("standard"),
-  paymentMethod: z.enum(["mtn_momo", "airtel_money", "cod"]),
+  paymentMethod: z.enum(["mtn_momo", "airtel_money", "manual_transfer", "cod"]),
   couponCode: z.string().optional(),
   pointsToRedeem: z.number().int().nonnegative().optional(),
 });

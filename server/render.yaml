@@ -36,6 +36,12 @@ services:
         sync: false
       - key: SMTP_PASS
         sync: false
+      - key: MANUAL_PAY_MTN_NUMBER
+        sync: false
+      - key: MANUAL_PAY_AIRTEL_NUMBER
+        sync: false
+      - key: MANUAL_PAY_ACCOUNT_NAME
+        value: OneAfricaShop
       - key: SMTP_FROM
         value: "OneAfricaShop <no-reply@somamarket.rw>"
       - key: COOKIE_SECURE

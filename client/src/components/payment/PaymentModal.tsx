@@ -5,6 +5,8 @@ import {
   usePawapayPredictMutation,
   usePawapayInitiateMutation,
   useLazyPawapayStatusQuery,
+  useGetPaymentConfigQuery,
+  useSubmitManualPaymentMutation,
 } from "../../app/api";
 import { CheckCircle, XCircle, Smartphone, Banknote, Info, Copy, Loader2 } from "lucide-react";
 import { formatRWF } from "../../utils/format";
@@ -13,18 +15,13 @@ interface PaymentModalProps {
   orderId: string;
   orderNumber: string;
   total: number;
-  method: "mtn_momo" | "airtel_money" | "cod";
+  method: "mtn_momo" | "airtel_money" | "manual_transfer" | "cod";
   defaultPhone?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-type PaymentState = "idle" | "submitting" | "waiting" | "instructions" | "success" | "failed";
-
-// Legacy manual-transfer fallback only. Set VITE_PAWAPAY_ENABLED=false to use it.
-const PAWAPAY_ENABLED = import.meta.env.VITE_PAWAPAY_ENABLED !== "false";
-const OAS_MTN_NUMBER = "+250 788 000 000";
-const OAS_AIRTEL_NUMBER = "+250 732 000 000";
+type PaymentState = "idle" | "submitting" | "waiting" | "submitted" | "success" | "failed";
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 120_000; // MoMo PIN entry can take a couple of minutes
@@ -47,6 +44,15 @@ export function PaymentModal({
   const [pawapayPredict] = usePawapayPredictMutation();
   const [pawapayInitiate] = usePawapayInitiateMutation();
   const [fetchPawapayStatus] = useLazyPawapayStatusQuery();
+  const [submitManualPayment] = useSubmitManualPaymentMutation();
+  const { data: payConfig, isLoading: configLoading } = useGetPaymentConfigQuery(undefined, {
+    skip: method !== "manual_transfer",
+  });
+  const accounts = payConfig?.manual.accounts ?? [];
+  const [provider, setProvider] = useState<"mtn_momo" | "airtel_money" | "">("");
+  const [reference, setReference] = useState("");
+  const activeProvider = provider || accounts[0]?.provider || "";
+  const account = accounts.find((a) => a.provider === activeProvider);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef(0);
 
@@ -57,22 +63,25 @@ export function PaymentModal({
     [],
   );
 
-  const isMoMo = method !== "cod";
+  const isManual = method === "manual_transfer";
+  const isMoMo = method === "mtn_momo" || method === "airtel_money"; // instant, via pawaPay
   const methodLabel =
     method === "mtn_momo"
       ? "MTN MoMo"
       : method === "airtel_money"
         ? "Airtel Money"
-        : "Cash on Delivery";
+        : isManual
+          ? "Manual transfer"
+          : "Cash on Delivery";
 
   const headerColor =
     method === "mtn_momo"
       ? "bg-yellow-400"
       : method === "airtel_money"
         ? "bg-red-500"
-        : "bg-green-600";
-
-  const businessNumber = method === "mtn_momo" ? OAS_MTN_NUMBER : OAS_AIRTEL_NUMBER;
+        : isManual
+          ? "bg-forest"
+          : "bg-green-600";
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -134,26 +143,50 @@ export function PaymentModal({
         return;
       }
 
-      if (PAWAPAY_ENABLED) {
-        // pawaPay validates the number and tells us which network it's on.
-        const prediction = await pawapayPredict({ phone: phone.trim() }).unwrap();
-        const { depositId } = await pawapayInitiate({
-          orderId,
-          phone: prediction.phoneNumber,
-          provider: prediction.provider,
-        }).unwrap();
-        setState("waiting");
-        pollDepositStatus(depositId);
-        return;
-      }
-
-      // Legacy fallback: manual transfer instructions.
-      await initiatePayment({ orderId, method, phone: phone.trim() }).unwrap();
-      setState("instructions");
+      // pawaPay validates the number and tells us which network it's on.
+      const prediction = await pawapayPredict({ phone: phone.trim() }).unwrap();
+      const { depositId } = await pawapayInitiate({
+        orderId,
+        phone: prediction.phoneNumber,
+        provider: prediction.provider,
+      }).unwrap();
+      setState("waiting");
+      pollDepositStatus(depositId);
     } catch (err: unknown) {
       const e = err as { data?: { error?: string } };
       setState("failed");
       setErrorMsg(e?.data?.error ?? "Failed to place order. Please try again.");
+    }
+  }
+
+  async function handleManualSubmit() {
+    if (!activeProvider) {
+      setErrorMsg("Choose the network you paid with.");
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMsg("Enter the number you paid from.");
+      return;
+    }
+    if (reference.trim().length < 4) {
+      setErrorMsg("Enter the transaction ID from your MoMo confirmation SMS.");
+      return;
+    }
+    setErrorMsg("");
+    setState("submitting");
+    try {
+      await submitManualPayment({
+        orderId,
+        provider: activeProvider,
+        senderPhone: phone.trim(),
+        reference: reference.trim(),
+      }).unwrap();
+      onSuccess();
+      setState("submitted");
+    } catch (err: unknown) {
+      const e = err as { data?: { error?: string } };
+      setState("idle");
+      setErrorMsg(e?.data?.error ?? "Couldn't submit your payment details. Please try again.");
     }
   }
 
@@ -200,13 +233,108 @@ export function PaymentModal({
                   <div className="flex items-start gap-2 mt-2.5 bg-blue-50 rounded-lg p-2.5">
                     <Info size={13} className="text-blue-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-700">
-                      You'll receive payment instructions to send manually to our business number.
-                      Your order will be confirmed once we verify the transfer.
+                      You'll get a prompt on your phone to approve the payment with your PIN. Your
+                      order is confirmed automatically.
                     </p>
                   </div>
                 </div>
               )}
-              {!isMoMo && (
+              {isManual && (
+                <div className="space-y-3">
+                  {configLoading ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="animate-spin text-forest" size={24} />
+                    </div>
+                  ) : !account ? (
+                    <p className="text-sm text-vermillion">
+                      Manual transfer isn't available right now. Please choose another payment
+                      method.
+                    </p>
+                  ) : (
+                    <>
+                      {accounts.length > 1 && (
+                        <div className="flex gap-2">
+                          {accounts.map((a) => (
+                            <button
+                              key={a.provider}
+                              type="button"
+                              onClick={() => setProvider(a.provider)}
+                              className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition ${activeProvider === a.provider ? "border-forest bg-forest/5 text-forest" : "border-forest/10 text-slate/60"}`}
+                            >
+                              {a.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="bg-saffron/10 rounded-xl p-3 space-y-1">
+                        <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
+                          1 · Send {formatRWF(total)} to
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-forest text-base">
+                            {account.number}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(account.number, "phone")}
+                            className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
+                          >
+                            <Copy size={12} /> {copied === "phone" ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate/50">
+                          {account.label} · {account.accountName}
+                        </p>
+                      </div>
+
+                      <div className="bg-forest/5 rounded-xl p-3 space-y-1">
+                        <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
+                          2 · Use this as the payment reason
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-forest text-sm">
+                            {orderNumber}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(orderNumber, "ref")}
+                            className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
+                          >
+                            <Copy size={12} /> {copied === "ref" ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide pt-1">
+                        3 · After paying, tell us how
+                      </p>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Number you paid from, e.g. 0788 123 456"
+                        className="w-full border border-forest/20 rounded-xl px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-saffron/30"
+                      />
+                      <input
+                        type="text"
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder="Transaction ID from the MoMo SMS"
+                        className="w-full border border-forest/20 rounded-xl px-4 py-2.5 font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-saffron/30"
+                      />
+                      <div className="flex items-start gap-2 bg-blue-50 rounded-lg p-2.5">
+                        <Info size={13} className="text-blue-600 mt-0.5 shrink-0" />
+                        <p className="text-xs text-blue-700">
+                          Our team checks the transfer and confirms your order, usually within 1–2
+                          hours. You'll get a notification.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {method === "cod" && (
                 <p className="text-sm text-slate/70">
                   Your order will be placed now and you pay cash when it arrives. A confirmation
                   email will be sent.
@@ -219,16 +347,21 @@ export function PaymentModal({
               )}
               <div className="flex gap-3">
                 <button
-                  onClick={handlePay}
-                  className="flex-1 bg-forest text-white font-bold py-3 rounded-xl hover:bg-forest/90 transition text-sm"
+                  onClick={isManual ? handleManualSubmit : handlePay}
+                  disabled={isManual && !account}
+                  className="flex-1 bg-forest text-white font-bold py-3 rounded-xl hover:bg-forest/90 transition text-sm disabled:opacity-50"
                 >
-                  {isMoMo ? "Continue to Payment" : "Place Order"}
+                  {isManual
+                    ? "Submit payment details"
+                    : isMoMo
+                      ? "Continue to Payment"
+                      : "Place Order"}
                 </button>
                 <button
                   onClick={onClose}
                   className="px-4 border border-forest/15 rounded-xl text-sm text-slate/60 hover:bg-forest/5 transition"
                 >
-                  Cancel
+                  {isManual ? "I'll pay later" : "Cancel"}
                 </button>
               </div>
             </>
@@ -274,92 +407,21 @@ export function PaymentModal({
             </div>
           )}
 
-          {state === "instructions" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-forest font-bold">
-                <Smartphone size={18} />
-                <span>Send payment manually</span>
-              </div>
-              <p className="text-xs text-slate/60">
-                Open your {methodLabel} app and send the exact amount to our business number below.
-                Use the order reference as your payment reason.
-              </p>
-
-              {/* Step 1 */}
-              <div className="bg-saffron/10 rounded-xl p-3 space-y-2">
-                <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
-                  Step 1 — Send to this number
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-forest text-base">
-                    {businessNumber}
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(businessNumber, "phone")}
-                    className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
-                  >
-                    <Copy size={12} />
-                    {copied === "phone" ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-                <p className="text-xs text-slate/50">OneAfricaShop — {methodLabel}</p>
-              </div>
-
-              {/* Step 2 */}
-              <div className="bg-forest/5 rounded-xl p-3 space-y-2">
-                <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
-                  Step 2 — Amount to send
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-forest text-base">
-                    {formatRWF(total)}
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(String(total), "amount")}
-                    className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
-                  >
-                    <Copy size={12} />
-                    {copied === "amount" ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="bg-forest/5 rounded-xl p-3 space-y-2">
-                <p className="text-xs font-semibold text-slate/60 uppercase tracking-wide">
-                  Step 3 — Payment reason / reference
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-forest text-sm">{orderNumber}</span>
-                  <button
-                    onClick={() => copyToClipboard(orderNumber, "ref")}
-                    className="flex items-center gap-1 text-xs text-forest/60 hover:text-forest transition"
-                  >
-                    <Copy size={12} />
-                    {copied === "ref" ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 bg-amber-50 rounded-lg p-2.5">
-                <Info size={13} className="text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-700">
-                  After sending, click "I've Paid" below. Our team will confirm your payment within
-                  1–2 hours and your order will proceed.
+          {state === "submitted" && (
+            <div className="flex flex-col items-center py-4 gap-3 text-center">
+              <CheckCircle size={44} className="text-green-500" />
+              <div>
+                <p className="font-bold text-forest text-lg">Payment details received</p>
+                <p className="text-sm text-slate/60 mt-1">
+                  We'll verify your transfer of {formatRWF(total)} and confirm order {orderNumber} —
+                  usually within 1–2 hours. Track it from your order page.
                 </p>
               </div>
-
               <button
                 onClick={handleDone}
                 className="w-full bg-forest text-white font-bold py-3 rounded-xl hover:bg-forest/90 transition text-sm"
               >
-                I've Paid — View My Order
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full text-center text-xs text-slate/40 hover:text-slate/60 transition"
-              >
-                I'll pay later
+                View my order
               </button>
             </div>
           )}
