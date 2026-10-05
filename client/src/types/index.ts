@@ -6,7 +6,7 @@ export type LoyaltyTier = "starter" | "regular" | "trusted" | "vip";
 export type VerificationTier = "basic" | "trusted" | "verified" | "top_seller";
 export type AccountType = "individual" | "business" | "farm";
 export type Condition = "new" | "used";
-export type PaymentMethod = "mtn_momo" | "airtel_money" | "cod";
+export type PaymentMethod = "mtn_momo" | "airtel_money" | "manual_transfer" | "cod";
 export type DeliverySpeed = "standard" | "express" | "pickup";
 
 export type OrderStatus =
@@ -20,7 +20,12 @@ export type OrderStatus =
   | "cancelled";
 
 export type PaymentStatus =
-  "pending" | "manual_review" | "paid" | "failed" | "refunded" | "refund_pending";
+  | "pending"
+  | "manual_review"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "refund_pending";
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -157,6 +162,13 @@ export interface Order {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   paymentRef?: string;
+  manualPayment?: {
+    provider?: "mtn_momo" | "airtel_money";
+    senderPhone?: string;
+    reference?: string;
+    submittedAt?: string;
+    rejectedReason?: string;
+  };
   statusHistory: StatusHistoryEntry[];
   couponCode?: string;
   pointsRedeemed: number;
@@ -328,4 +340,19 @@ export interface ReferralSummary {
     rewardedAt?: string;
     pointsEarned: number;
   }>;
+}
+
+export interface PaymentConfig {
+  /** Instant MoMo via pawaPay is configured on the server. */
+  pawapay: boolean;
+  manual: {
+    enabled: boolean;
+    accounts: Array<{
+      provider: "mtn_momo" | "airtel_money";
+      label: string;
+      number: string;
+      accountName: string;
+    }>;
+  };
+  cod: boolean;
 }

@@ -11,6 +11,7 @@ import type {
   Coupon,
   Payout,
   SellerBalance,
+  PaymentConfig,
   SellerEarningRow,
   ReferralSummary,
   Dispute,
@@ -121,7 +122,12 @@ export const api = createApi({
         email: string;
         subject: string;
         category:
-          "general" | "order_support" | "seller_support" | "technical" | "partnership" | "press";
+          | "general"
+          | "order_support"
+          | "seller_support"
+          | "technical"
+          | "partnership"
+          | "press";
         message: string;
         orderId?: string;
       }
@@ -198,7 +204,7 @@ export const api = createApi({
         items: Array<{ productId: string; quantity: number; variant?: string }>;
         deliveryAddress: { sector: string; district?: string; street?: string; phone: string };
         deliverySpeed: "standard" | "express" | "pickup";
-        paymentMethod: "mtn_momo" | "airtel_money" | "cod";
+        paymentMethod: "mtn_momo" | "airtel_money" | "manual_transfer" | "cod";
         couponCode?: string;
         pointsToRedeem?: number;
       }
@@ -212,6 +218,21 @@ export const api = createApi({
     }),
 
     // ── Payments ─────────────────────────────────────────────────────────────
+    getPaymentConfig: b.query<PaymentConfig, void>({
+      query: () => "/payments/config",
+    }),
+    submitManualPayment: b.mutation<
+      { status: string; message: string },
+      {
+        orderId: string;
+        provider: "mtn_momo" | "airtel_money";
+        senderPhone: string;
+        reference: string;
+      }
+    >({
+      query: (body) => ({ url: "/payments/manual", method: "POST", body }),
+      invalidatesTags: (_r, _e, { orderId }) => [{ type: "Order", id: orderId }, "Orders"],
+    }),
     payMock: b.mutation<
       { mockRef: string; message: string },
       { orderId: string; method: "mtn_momo" | "airtel_money"; phone: string }
@@ -482,6 +503,17 @@ export const api = createApi({
       query: (id) => ({ url: `/admin/orders/${id}/confirm-payment`, method: "POST" }),
       invalidatesTags: ["Orders", "AdminStats"],
     }),
+    adminRejectPayment: b.mutation<
+      { message: string; order: Order },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/admin/orders/${id}/reject-payment`,
+        method: "POST",
+        body: { reason },
+      }),
+      invalidatesTags: ["Orders", "AdminStats"],
+    }),
     adminMarkRefunded: b.mutation<{ message: string; order: Order }, string>({
       query: (id) => ({ url: `/admin/orders/${id}/mark-refunded`, method: "POST" }),
       invalidatesTags: ["Orders", "AdminStats"],
@@ -741,6 +773,9 @@ export const {
   useAdminDisbursePawapayMutation,
   useAdminFailPayoutMutation,
   useAdminMarkRefundedMutation,
+  useAdminRejectPaymentMutation,
+  useGetPaymentConfigQuery,
+  useSubmitManualPaymentMutation,
   useAdminSetCommissionMutation,
   useAdminOrdersQuery,
   // Coupons

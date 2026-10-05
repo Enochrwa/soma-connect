@@ -5,7 +5,11 @@
 1. **Checkout** (`POST /api/orders`) — prices, variant deltas, delivery fee, coupon and loyalty-point
    discount are all computed **server-side**. Stock, coupon use and points are reserved atomically in one
    transaction. Buyers can't buy from their own store or from unapproved / closed stores.
-2. **Pay** — mobile money via pawaPay (callback → `applyOrderPaid`), manual transfer confirmed by an admin
+2. **Pay** — checkout lists only what the server can process (`GET /api/payments/config`). Manual
+   transfer: the buyer sees our MTN/Airtel number, pays, then submits their phone number and the MoMo
+   transaction ID (`POST /api/payments/manual`) → order shows "awaiting verification" → an admin checks
+   it against the MoMo statement and confirms or rejects (buyer gets a notification; rejected orders can
+   be resubmitted; one transaction ID can't pay two orders). Other methods: mobile money via pawaPay (callback → `applyOrderPaid`), manual transfer confirmed by an admin
    (`POST /api/admin/orders/:id/confirm-payment`), or cash on delivery. A payment that lands _after_ an
    order was cancelled flags it `refund_pending` instead of reviving it.
 3. **Fulfil** — sellers move paid/COD orders forward only: `payment_confirmed → preparing → packed →

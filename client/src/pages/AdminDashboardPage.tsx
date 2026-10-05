@@ -15,6 +15,7 @@ import {
   useAdminOrdersQuery,
   useAdminConfirmPaymentMutation,
   useAdminMarkRefundedMutation,
+  useAdminRejectPaymentMutation,
   useAdminGetDisputesQuery,
   useAdminResolveDisputeMutation,
   useGetAdminModerationQueueQuery,
@@ -91,6 +92,7 @@ function OverviewTab() {
       label: `Payouts waiting (${stats.pendingPayoutCount ?? 0})`,
       value: formatRWF(stats.pendingPayoutAmount ?? 0),
     },
+    { label: "Payments to verify", value: stats.paymentsToVerify ?? 0 },
     { label: "Refunds to send", value: stats.refundsPending ?? 0 },
     { label: "Refund clawbacks", value: stats.clawbacksOutstanding ?? 0 },
     { label: "Referrals rewarded", value: stats.referralsRewarded ?? 0 },
@@ -152,16 +154,19 @@ function OverviewTab() {
 // ── Orders & Payments ─────────────────────────────────────────────────────────
 
 function OrdersTab() {
-  const [filter, setFilter] = useState<"awaiting" | "refund" | "all">("awaiting");
+  const [filter, setFilter] = useState<"verify" | "awaiting" | "refund" | "all">("verify");
   const query =
-    filter === "awaiting"
-      ? { status: "placed", paymentStatus: "pending" }
-      : filter === "refund"
-        ? { paymentStatus: "refund_pending" }
-        : {};
+    filter === "verify"
+      ? { status: "placed", paymentStatus: "manual_review" }
+      : filter === "awaiting"
+        ? { status: "placed", paymentStatus: "pending" }
+        : filter === "refund"
+          ? { paymentStatus: "refund_pending" }
+          : {};
   const { data, isLoading } = useAdminOrdersQuery(query);
   const [confirmPayment] = useAdminConfirmPaymentMutation();
   const [markRefunded] = useAdminMarkRefundedMutation();
+  const [rejectPayment] = useAdminRejectPaymentMutation();
   const [busy, setBusy] = useState<string | null>(null);
 
   async function run(
@@ -185,6 +190,7 @@ function OrdersTab() {
       <div className="flex gap-2">
         {(
           [
+            ["verify", "Payments to verify"],
             ["awaiting", "Awaiting payment"],
             ["refund", "Refunds to send"],
             ["all", "All orders"],
@@ -221,8 +227,30 @@ function OrdersTab() {
                 </p>
                 <p className="text-xs text-slate/50">
                   {String((buyer?.profile as Record<string, unknown>)?.name ?? buyer?.phone ?? "—")}{" "}
-                  · {String(order.paymentMethod)} · ref {String(order.paymentRef ?? "—")}
+                  · {String(order.paymentMethod).replace("_", " ")} · ref{" "}
+                  {String(order.paymentRef ?? "—")}
                 </p>
+                {(() => {
+                  const mp = order.manualPayment as
+                    | {
+                        provider?: string;
+                        senderPhone?: string;
+                        reference?: string;
+                        submittedAt?: string;
+                      }
+                    | undefined;
+                  if (!mp?.reference) return null;
+                  return (
+                    <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-2 py-1 mt-1.5 inline-block">
+                      {mp.provider === "airtel_money" ? "Airtel" : "MTN"} · from{" "}
+                      <span className="font-mono">{mp.senderPhone}</span> · transaction ID{" "}
+                      <span className="font-mono font-bold">{mp.reference}</span>
+                      {mp.submittedAt
+                        ? ` · ${new Date(mp.submittedAt).toLocaleString("en-RW")}`
+                        : ""}
+                    </p>
+                  );
+                })()}
               </div>
               <span className="font-mono font-bold text-saffron">
                 {formatRWF(Number(order.total))}
@@ -230,20 +258,46 @@ function OrdersTab() {
               <span className="text-xs bg-forest/10 text-forest px-2 py-0.5 rounded-full">
                 {String(order.status)} / {String(order.paymentStatus)}
               </span>
-              {order.paymentStatus === "pending" && order.status === "placed" && (
+              {(order.paymentStatus === "pending" || order.paymentStatus === "manual_review") &&
+                order.status === "placed" && (
+                  <button
+                    disabled={busy === id}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Confirm that RWF ${Number(order.total).toLocaleString()} was received for ${String(order.orderNumber)}?`,
+                        )
+                      )
+                        void run(id, confirmPayment);
+                    }}
+                    className="text-sm bg-forest text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
+                  >
+                    Confirm payment received
+                  </button>
+                )}
+              {order.paymentStatus === "manual_review" && order.status === "placed" && (
                 <button
                   disabled={busy === id}
                   onClick={() => {
-                    if (
-                      confirm(
-                        `Confirm that RWF ${Number(order.total).toLocaleString()} was received?`,
+                    const reason = prompt(
+                      "Why can't you verify this payment? (the buyer will see this)",
+                      "Transaction ID not found on our statement",
+                    );
+                    if (!reason || reason.trim().length < 2) return;
+                    setBusy(id);
+                    rejectPayment({ id, reason: reason.trim() })
+                      .unwrap()
+                      .then((r) => alert(r.message))
+                      .catch((err: unknown) =>
+                        alert(
+                          (err as { data?: { error?: string } }).data?.error ?? "Action failed.",
+                        ),
                       )
-                    )
-                      void run(id, confirmPayment);
+                      .finally(() => setBusy(null));
                   }}
-                  className="text-sm bg-forest text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
+                  className="text-sm border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
                 >
-                  Confirm payment received
+                  Reject
                 </button>
               )}
               {order.paymentStatus === "refund_pending" && (

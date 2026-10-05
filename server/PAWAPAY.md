@@ -48,8 +48,9 @@ decimals, so amounts are rounded to whole francs before sending.
 
    Locally, expose your server with `ngrok http 4000` and use the HTTPS URL.
 
-4. Frontend: `VITE_PAWAPAY_ENABLED=true` (default). Set `false` to revert to the
-   manual-transfer flow without a code change.
+4. Checkout shows the instant MTN/Airtel options only while `PAWAPAY_API_TOKEN` is set. Without it
+   buyers see "Manual transfer" (if `MANUAL_PAY_*` numbers are set) and Cash on Delivery instead —
+   no frontend flag needed.
 
 ## Sandbox test numbers (Rwanda)
 

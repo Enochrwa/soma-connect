@@ -14,7 +14,7 @@ export type OrderStatus =
   | "cancelled";
 
 export type PaymentStatus = "pending" | "manual_review" | "paid" | "failed" | "refunded";
-export type PaymentMethod = "mtn_momo" | "airtel_money" | "cod";
+export type PaymentMethod = "mtn_momo" | "airtel_money" | "manual_transfer" | "cod";
 export type DeliverySpeed = "standard" | "express" | "pickup";
 
 /** Re-export for use in route handlers */

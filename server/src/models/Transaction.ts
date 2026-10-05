@@ -5,7 +5,11 @@ const TransactionSchema = new Schema(
     orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     amount: { type: Number, required: true },
-    method: { type: String, enum: ["mtn_momo", "airtel_money", "cod"], required: true },
+    method: {
+      type: String,
+      enum: ["mtn_momo", "airtel_money", "manual_transfer", "cod"],
+      required: true,
+    },
     mockRef: String,
     phone: String,
     status: {
