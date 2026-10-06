@@ -46,3 +46,18 @@ picked_up → out_for_delivery → delivered`. Sellers cannot confirm payment. O
 
 Run once after deploying: `npm --prefix server run backfill:earnings` (dry run) then `-- --apply`.
 This builds ledger rows for orders delivered before the ledger existed.
+
+## Admin console (`/admin`)
+
+One sidebar console, with red badges for whatever is waiting on you:
+
+- **Overview** — attention queue (payments to verify, orders ready, refunds, pending sellers/payouts/disputes, low stock), 30-day sales chart, top sellers/products.
+- **Orders & payments** — queues: _Payments to verify · Awaiting payment · Ready to process · In progress · Refunds to send · Delivered · Cancelled · All_. Search by order #, buyer, phone or transaction ID; select several manual payments and confirm them at once; click an order for the full drawer (buyer, items per seller with the commission breakdown, payment proof, timeline, notes) with every action: confirm / reject payment (with reason), move forward, mark delivered, cancel, mark refund sent. Export any queue to CSV.
+- **Seller payouts**, **Disputes**, **Coupons**, **Review moderation**, **Fraud signals**, **Automations**.
+- **Sellers** — approve/reject with notes, suspend/reactivate, verification tier, per-seller commission rate, documents.
+- **Products** — search, hide/show, low-stock filter, delete. **Users** — search, ban/unban, change role, adjust loyalty points, order history.
+- **Earnings & commission** — platform commission vs. what sellers earned and what is still owed (withdrawable / clearing / in payout / paid), per-seller table, refund clawbacks.
+- **Referrals** — funnel, points given out, top referrers, reject fraudulent referrals.
+- **Activity log** — audit trail of sensitive admin actions. **Settings** — read-only view of commission, referral, delivery, payment and service configuration.
+
+New admin API (all admin-only): `GET /admin/overview`, `GET /admin/orders?queue=&q=&page=`, `GET /admin/orders/counts`, `GET /admin/orders/:id`, `GET /admin/orders/export`, `POST /admin/orders/bulk-confirm`, `POST /admin/orders/:id/note`, `GET /admin/users/:id`, `PATCH /admin/users/:id/role`, `POST /admin/users/:id/points`, `PATCH /admin/sellers/:id/reactivate`, `GET /admin/earnings/summary`, `GET /admin/referrals`, `PATCH /admin/referrals/:id/reject`, `GET /admin/activity`, `GET /admin/settings`.

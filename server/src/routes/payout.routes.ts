@@ -15,6 +15,7 @@ import {
   releaseEarnings,
 } from "../services/earnings.service.js";
 import mongoose from "mongoose";
+import { logAdmin } from "../services/admin.helpers.js";
 import { randomUUID } from "crypto";
 import {
   predictProvider,
@@ -163,6 +164,12 @@ payoutRouter.patch(
       ) as unknown as typeof payout.initiatedBy;
       await payout.save();
       await markEarningsPaid(String(payout._id));
+      await logAdmin(
+        req,
+        "payout.sent",
+        { type: "payout", id: payout._id },
+        `Marked payout of RWF ${payout.amount.toLocaleString()} as sent (ref ${momoRef ?? "—"})`,
+      );
 
       // Notify seller via email
       const sellerDoc = await Seller.findById(String((payout.sellerId as { _id: string })._id));
@@ -279,6 +286,12 @@ payoutRouter.patch(
       await existing.save();
       // Nothing was paid — the seller's earnings become withdrawable again.
       await releaseEarnings(String(existing._id));
+      await logAdmin(
+        req,
+        "payout.reject",
+        { type: "payout", id: existing._id },
+        `Rejected payout of RWF ${existing.amount.toLocaleString()}${note ? ` — ${note}` : ""}`,
+      );
       res.json({ payout: existing });
     } catch (e) {
       next(e);

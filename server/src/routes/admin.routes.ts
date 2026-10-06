@@ -16,6 +16,9 @@ import { Review } from "../models/Review.js";
 import { requireAuth, requireRole, type AuthedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { HttpError } from "../middleware/errorHandler.js";
+import { Dispute } from "../models/Dispute.js";
+import { registerAdminConsoleRoutes } from "./admin.console.routes.js";
+import { escapeRegex, logAdmin, orderQueueFilter } from "../services/admin.helpers.js";
 
 export const adminRouter = Router();
 
@@ -108,21 +111,22 @@ adminRouter.get("/dashboard", async (_req, res, next) => {
 
 adminRouter.get("/users", async (req, res, next) => {
   try {
-    const { q, role, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const { q, role, status, page = "1", limit = "20" } = req.query as Record<string, string>;
     const filter: Record<string, unknown> = {};
     if (role) filter.role = role;
-    if (q)
-      filter.$or = [
-        { phone: new RegExp(q, "i") },
-        { email: new RegExp(q, "i") },
-        { "profile.name": new RegExp(q, "i") },
-      ];
+    if (status === "banned") filter.lockedUntil = { $gt: new Date() };
+    if (status === "flagged") filter.flaggedForReview = true;
+    if (q?.trim()) {
+      const re = new RegExp(escapeRegex(q.trim()), "i");
+      filter.$or = [{ phone: re }, { email: re }, { "profile.name": re }, { referralCode: re }];
+    }
 
     const pg = Math.max(1, Number(page));
-    const lim = Math.min(100, Number(limit));
+    const lim = Math.min(100, Math.max(1, Number(limit)));
     const [users, total] = await Promise.all([
       User.find(filter)
         .select("-passwordHash")
+        .sort({ createdAt: -1 })
         .skip((pg - 1) * lim)
         .limit(lim)
         .lean(),
@@ -135,12 +139,24 @@ adminRouter.get("/users", async (req, res, next) => {
 });
 
 const banSchema = z.object({ banned: z.boolean(), reason: z.string().max(280).optional() });
-adminRouter.patch("/users/:id/ban", validate(banSchema), async (req, res, next) => {
+adminRouter.patch("/users/:id/ban", validate(banSchema), async (req: AuthedRequest, res, next) => {
   try {
-    const { banned } = req.body as z.infer<typeof banSchema>;
-    await User.findByIdAndUpdate(req.params.id, {
-      lockedUntil: banned ? new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000) : undefined,
-    });
+    const { banned, reason } = req.body as z.infer<typeof banSchema>;
+    if (req.params.id === req.user!.id) throw new HttpError(400, "You can't ban your own account.");
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      banned
+        ? { lockedUntil: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000) }
+        : { $unset: { lockedUntil: 1 } },
+      { new: true },
+    );
+    if (!user) throw new HttpError(404, "User not found.");
+    await logAdmin(
+      req,
+      banned ? "user.ban" : "user.unban",
+      { type: "user", id: user._id },
+      `${banned ? "Banned" : "Unbanned"} ${user.profile?.name ?? user.phone}${reason ? ` — ${reason}` : ""}`,
+    );
     res.json({ ok: true });
   } catch (e) {
     next(e);
@@ -165,14 +181,25 @@ adminRouter.get("/sellers/pending", async (_req, res, next) => {
 
 adminRouter.get("/sellers", async (req, res, next) => {
   try {
-    const { tier, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const { tier, status, q, page = "1", limit = "20" } = req.query as Record<string, string>;
     const filter: Record<string, unknown> = {};
     if (tier) filter.verificationTier = tier;
+    if (status === "suspended") {
+      filter.approvalStatus = "approved";
+      filter.isActive = false;
+    } else if (status === "approved") {
+      filter.approvalStatus = "approved";
+      filter.isActive = true;
+    } else if (status === "pending" || status === "rejected") {
+      filter.approvalStatus = status;
+    }
+    if (q?.trim()) filter.storeName = new RegExp(escapeRegex(q.trim()), "i");
     const pg = Math.max(1, Number(page));
-    const lim = Math.min(100, Number(limit));
+    const lim = Math.min(100, Math.max(1, Number(limit)));
     const [sellers, total] = await Promise.all([
       Seller.find(filter)
         .populate("userId", "profile phone email")
+        .sort({ createdAt: -1 })
         .skip((pg - 1) * lim)
         .limit(lim)
         .lean(),
@@ -187,25 +214,43 @@ adminRouter.get("/sellers", async (req, res, next) => {
 const tierSchema = z.object({
   tier: z.enum(["basic", "trusted", "verified", "top_seller"]),
 });
-adminRouter.patch("/sellers/:id/tier", validate(tierSchema), async (req, res, next) => {
-  try {
-    const seller = await Seller.findByIdAndUpdate(
-      req.params.id,
-      { verificationTier: req.body.tier },
-      { new: true },
-    );
-    res.json({ seller });
-  } catch (e) {
-    next(e);
-  }
-});
+adminRouter.patch(
+  "/sellers/:id/tier",
+  validate(tierSchema),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const seller = await Seller.findByIdAndUpdate(
+        req.params.id,
+        { verificationTier: req.body.tier },
+        { new: true },
+      );
+      if (!seller) throw new HttpError(404, "Seller not found.");
+      await logAdmin(
+        req,
+        "seller.tier",
+        { type: "seller", id: seller._id },
+        `Set ${seller.storeName} to tier ${req.body.tier}`,
+      );
+      res.json({ seller });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
-adminRouter.patch("/sellers/:id/suspend", async (req, res, next) => {
+adminRouter.patch("/sellers/:id/suspend", async (req: AuthedRequest, res, next) => {
   try {
     const seller = await Seller.findByIdAndUpdate(
       req.params.id,
       { isActive: false },
       { new: true },
+    );
+    if (!seller) throw new HttpError(404, "Seller not found.");
+    await logAdmin(
+      req,
+      "seller.suspend",
+      { type: "seller", id: seller._id },
+      `Suspended ${seller.storeName}`,
     );
     res.json({ seller });
   } catch (e) {
@@ -217,15 +262,30 @@ adminRouter.patch("/sellers/:id/suspend", async (req, res, next) => {
 
 adminRouter.get("/products", async (req, res, next) => {
   try {
-    const { q, category, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const {
+      q,
+      category,
+      status,
+      sellerId,
+      page = "1",
+      limit = "20",
+    } = req.query as Record<string, string>;
     const filter: Record<string, unknown> = {};
     if (category) filter.category = category;
-    if (q) filter.$text = { $search: q };
+    if (sellerId) filter.sellerId = sellerId;
+    if (status === "active") filter.isActive = true;
+    if (status === "hidden") filter.isActive = false;
+    if (status === "low_stock") {
+      filter.isActive = true;
+      filter.stock = { $lte: 5 };
+    }
+    if (q?.trim()) filter.title = new RegExp(escapeRegex(q.trim()), "i");
     const pg = Math.max(1, Number(page));
-    const lim = Math.min(100, Number(limit));
+    const lim = Math.min(100, Math.max(1, Number(limit)));
     const [products, total] = await Promise.all([
       Product.find(filter)
         .populate("sellerId", "storeName")
+        .sort({ createdAt: -1 })
         .skip((pg - 1) * lim)
         .limit(lim)
         .lean(),
@@ -237,7 +297,7 @@ adminRouter.get("/products", async (req, res, next) => {
   }
 });
 
-adminRouter.patch("/products/:id/toggle", async (req, res, next) => {
+adminRouter.patch("/products/:id/toggle", async (req: AuthedRequest, res, next) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -246,6 +306,12 @@ adminRouter.patch("/products/:id/toggle", async (req, res, next) => {
     }
     product.isActive = !product.isActive;
     await product.save();
+    await logAdmin(
+      req,
+      "product.toggle",
+      { type: "product", id: product._id },
+      `${product.isActive ? "Showed" : "Hid"} product "${product.title}"`,
+    );
     res.json({ product });
   } catch (e) {
     next(e);
@@ -256,15 +322,43 @@ adminRouter.patch("/products/:id/toggle", async (req, res, next) => {
 
 adminRouter.get("/orders", async (req, res, next) => {
   try {
-    const { status, paymentStatus, page = "1", limit = "20" } = req.query as Record<string, string>;
-    const filter: Record<string, unknown> = {};
+    const {
+      queue,
+      status,
+      paymentStatus,
+      method,
+      q,
+      page = "1",
+      limit = "20",
+    } = req.query as Record<string, string>;
+    const filter: Record<string, unknown> = { ...orderQueueFilter(queue) };
     if (status) filter.status = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
+    if (method) filter.paymentMethod = method;
+
+    if (q?.trim()) {
+      const re = new RegExp(escapeRegex(q.trim()), "i");
+      const buyers = await User.find({
+        $or: [{ phone: re }, { "profile.name": re }, { email: re }],
+      })
+        .select("_id")
+        .limit(50)
+        .lean();
+      filter.$or = [
+        { orderNumber: re },
+        { paymentRef: re },
+        { "manualPayment.reference": re },
+        { "manualPayment.senderPhone": re },
+        { "deliveryAddress.phone": re },
+        { buyerId: { $in: buyers.map((b) => b._id) } },
+      ];
+    }
+
     const pg = Math.max(1, Number(page));
-    const lim = Math.min(100, Number(limit));
+    const lim = Math.min(100, Math.max(1, Number(limit)));
     const [orders, total] = await Promise.all([
       Order.find(filter)
-        .populate("buyerId", "profile phone")
+        .populate("buyerId", "profile phone email")
         .sort({ createdAt: -1 })
         .skip((pg - 1) * lim)
         .limit(lim)
@@ -365,6 +459,12 @@ adminRouter.patch(
         ).catch((e) => console.error("[email] seller approval email failed", e));
       }
 
+      await logAdmin(
+        req,
+        `seller.${status}`,
+        { type: "seller", id: seller._id },
+        `${status === "approved" ? "Approved" : "Rejected"} seller ${seller.storeName}${note ? ` — ${note}` : ""}`,
+      );
       res.json({ seller, message: `Seller ${status} successfully.` });
     } catch (e) {
       next(e);
@@ -430,7 +530,6 @@ adminRouter.delete("/coupons/:id", async (req, res, next) => {
 });
 
 // ── Dispute Management ───────────────────────────────────────────────────────
-import { Dispute } from "../models/Dispute.js";
 
 adminRouter.get("/disputes", async (req, res, next) => {
   try {
@@ -509,7 +608,10 @@ adminRouter.post(
       const order = await Order.findById(req.params.orderId);
       if (!order) throw new HttpError(404, "Order not found.");
       if (order.paymentStatus !== "manual_review") {
-        throw new HttpError(400, "There is no manual payment waiting for verification on this order.");
+        throw new HttpError(
+          400,
+          "There is no manual payment waiting for verification on this order.",
+        );
       }
       order.paymentStatus = "failed";
       if (order.manualPayment) order.manualPayment.rejectedReason = reason;
@@ -521,10 +623,19 @@ adminRouter.post(
       await order.save();
       await settleManualTransaction(order._id, false, reason);
       await notifyBuyerPayment(order, "rejected", reason);
+      await logAdmin(
+        req,
+        "order.reject_payment",
+        { type: "order", id: order._id },
+        `Rejected payment for ${order.orderNumber} — ${reason}`,
+      );
 
       const { emitOrderUpdate } = await import("../socket/index.js");
       emitOrderUpdate(String(order._id), { status: order.status, at: new Date() });
-      res.json({ message: "Payment rejected — the buyer was asked to re-check and resubmit.", order });
+      res.json({
+        message: "Payment rejected — the buyer was asked to re-check and resubmit.",
+        order,
+      });
     } catch (e) {
       next(e);
     }
@@ -540,6 +651,12 @@ adminRouter.post("/orders/:orderId/mark-refunded", async (req: AuthedRequest, re
       throw new HttpError(400, "This order has no refund pending.");
     }
     order.paymentStatus = "refunded";
+    await logAdmin(
+      req,
+      "order.refund_sent",
+      { type: "order", id: order._id },
+      `Marked refund sent for ${order.orderNumber}`,
+    );
     order.statusHistory.push({
       status: order.status,
       at: new Date(),
@@ -554,20 +671,30 @@ adminRouter.post("/orders/:orderId/mark-refunded", async (req: AuthedRequest, re
 
 // ── Seller commission override ────────────────────────────────────────────────
 const commissionSchema = z.object({ rate: z.number().min(0).max(0.5).nullable() });
-adminRouter.patch("/sellers/:id/commission", validate(commissionSchema), async (req, res, next) => {
-  try {
-    const { rate } = req.body as z.infer<typeof commissionSchema>;
-    const seller = await Seller.findByIdAndUpdate(
-      req.params.id,
-      rate === null ? { $unset: { commissionRate: 1 } } : { commissionRate: rate },
-      { new: true },
-    );
-    if (!seller) throw new HttpError(404, "Seller not found.");
-    res.json({ seller, effectiveRate: seller.commissionRate ?? BUSINESS.COMMISSION_RATE });
-  } catch (e) {
-    next(e);
-  }
-});
+adminRouter.patch(
+  "/sellers/:id/commission",
+  validate(commissionSchema),
+  async (req: AuthedRequest, res, next) => {
+    try {
+      const { rate } = req.body as z.infer<typeof commissionSchema>;
+      const seller = await Seller.findByIdAndUpdate(
+        req.params.id,
+        rate === null ? { $unset: { commissionRate: 1 } } : { commissionRate: rate },
+        { new: true },
+      );
+      if (!seller) throw new HttpError(404, "Seller not found.");
+      await logAdmin(
+        req,
+        "seller.commission",
+        { type: "seller", id: seller._id },
+        `Commission for ${seller.storeName}: ${rate === null ? "platform default" : `${rate * 100}%`}`,
+      );
+      res.json({ seller, effectiveRate: seller.commissionRate ?? BUSINESS.COMMISSION_RATE });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 // ── Refund clawbacks (refunds issued after a seller was already paid out) ────
 adminRouter.get("/earnings/clawbacks", async (_req, res, next) => {
@@ -650,3 +777,5 @@ adminRouter.patch(
     }
   },
 );
+
+registerAdminConsoleRoutes(adminRouter);

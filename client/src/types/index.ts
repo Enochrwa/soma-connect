@@ -356,3 +356,62 @@ export interface PaymentConfig {
   };
   cod: boolean;
 }
+
+// ─── Admin console ───────────────────────────────────────────────────────────
+
+export interface AdminUserRow {
+  _id: string;
+  phone: string;
+  email?: string;
+  role: UserRole;
+  profile?: { name?: string };
+  loyaltyPoints: number;
+  tier?: LoyaltyTier;
+  referralCode?: string;
+  lockedUntil?: string;
+  flaggedForReview?: boolean;
+  createdAt: string;
+}
+
+export interface AdminOrderRow extends Omit<Order, "buyerId"> {
+  buyerId: {
+    _id: string;
+    phone?: string;
+    email?: string;
+    profile?: { name?: string };
+    loyaltyPoints?: number;
+  } | null;
+}
+
+export interface AdminEarningRow {
+  _id: string;
+  orderNumber: string;
+  sellerId: string | { _id: string; storeName: string };
+  commissionBase: number;
+  commission: number;
+  net: number;
+  status: "available" | "requested" | "paid" | "reversed";
+  clawbackRequired?: boolean;
+  createdAt: string;
+}
+
+export interface AdminOrderDetail {
+  order: AdminOrderRow;
+  sellers: Array<{
+    _id: string;
+    storeName: string;
+    payoutPhone?: string;
+    userId?: { phone?: string; email?: string };
+  }>;
+  earnings: AdminEarningRow[];
+  transactions: Array<{
+    _id: string;
+    provider: string;
+    method: string;
+    status: string;
+    amount: number;
+    phone?: string;
+    mockRef?: string;
+    createdAt: string;
+  }>;
+}

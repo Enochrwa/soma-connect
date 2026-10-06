@@ -61,7 +61,12 @@ export function normalizeRwandaPhone(raw: unknown): string | null {
 export async function settleManualTransaction(orderId: unknown, ok: boolean, reason?: string) {
   await Transaction.updateMany(
     { orderId, provider: "manual", status: { $in: ["initiated", "manual_review"] } },
-    { $set: { status: ok ? "succeeded" : "failed", ...(reason ? { "rawMeta.rejectedReason": reason } : {}) } },
+    {
+      $set: {
+        status: ok ? "succeeded" : "failed",
+        ...(reason ? { "rawMeta.rejectedReason": reason } : {}),
+      },
+    },
   );
 }
 
