@@ -148,7 +148,9 @@ export default function CheckoutPage() {
     Math.max(0, subtotal - couponDiscount - loyaltyDiscount) * POINTS_PER_RWF,
   );
 
-  if (!items.length) {
+  // Don't bounce to the cart while a payment is in progress: the cart is cleared as soon as the buyer
+  // submits payment, and redirecting then would unmount the confirmation screen.
+  if (!items.length && !pendingOrder) {
     navigate("/cart");
     return null;
   }
