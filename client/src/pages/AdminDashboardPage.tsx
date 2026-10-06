@@ -1,9 +1,6 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
+import { Navigate } from "react-router-dom";
 import {
-  useAdminDashboardQuery,
-  useAdminPendingSellersQuery,
-  useAdminApproveSellerMutation,
   useAdminGetCouponsQuery,
   useAdminCreateCouponMutation,
   useAdminToggleCouponMutation,
@@ -12,10 +9,6 @@ import {
   useAdminDisbursePayoutMutation,
   useAdminDisbursePawapayMutation,
   useAdminFailPayoutMutation,
-  useAdminOrdersQuery,
-  useAdminConfirmPaymentMutation,
-  useAdminMarkRefundedMutation,
-  useAdminRejectPaymentMutation,
   useAdminGetDisputesQuery,
   useAdminResolveDisputeMutation,
   useGetAdminModerationQueueQuery,
@@ -31,7 +24,6 @@ import {
   XCircle,
   Tag,
   CreditCard,
-  AlertTriangle,
   Users,
   AlertCircle,
   Shield,
@@ -42,411 +34,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-type AdminTab =
-  | "overview"
-  | "orders"
-  | "sellers"
-  | "coupons"
-  | "payouts"
-  | "disputes"
-  | "moderation"
-  | "fraud"
-  | "automations";
-
-const TAB_LABELS: Record<AdminTab, string> = {
-  overview: "Overview",
-  orders: "Orders & Payments",
-  sellers: "Pending Sellers",
-  coupons: "Coupons",
-  payouts: "Payouts",
-  disputes: "Disputes",
-  moderation: "Moderation Queue",
-  fraud: "Fraud Signals",
-  automations: "Automations",
-};
-
-// ── Overview ─────────────────────────────────────────────────────────────────
-
-function OverviewTab() {
-  const { data, isLoading } = useAdminDashboardQuery();
-  if (isLoading)
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="animate-spin text-forest" size={24} />
-      </div>
-    );
-  const stats = data?.stats;
-  if (!stats) return null;
-  const statCards = [
-    { label: "Total Users", value: stats.totalUsers },
-    { label: "Total Sellers", value: stats.totalSellers },
-    { label: "Active Products", value: stats.totalProducts },
-    { label: "Total Orders", value: stats.totalOrders },
-    { label: "Pending Approvals", value: stats.pendingSellerApprovals },
-    { label: "Gross sales (paid orders)", value: formatRWF(stats.gmv ?? 0) },
-    {
-      label: `Commission earned (${Math.round((stats.commissionRate ?? 0.1) * 1000) / 10}%)`,
-      value: formatRWF(stats.commissionEarned ?? 0),
-    },
-    {
-      label: `Payouts waiting (${stats.pendingPayoutCount ?? 0})`,
-      value: formatRWF(stats.pendingPayoutAmount ?? 0),
-    },
-    { label: "Payments to verify", value: stats.paymentsToVerify ?? 0 },
-    { label: "Refunds to send", value: stats.refundsPending ?? 0 },
-    { label: "Refund clawbacks", value: stats.clawbacksOutstanding ?? 0 },
-    { label: "Referrals rewarded", value: stats.referralsRewarded ?? 0 },
-  ];
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {statCards.map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-2xl shadow-card p-4">
-            <p className="text-xs text-slate/50">{label}</p>
-            <p className="font-display text-xl text-forest mt-1">{String(value)}</p>
-          </div>
-        ))}
-      </div>
-      <div className="bg-white rounded-2xl shadow-card p-5">
-        <h3 className="font-display text-forest mb-3">Recent Orders</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate/50 border-b border-forest/8">
-                <th className="pb-2 pr-4">Order #</th>
-                <th className="pb-2 pr-4">Buyer</th>
-                <th className="pb-2 pr-4">Total</th>
-                <th className="pb-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.recentOrders ?? []).map((o) => {
-                const order = o as unknown as Record<string, unknown>;
-                const buyer = order.buyerId as Record<string, unknown> | null;
-                return (
-                  <tr
-                    key={String(order._id)}
-                    className="border-b border-forest/5 hover:bg-forest/2"
-                  >
-                    <td className="py-2 pr-4 font-mono text-xs">{String(order.orderNumber)}</td>
-                    <td className="py-2 pr-4">
-                      {String(
-                        (buyer?.profile as Record<string, unknown>)?.name ?? buyer?.phone ?? "—",
-                      )}
-                    </td>
-                    <td className="py-2 pr-4 font-mono">{formatRWF(Number(order.total))}</td>
-                    <td className="py-2">
-                      <span className="text-xs bg-forest/10 text-forest px-2 py-0.5 rounded-full">
-                        {String(order.status)}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Orders & Payments ─────────────────────────────────────────────────────────
-
-function OrdersTab() {
-  const [filter, setFilter] = useState<"verify" | "awaiting" | "refund" | "all">("verify");
-  const query =
-    filter === "verify"
-      ? { status: "placed", paymentStatus: "manual_review" }
-      : filter === "awaiting"
-        ? { status: "placed", paymentStatus: "pending" }
-        : filter === "refund"
-          ? { paymentStatus: "refund_pending" }
-          : {};
-  const { data, isLoading } = useAdminOrdersQuery(query);
-  const [confirmPayment] = useAdminConfirmPaymentMutation();
-  const [markRefunded] = useAdminMarkRefundedMutation();
-  const [rejectPayment] = useAdminRejectPaymentMutation();
-  const [busy, setBusy] = useState<string | null>(null);
-
-  async function run(
-    id: string,
-    fn: (id: string) => { unwrap: () => Promise<{ message: string }> },
-  ) {
-    setBusy(id);
-    try {
-      const r = await fn(id).unwrap();
-      alert(r.message);
-    } catch (err: unknown) {
-      alert((err as { data?: { error?: string } }).data?.error ?? "Action failed.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  const orders = data?.orders ?? [];
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        {(
-          [
-            ["verify", "Payments to verify"],
-            ["awaiting", "Awaiting payment"],
-            ["refund", "Refunds to send"],
-            ["all", "All orders"],
-          ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className={`px-3 py-1.5 rounded-lg text-sm ${filter === k ? "bg-forest text-saffron" : "bg-white shadow-card text-slate/70"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-forest" size={24} />
-        </div>
-      ) : orders.length === 0 ? (
-        <p className="text-slate/50 text-center py-12">Nothing here.</p>
-      ) : (
-        orders.map((o) => {
-          const order = o as unknown as Record<string, unknown>;
-          const buyer = order.buyerId as Record<string, unknown> | null;
-          const id = String(order._id);
-          return (
-            <div
-              key={id}
-              className="bg-white rounded-2xl shadow-card p-4 flex flex-wrap items-center gap-3"
-            >
-              <div className="flex-1 min-w-[200px]">
-                <p className="font-mono font-bold text-forest text-sm">
-                  {String(order.orderNumber)}
-                </p>
-                <p className="text-xs text-slate/50">
-                  {String((buyer?.profile as Record<string, unknown>)?.name ?? buyer?.phone ?? "—")}{" "}
-                  · {String(order.paymentMethod).replace("_", " ")} · ref{" "}
-                  {String(order.paymentRef ?? "—")}
-                </p>
-                {(() => {
-                  const mp = order.manualPayment as
-                    | {
-                        provider?: string;
-                        senderPhone?: string;
-                        reference?: string;
-                        submittedAt?: string;
-                      }
-                    | undefined;
-                  if (!mp?.reference) return null;
-                  return (
-                    <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-2 py-1 mt-1.5 inline-block">
-                      {mp.provider === "airtel_money" ? "Airtel" : "MTN"} · from{" "}
-                      <span className="font-mono">{mp.senderPhone}</span> · transaction ID{" "}
-                      <span className="font-mono font-bold">{mp.reference}</span>
-                      {mp.submittedAt
-                        ? ` · ${new Date(mp.submittedAt).toLocaleString("en-RW")}`
-                        : ""}
-                    </p>
-                  );
-                })()}
-              </div>
-              <span className="font-mono font-bold text-saffron">
-                {formatRWF(Number(order.total))}
-              </span>
-              <span className="text-xs bg-forest/10 text-forest px-2 py-0.5 rounded-full">
-                {String(order.status)} / {String(order.paymentStatus)}
-              </span>
-              {(order.paymentStatus === "pending" || order.paymentStatus === "manual_review") &&
-                order.status === "placed" && (
-                  <button
-                    disabled={busy === id}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Confirm that RWF ${Number(order.total).toLocaleString()} was received for ${String(order.orderNumber)}?`,
-                        )
-                      )
-                        void run(id, confirmPayment);
-                    }}
-                    className="text-sm bg-forest text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
-                  >
-                    Confirm payment received
-                  </button>
-                )}
-              {order.paymentStatus === "manual_review" && order.status === "placed" && (
-                <button
-                  disabled={busy === id}
-                  onClick={() => {
-                    const reason = prompt(
-                      "Why can't you verify this payment? (the buyer will see this)",
-                      "Transaction ID not found on our statement",
-                    );
-                    if (!reason || reason.trim().length < 2) return;
-                    setBusy(id);
-                    rejectPayment({ id, reason: reason.trim() })
-                      .unwrap()
-                      .then((r) => alert(r.message))
-                      .catch((err: unknown) =>
-                        alert(
-                          (err as { data?: { error?: string } }).data?.error ?? "Action failed.",
-                        ),
-                      )
-                      .finally(() => setBusy(null));
-                  }}
-                  className="text-sm border border-red-200 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
-                >
-                  Reject
-                </button>
-              )}
-              {order.paymentStatus === "refund_pending" && (
-                <button
-                  disabled={busy === id}
-                  onClick={() => {
-                    if (confirm("Have you sent the refund to the buyer?"))
-                      void run(id, markRefunded);
-                  }}
-                  className="text-sm bg-saffron text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
-                >
-                  Mark refund sent
-                </button>
-              )}
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
-// ── Pending Sellers ───────────────────────────────────────────────────────────
-
-function SellersTab() {
-  const { data, isLoading, refetch } = useAdminPendingSellersQuery();
-  const [approveSeller] = useAdminApproveSellerMutation();
-  const [approving, setApproving] = useState<string | null>(null);
-  const [noteMap, setNoteMap] = useState<Record<string, string>>({});
-
-  async function handle(id: string, status: "approved" | "rejected") {
-    setApproving(id);
-    try {
-      await approveSeller({ id, status, note: noteMap[id] }).unwrap();
-      refetch();
-    } finally {
-      setApproving(null);
-    }
-  }
-
-  if (isLoading)
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="animate-spin text-forest" size={24} />
-      </div>
-    );
-  const sellers = data?.sellers ?? [];
-
-  return (
-    <div className="space-y-4">
-      <h2 className="font-display text-lg text-forest">
-        Pending Seller Applications ({sellers.length})
-      </h2>
-      {sellers.length === 0 ? (
-        <p className="text-slate/50 text-center py-12">No pending applications.</p>
-      ) : (
-        sellers.map((s) => {
-          const seller = s as unknown as Record<string, unknown>;
-          const user = seller.userId as Record<string, unknown> | null;
-          const docs = seller.documents as Record<string, string | undefined> | undefined;
-          return (
-            <div
-              key={String(seller._id)}
-              className="bg-white rounded-2xl shadow-card p-5 space-y-3"
-            >
-              <div className="flex gap-4">
-                {seller.logo != null && (
-                  <img
-                    src={String(seller.logo)}
-                    alt=""
-                    className="w-14 h-14 rounded-xl object-cover"
-                  />
-                )}
-                <div className="flex-1">
-                  <p className="font-bold text-forest">{String(seller.storeName)}</p>
-                  <p className="text-xs text-slate/50">
-                    {String((user?.profile as Record<string, unknown>)?.name ?? "—")} ·{" "}
-                    {String(user?.phone ?? "—")} · {String(user?.email ?? "—")}
-                  </p>
-                  <p className="text-xs text-slate/50 mt-0.5">
-                    {String(seller.accountType)} ·{" "}
-                    {String((seller.location as Record<string, unknown>)?.district ?? "")}
-                  </p>
-                </div>
-              </div>
-              {(docs?.nidUrl || docs?.licenseUrl) && (
-                <div className="flex gap-3 text-xs">
-                  {docs.nidUrl && (
-                    <a
-                      href={docs.nidUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-forest underline"
-                    >
-                      📄 NID
-                    </a>
-                  )}
-                  {docs.licenseUrl && (
-                    <a
-                      href={docs.licenseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-forest underline"
-                    >
-                      📄 License
-                    </a>
-                  )}
-                </div>
-              )}
-              <input
-                placeholder="Rejection note (optional)"
-                value={noteMap[String(seller._id)] ?? ""}
-                onChange={(e) =>
-                  setNoteMap((m) => ({ ...m, [String(seller._id)]: e.target.value }))
-                }
-                className="w-full border border-forest/15 rounded-lg px-3 py-2 text-sm"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handle(String(seller._id), "approved")}
-                  disabled={approving === String(seller._id)}
-                  className="flex items-center gap-1.5 text-sm bg-forest text-white px-4 py-2 rounded-lg hover:bg-forest/90 disabled:opacity-50"
-                >
-                  {approving === String(seller._id) ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <CheckCircle size={13} />
-                  )}
-                  Approve
-                </button>
-                <button
-                  onClick={() => handle(String(seller._id), "rejected")}
-                  disabled={approving === String(seller._id)}
-                  className="flex items-center gap-1.5 text-sm border border-vermillion/30 text-vermillion px-4 py-2 rounded-lg hover:bg-vermillion/5 disabled:opacity-50"
-                >
-                  <XCircle size={13} /> Reject
-                </button>
-              </div>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
 // ── Coupons ───────────────────────────────────────────────────────────────────
 
-function CouponsTab() {
+export function CouponsTab() {
   const { data, isLoading, refetch } = useAdminGetCouponsQuery();
   const [createCoupon, { isLoading: creating }] = useAdminCreateCouponMutation();
   const [toggleCoupon] = useAdminToggleCouponMutation();
@@ -652,7 +242,7 @@ function CouponsTab() {
 
 // ── Payouts ───────────────────────────────────────────────────────────────────
 
-function PayoutsTab() {
+export function PayoutsTab() {
   const { data, isLoading, refetch } = useAdminGetPayoutsQuery();
   const [disbursePayout] = useAdminDisbursePayoutMutation();
   const [disbursePawapay] = useAdminDisbursePawapayMutation();
@@ -825,7 +415,7 @@ function PayoutsTab() {
 
 // ── Disputes ─────────────────────────────────────────────────────────────────
 
-function DisputesTab() {
+export function DisputesTab() {
   const { data, isLoading, refetch } = useAdminGetDisputesQuery({});
   const [resolveDispute] = useAdminResolveDisputeMutation();
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
@@ -951,69 +541,16 @@ function DisputesTab() {
 
 // ── Root ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Legacy entry point. The admin screens now live in the sidebar console under /admin;
+ * anything still pointing here lands on the orders queue that needs attention first.
+ */
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
-  const tabs: AdminTab[] = [
-    "overview",
-    "orders",
-    "sellers",
-    "coupons",
-    "payouts",
-    "disputes",
-    "moderation",
-    "fraud",
-    "automations",
-  ];
-  const TAB_ICONS: Record<AdminTab, React.ElementType> = {
-    overview: Users,
-    orders: CreditCard,
-    sellers: CheckCircle,
-    coupons: Tag,
-    payouts: CreditCard,
-    disputes: AlertTriangle,
-    moderation: AlertCircle,
-    fraud: Shield,
-    automations: Zap,
-  };
-
-  return (
-    <>
-      <Helmet>
-        <title>Admin Dashboard — OneAfricaShop</title>
-      </Helmet>
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <h1 className="font-display text-3xl text-forest mb-6">Admin Dashboard</h1>
-        <nav className="flex gap-1 flex-wrap border-b border-forest/10 pb-4 mb-6">
-          {tabs.map((tab) => {
-            const Icon = TAB_ICONS[tab];
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab ? "bg-forest text-saffron" : "text-slate/70 hover:bg-forest/5 hover:text-forest"}`}
-              >
-                <Icon size={15} />
-                {TAB_LABELS[tab]}
-              </button>
-            );
-          })}
-        </nav>
-        {activeTab === "overview" && <OverviewTab />}
-        {activeTab === "orders" && <OrdersTab />}
-        {activeTab === "sellers" && <SellersTab />}
-        {activeTab === "coupons" && <CouponsTab />}
-        {activeTab === "payouts" && <PayoutsTab />}
-        {activeTab === "disputes" && <DisputesTab />}
-        {activeTab === "moderation" && <ModerationQueueTab />}
-        {activeTab === "fraud" && <FraudSignalsTab />}
-        {activeTab === "automations" && <AutomationsTab />}
-      </div>
-    </>
-  );
+  return <Navigate to="/admin/orders?queue=verify" replace />;
 }
 
 // ── Moderation Queue Tab ──────────────────────────────────────────────────────
-function ModerationQueueTab() {
+export function ModerationQueueTab() {
   const { data, isLoading, refetch } = useGetAdminModerationQueueQuery();
   const [moderate] = useModerateReviewMutation();
   const reviews = data?.reviews ?? [];
@@ -1102,7 +639,7 @@ function ModerationQueueTab() {
 }
 
 // ── Fraud Signals Tab ─────────────────────────────────────────────────────────
-function FraudSignalsTab() {
+export function FraudSignalsTab() {
   const { data, isLoading, refetch } = useGetAdminFlaggedUsersQuery();
   const [unflag] = useUnflagUserMutation();
   const users = data?.users ?? [];
@@ -1252,7 +789,7 @@ const AUTOMATION_JOBS: Array<{
   },
 ];
 
-function AutomationsTab() {
+export function AutomationsTab() {
   const [trigger, { isLoading }] = useTriggerAutomationMutation();
   const [results, setResults] = useState<Record<string, { ok: boolean; ranAt: string }>>({});
   const [running, setRunning] = useState<string | null>(null);

@@ -12,6 +12,10 @@ import type {
   Payout,
   SellerBalance,
   PaymentConfig,
+  AdminUserRow,
+  AdminOrderRow,
+  AdminOrderDetail,
+  AdminEarningRow,
   SellerEarningRow,
   ReferralSummary,
   Dispute,
@@ -35,6 +39,9 @@ export const api = createApi({
     "AdminStats",
     "Wishlist",
     "Disputes",
+    "AdminUsers",
+    "AdminSellers",
+    "AdminProducts",
   ],
   endpoints: (b) => ({
     // ── Products ─────────────────────────────────────────────────────────────
@@ -65,7 +72,7 @@ export const api = createApi({
     }),
     deleteProduct: b.mutation<{ ok: boolean }, string>({
       query: (id) => ({ url: `/products/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Products"],
+      invalidatesTags: ["Products", "AdminProducts"],
     }),
 
     // ── Bulk product import ───────────────────────────────────────────────────
@@ -365,13 +372,18 @@ export const api = createApi({
       providesTags: ["AdminStats"],
     }),
     adminUsers: b.query<
-      { users: User[]; total: number; pages: number },
-      { q?: string; role?: string; page?: number }
+      { users: AdminUserRow[]; total: number; page: number; pages: number },
+      { q?: string; role?: string; status?: string; page?: number }
     >({
       query: (params) => ({ url: "/admin/users", params }),
+      providesTags: ["AdminUsers"],
     }),
-    adminSellers: b.query<{ sellers: Seller[]; total: number }, { tier?: string; page?: number }>({
+    adminSellers: b.query<
+      { sellers: Seller[]; total: number; page: number; pages: number },
+      { tier?: string; status?: string; q?: string; page?: number }
+    >({
       query: (params) => ({ url: "/admin/sellers", params }),
+      providesTags: ["AdminSellers"],
     }),
     adminUpdateSellerTier: b.mutation<{ seller: Seller }, { id: string; tier: string }>({
       query: ({ id, ...body }) => ({ url: `/admin/sellers/${id}/tier`, method: "PATCH", body }),
@@ -493,11 +505,38 @@ export const api = createApi({
     }),
 
     adminOrders: b.query<
-      { orders: Order[]; total: number; pages: number },
-      { status?: string; paymentStatus?: string; page?: number }
+      { orders: AdminOrderRow[]; total: number; page: number; pages: number },
+      { queue?: string; q?: string; method?: string; page?: number; limit?: number }
     >({
       query: (params) => ({ url: "/admin/orders", params }),
       providesTags: ["Orders"],
+    }),
+    adminOrderCounts: b.query<{ counts: Record<string, number> }, void>({
+      query: () => "/admin/orders/counts",
+      providesTags: ["Orders"],
+    }),
+    adminOrderDetail: b.query<AdminOrderDetail, string>({
+      query: (id) => `/admin/orders/${id}`,
+      providesTags: (_r, _e, id) => [{ type: "Orders", id }, "Orders"],
+    }),
+    adminBulkConfirm: b.mutation<
+      { confirmed: number; skipped: Array<{ orderNumber: string; reason: string }> },
+      string[]
+    >({
+      query: (orderIds) => ({
+        url: "/admin/orders/bulk-confirm",
+        method: "POST",
+        body: { orderIds },
+      }),
+      invalidatesTags: ["Orders", "AdminStats"],
+    }),
+    adminOrderNote: b.mutation<{ order: Order }, { id: string; note: string }>({
+      query: ({ id, note }) => ({
+        url: `/admin/orders/${id}/note`,
+        method: "POST",
+        body: { note },
+      }),
+      invalidatesTags: ["Orders"],
     }),
     adminConfirmPayment: b.mutation<{ message: string; order: Order }, string>({
       query: (id) => ({ url: `/admin/orders/${id}/confirm-payment`, method: "POST" }),
@@ -537,6 +576,187 @@ export const api = createApi({
     }),
 
     // ── Disputes ─────────────────────────────────────────────────────────────
+    adminOverview: b.query<
+      {
+        attention: Record<string, number>;
+        topSellers: Array<{
+          sellerId: string;
+          storeName: string;
+          sales: number;
+          commission: number;
+        }>;
+        topProducts: Array<{
+          _id: string;
+          title: string;
+          salesCount: number;
+          price: number;
+          images?: string[];
+        }>;
+        daily: Array<{ _id: string; revenue: number; orders: number }>;
+      },
+      void
+    >({
+      query: () => "/admin/overview",
+      providesTags: ["AdminStats", "Orders"],
+    }),
+    adminUserDetail: b.query<
+      {
+        user: AdminUserRow & { referredBy?: string };
+        stats: { paidOrders: number; totalSpent: number };
+        recentOrders: Array<{
+          _id: string;
+          orderNumber: string;
+          total: number;
+          status: string;
+          paymentStatus: string;
+          createdAt: string;
+        }>;
+        seller: { storeName: string; approvalStatus: string; isActive: boolean } | null;
+        referrals: { invited: number; rewarded: number };
+        referredBy: { profile?: { name?: string }; phone?: string } | null;
+      },
+      string
+    >({
+      query: (id) => `/admin/users/${id}`,
+      providesTags: ["AdminUsers"],
+    }),
+    adminBanUser: b.mutation<{ ok: boolean }, { id: string; banned: boolean; reason?: string }>({
+      query: ({ id, ...body }) => ({ url: `/admin/users/${id}/ban`, method: "PATCH", body }),
+      invalidatesTags: ["AdminUsers"],
+    }),
+    adminSetUserRole: b.mutation<{ ok: boolean }, { id: string; role: string }>({
+      query: ({ id, role }) => ({
+        url: `/admin/users/${id}/role`,
+        method: "PATCH",
+        body: { role },
+      }),
+      invalidatesTags: ["AdminUsers"],
+    }),
+    adminAdjustPoints: b.mutation<
+      { loyaltyPoints: number },
+      { id: string; points: number; reason: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/admin/users/${id}/points`, method: "POST", body }),
+      invalidatesTags: ["AdminUsers"],
+    }),
+    adminSuspendSeller: b.mutation<{ seller: Seller }, string>({
+      query: (id) => ({ url: `/admin/sellers/${id}/suspend`, method: "PATCH" }),
+      invalidatesTags: ["AdminSellers", "AdminStats"],
+    }),
+    adminReactivateSeller: b.mutation<{ seller: Seller }, string>({
+      query: (id) => ({ url: `/admin/sellers/${id}/reactivate`, method: "PATCH" }),
+      invalidatesTags: ["AdminSellers", "AdminStats"],
+    }),
+    adminProducts: b.query<
+      {
+        products: Array<
+          Omit<Product, "sellerId"> & { sellerId: { _id: string; storeName: string } | string }
+        >;
+        total: number;
+        pages: number;
+      },
+      { q?: string; status?: string; category?: string; page?: number }
+    >({
+      query: (params) => ({ url: "/admin/products", params }),
+      providesTags: ["AdminProducts"],
+    }),
+    adminToggleProduct: b.mutation<{ product: Product }, string>({
+      query: (id) => ({ url: `/admin/products/${id}/toggle`, method: "PATCH" }),
+      invalidatesTags: ["AdminProducts", "Products"],
+    }),
+    adminEarnings: b.query<
+      {
+        days: number;
+        defaultRate: number;
+        totals: { sales: number; commission: number; net: number; orders: number };
+        owed: { available: number; clearing: number; requested: number; paid: number };
+        clawbacks: { amount: number; count: number };
+        sellers: Array<{
+          sellerId: string;
+          storeName: string;
+          commissionRate: number | null;
+          orders: number;
+          sales: number;
+          commission: number;
+          net: number;
+          available: number;
+          clearing: number;
+          requested: number;
+          paid: number;
+        }>;
+        recent: AdminEarningRow[];
+      },
+      { days?: number }
+    >({
+      query: (params) => ({ url: "/admin/earnings/summary", params }),
+      providesTags: ["AdminStats"],
+    }),
+    adminReferrals: b.query<
+      {
+        stats: {
+          invited: number;
+          pending: number;
+          rewarded: number;
+          rejected: number;
+          pointsPaid: number;
+        };
+        rules: {
+          referrerBonusPoints: number;
+          refereeBonusPoints: number;
+          minQualifyingOrder: number;
+          maxRewards: number;
+        };
+        topReferrers: Array<{ userId: string; name: string; rewarded: number; points: number }>;
+        recent: Array<{
+          _id: string;
+          status: "pending" | "rewarded" | "rejected";
+          code: string;
+          createdAt: string;
+          rewardedAt?: string;
+          rejectReason?: string;
+          referrerPoints: number;
+          refereePoints: number;
+          referrerId?: { profile?: { name?: string }; phone?: string };
+          refereeId?: { profile?: { name?: string }; phone?: string };
+          qualifyingOrderId?: { orderNumber: string; total: number };
+        }>;
+      },
+      void
+    >({
+      query: () => "/admin/referrals",
+      providesTags: ["AdminStats"],
+    }),
+    adminRejectReferral: b.mutation<unknown, { id: string; reason: string }>({
+      query: ({ id, reason }) => ({
+        url: `/admin/referrals/${id}/reject`,
+        method: "PATCH",
+        body: { reason },
+      }),
+      invalidatesTags: ["AdminStats"],
+    }),
+    adminActivity: b.query<
+      {
+        actions: Array<{
+          _id: string;
+          adminName?: string;
+          action: string;
+          targetType?: string;
+          targetId?: string;
+          summary: string;
+          createdAt: string;
+        }>;
+        total: number;
+        pages: number;
+      },
+      { q?: string; type?: string; page?: number }
+    >({
+      query: (params) => ({ url: "/admin/activity", params }),
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adminSettings: b.query<Record<string, any>, void>({
+      query: () => "/admin/settings",
+    }),
+
     openDispute: b.mutation<
       { dispute: Dispute },
       { orderId: string; reason: string; description: string; evidenceImages?: string[] }
@@ -769,6 +989,24 @@ export const {
   useGetMyEarningsQuery,
   useGetMyReferralsQuery,
   useCheckReferralCodeQuery,
+  useAdminOrderCountsQuery,
+  useAdminOrderDetailQuery,
+  useAdminBulkConfirmMutation,
+  useAdminOrderNoteMutation,
+  useAdminOverviewQuery,
+  useAdminUserDetailQuery,
+  useAdminBanUserMutation,
+  useAdminSetUserRoleMutation,
+  useAdminAdjustPointsMutation,
+  useAdminSuspendSellerMutation,
+  useAdminReactivateSellerMutation,
+  useAdminProductsQuery,
+  useAdminToggleProductMutation,
+  useAdminEarningsQuery,
+  useAdminReferralsQuery,
+  useAdminRejectReferralMutation,
+  useAdminActivityQuery,
+  useAdminSettingsQuery,
   useAdminConfirmPaymentMutation,
   useAdminDisbursePawapayMutation,
   useAdminFailPayoutMutation,
